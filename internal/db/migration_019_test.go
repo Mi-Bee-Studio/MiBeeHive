@@ -6,9 +6,9 @@ import (
 	"testing"
 )
 
-// TestMigration018FreshInstall verifies that a fresh DB with all 18 migrations
+// TestMigration019FreshInstall verifies that a fresh DB with all 19 migrations
 // has the storage_migrations table with correct columns and index.
-func TestMigration018FreshInstall(t *testing.T) {
+func TestMigration019FreshInstall(t *testing.T) {
 	db := testDB(t)
 	ctx := context.Background()
 
@@ -77,9 +77,9 @@ func TestMigration018FreshInstall(t *testing.T) {
 	}
 }
 
-// TestMigration018UpgradePath verifies that applying migration 018 after 001-017
+// TestMigration019UpgradePath verifies that applying migration 019 after 001-017
 // creates the storage_migrations table correctly.
-func TestMigration018UpgradePath(t *testing.T) {
+func TestMigration019UpgradePath(t *testing.T) {
 	ctx := context.Background()
 
 	// Create a fresh DB and manually apply only up to migration 017.
@@ -146,29 +146,29 @@ func TestMigration018UpgradePath(t *testing.T) {
 		t.Fatalf("re-enable foreign_keys: %v", err)
 	}
 
-	// Verify storage_migrations does NOT exist before migration 018.
+	// Verify storage_migrations does NOT exist before migration 019.
 	var tblName string
 	err = db.QueryRowContext(ctx,
 		"SELECT name FROM sqlite_master WHERE type='table' AND name='storage_migrations'",
 	).Scan(&tblName)
 	if err == nil {
-		t.Fatal("storage_migrations table should not exist before migration 018")
+		t.Fatal("storage_migrations table should not exist before migration 019")
 	}
 
 	tx, err = db.Begin()
 	if err != nil {
-		t.Fatalf("Begin tx for 018: %v", err)
+		t.Fatalf("Begin tx for 019: %v", err)
 	}
 	defer tx.Rollback()
 
-	// Find and apply migration 018.
+	// Find and apply migration 019.
 	entries, err := migrationsFS.ReadDir("migrations")
 	if err != nil {
 		t.Fatalf("ReadDir: %v", err)
 	}
 	var filePath string
 	for _, e := range entries {
-		if len(e.Name()) > 7 && e.Name()[:3] == "018" {
+		if len(e.Name()) > 7 && e.Name()[:3] == "019" {
 			filePath = "migrations/" + e.Name()
 			break
 		}
@@ -176,28 +176,28 @@ func TestMigration018UpgradePath(t *testing.T) {
 
 	data, err := migrationsFS.ReadFile(filePath)
 	if err != nil {
-		t.Fatalf("read migration 018: %v", err)
+		t.Fatalf("read migration 019: %v", err)
 	}
 	if err := execMigration(tx, string(data)); err != nil {
-		t.Fatalf("exec migration 018: %v", err)
+		t.Fatalf("exec migration 019: %v", err)
 	}
-	if _, err := tx.Exec("INSERT INTO schema_migrations (version) VALUES ('018')"); err != nil {
-		t.Fatalf("record migration 018: %v", err)
+	if _, err := tx.Exec("INSERT INTO schema_migrations (version) VALUES ('019')"); err != nil {
+		t.Fatalf("record migration 019: %v", err)
 	}
 
 	if err := tx.Commit(); err != nil {
-		t.Fatalf("commit 018: %v", err)
+		t.Fatalf("commit 019: %v", err)
 	}
 	if _, err := db.Exec("PRAGMA foreign_keys = ON"); err != nil {
 		t.Fatalf("re-enable foreign_keys: %v", err)
 	}
 
-	// Verify storage_migrations table now exists after migration 018.
+	// Verify storage_migrations table now exists after migration 019.
 	err = db.QueryRowContext(ctx,
 		"SELECT name FROM sqlite_master WHERE type='table' AND name='storage_migrations'",
 	).Scan(&tblName)
 	if err != nil {
-		t.Fatalf("storage_migrations should exist after migration 018: %v", err)
+		t.Fatalf("storage_migrations should exist after migration 019: %v", err)
 	}
 
 	// Verify we can CRUD on the new table.
@@ -214,19 +214,19 @@ func TestMigration018UpgradePath(t *testing.T) {
 		t.Errorf("expected 1 row in storage_migrations, got %d", count)
 	}
 
-	// Verify migration 018 is idempotent.
+	// Verify migration 019 is idempotent.
 	// Re-applying should not fail.
 	tx, err = db.Begin()
 	if err != nil {
-		t.Fatalf("Begin tx for re-apply 018: %v", err)
+		t.Fatalf("Begin tx for re-apply 019: %v", err)
 	}
 	defer tx.Rollback()
 
 	if err := execMigration(tx, string(data)); err != nil {
-		t.Fatalf("re-exec migration 018: %v", err)
+		t.Fatalf("re-exec migration 019: %v", err)
 	}
 	if err := tx.Commit(); err != nil {
-		t.Fatalf("commit re-apply 018: %v", err)
+		t.Fatalf("commit re-apply 019: %v", err)
 	}
 
 	t.Log("upgrade path test passed: storage_migrations created, CRUD works, idempotent")

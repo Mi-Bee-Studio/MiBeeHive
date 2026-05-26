@@ -10,12 +10,18 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/Mi-Bee-Studio/mibeehive/internal/config"
 )
 
 func newTestISOService(t *testing.T) (*ISOService, string) {
 	t.Helper()
 	dir := t.TempDir()
-	svc := NewISOService(dir, 2, nil)
+	if err := os.MkdirAll(filepath.Join(dir, "os-install"), 0755); err != nil {
+		t.Fatalf("failed to create os-install dir: %v", err)
+	}
+	resolver := NewStorageResolver(&config.Config{Storage: config.StorageConfig{BasePath: dir}})
+	svc := NewISOService(resolver, 2, nil)
 	return svc, dir
 }
 

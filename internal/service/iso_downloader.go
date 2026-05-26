@@ -50,7 +50,7 @@ type StaleISOCheck struct {
 // ISOService handles downloading, listing, and deleting ISO files
 // for OS installation provisioning.
 type ISOService struct {
-	basePath   string
+	resolver   *StorageResolver
 	semaphore  chan struct{}
 	httpClient *http.Client
 	progress   sync.Map    // string (filename) → *DownloadProgress
@@ -68,11 +68,11 @@ func (s *ISOService) GetActiveProgress() map[string]*DownloadProgress {
 	})
 	return result
 }
-// NewISOService creates a new ISOService rooted at basePath.
+// NewISOService creates a new ISOService with the given storage resolver.
 // maxConcurrent limits the number of simultaneous ISO downloads.
-func NewISOService(basePath string, maxConcurrent int, m *metrics.Metrics) *ISOService {
+func NewISOService(resolver *StorageResolver, maxConcurrent int, m *metrics.Metrics) *ISOService {
 	return &ISOService{
-		basePath:  basePath,
+		resolver:  resolver,
 		semaphore: make(chan struct{}, maxConcurrent),
 		httpClient: &http.Client{
 			Timeout: 0, // No timeout for large ISO downloads; controlled by context.
@@ -94,7 +94,7 @@ func (s *ISOService) Shutdown() {
 
 // isoDir returns the full path to the os-install directory.
 func (s *ISOService) isoDir() string {
-	return filepath.Join(s.basePath, "os-install")
+	return s.resolver.ResolveISO()
 }
 
 // ResetStaleDownloads checks downloading entries and determines which are stale.
@@ -393,7 +393,7 @@ func (s *ISOService) DeleteISO(filename string) error {
 // containing the os-install directory.
 func (s *ISOService) DiskAvailable() (uint64, error) {
 	var stat syscall.Statfs_t
-	if err := syscall.Statfs(s.basePath, &stat); err != nil {
+	if err := syscall.Statfs(s.resolver.ResolveISO(), &stat); err != nil {
 		return 0, fmt.Errorf("statfs failed: %w", err)
 	}
 	return uint64(stat.Bavail) * uint64(stat.Bsize), nil

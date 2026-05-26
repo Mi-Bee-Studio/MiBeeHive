@@ -24,6 +24,18 @@ const DeployISO = (function () {
     return { available: t('catalog_available'), downloaded: t('catalog_downloaded'), error: t('catalog_error'), no_match: t('catalog_no_match') };
   }
 
+  function parseISOFilename(name) {
+    var n = name.toLowerCase();
+    var hasAmd = n.indexOf('x86_64') >= 0;
+    var hasArm = n.indexOf('arm64') >= 0 || n.indexOf('aarch64') >= 0;
+    var arch = hasArm ? 'arm64' : (hasAmd ? 'amd64' : 'amd64');
+    var distros = [['ubuntu','ubuntu'],['debian','debian'],['rocky','rocky'],['alma','almalinux'],['fedora','fedora'],['opensuse','opensuse'],['centos','centos']];
+    for (var i = 0; i < distros.length; i++) {
+      if (n.indexOf(distros[i][0]) >= 0) return { distro: distros[i][1], arch: arch };
+    }
+    return { distro: 'other', arch: 'unknown' };
+  }
+
   // ── Catalog Entry Row ────────────────────────────────────────────────
   function CatalogEntryRow(props) {
     var e = props.entry;
@@ -98,7 +110,7 @@ const DeployISO = (function () {
           <span>${Helpers.escapeHtml(props.arch)}</span>
           <span style="opacity:0.5">(${entries.length})</span>
         </button>
-        ${aOpen ? html`<div class="table-wrap overflow-x-auto" style="padding:0 var(--space-sm) var(--space-sm)"><table style="margin-bottom:var(--space-sm)"><thead><tr><th>${t('catalog_name')}</th><th>${t('catalog_status')}</th><th>${t('catalog_last_checked')}</th><th>${t('catalog_auto_update')}</th><th style="text-align:right">${t('actions')}</th></tr></thead><tbody>${entries.map(function(e){var fn=e.current_url?e.current_url.split('/').pop():'';return html`<${CatalogEntryRow} key=${e.id} entry=${e} progress=${props.progressMap[fn]} onCheck=${props.onCheck} onDownload=${props.onDownload} onRetry=${props.onRetry} onCancel=${props.onCancel} onEdit=${props.onEdit} onDelete=${props.onDelete} onToggleAuto=${props.onToggleAuto} />`;})}</tbody></table></div>` : null}
+        ${aOpen ? html`<div class="table-wrap overflow-x-auto" style="padding:0 var(--space-sm) var(--space-sm)"><table style="margin-bottom:var(--space-sm)"><thead><tr><th>${t('catalog_name')}</th><th>${t('catalog_status')}</th><th>${t('catalog_last_checked')}</th><th>${t('catalog_auto_update')}</th><th style="text-align:right">${t('actions')}</th></tr></thead><tbody>${entries.map(function(e){if(e._isStandalone){return html`<${StandaloneFileRow} key=${e.id} iso=${e} onDelete=${props.onDeleteStandalone} />`;}var fn=e.current_url?e.current_url.split('/').pop():'';return html`<${CatalogEntryRow} key=${e.id} entry=${e} progress=${props.progressMap[fn]} onCheck=${props.onCheck} onDownload=${props.onDownload} onRetry=${props.onRetry} onCancel=${props.onCancel} onEdit=${props.onEdit} onDelete=${props.onDelete} onToggleAuto=${props.onToggleAuto} />`;})}</tbody></table></div>` : null}
       </div>`;
   }
 
@@ -121,6 +133,7 @@ const DeployISO = (function () {
           </div>
           <svg style="transform:rotate(${open ? '180' : '0'}deg);transition:transform 0.2s;width:1rem;height:1rem;color:var(--color-text-quaternary)" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
         </button>
+        ${open ? html`
           <div>
             ${Object.keys(archGroups).sort().map(function (arch) {
               var entries = archGroups[arch];
@@ -132,27 +145,55 @@ const DeployISO = (function () {
                 onCancel=${props.onCancel}
                 onEdit=${props.onEdit}
                 onDelete=${props.onDelete}
+                onDeleteStandalone=${props.onDeleteStandalone}
                 onToggleAuto=${props.onToggleAuto} />`;
             })}
           </div>` : null}
       </div>`;
   }
 
-  // ── ISO Row ──────────────────────────────────────────────────────────
-  function IsoRow(props) {
-    var iso = props.iso;
-    var E = Helpers.escapeHtml;
-    var sizeText = iso.size_bytes > 0 ? Helpers.formatBytes(iso.size_bytes) : t('osinstall_iso_no_file');
-
+  function StandaloneFileRow(props) {
+    var iso = props.iso, E = Helpers.escapeHtml;
+    var sz = iso.size_bytes > 0 ? Helpers.formatBytes(iso.size_bytes) : '';
+    var mt = iso.mod_time ? new Date(iso.mod_time).toLocaleString() : '';
     return html`
-      <tr data-name=${iso.name}>
-        <td><span class="text-sm font-medium" style="color:var(--color-text)">${E(iso.name)}</span></td>
-        <td><span class="text-xs" style="color:var(--color-text-tertiary)">${sizeText}</span></td>
-        <td style="text-align:right">
-          <button class="btn btn-ghost btn-danger-outline btn-sm"
-            onClick=${function () { props.onDelete(iso.name); }}>${t('osinstall_delete')}</button>
-        </td>
+      <tr data-standalone=${iso.name}>
+        <td><div class="font-medium" style="color:var(--color-text)">${E(iso.name)}</div><span class="badge badge-default" style="font-size:0.625rem;margin-top:0.125rem">${t('catalog_file_badge')}</span></td>
+        <td><span class="badge badge-blue" style="font-size:0.6875rem">${t('catalog_downloaded')}</span><span class="text-xs" style="color:var(--color-text-tertiary);margin-left:0.375rem">${sz}</span></td>
+        <td><span class="text-xs" style="color:var(--color-text-tertiary)">${mt}</span></td>
+        <td></td>
+        <td style="text-align:right"><button class="btn btn-ghost btn-danger-outline btn-sm" onClick=${function(){props.onDelete(iso.name);}}>${t('osinstall_delete')}</button></td>
       </tr>`;
+  }
+
+  function DownloadISOModal(props) {
+    var _fn=useState(''),fn=_fn[0],setFn=_fn[1];
+    var _u=useState(''),u=_u[0],setU=_u[1];
+    var _s=useState(false),s=_s[0],setS=_s[1];
+    function submit(){
+      var fname=fn.trim(),url=u.trim();
+      if(!fname){showToast(t('validation_required'),'error');return;}
+      if(!/\.iso$/i.test(fname)){showToast(t('validation_iso_filename'),'error');return;}
+      if(!url){showToast(t('validation_required'),'error');return;}
+      if(!Helpers.validateURL(url)){showToast(t('validation_iso_url'),'error');return;}
+      setS(true);
+      props.onSubmit(fname,url,function(){setS(false);setFn('');setU('');props.onClose();});
+    }
+    var fz='font-size:0.8125rem';
+    return html`
+      <div ref=${props.overlayRef} class="modal-overlay" onClick=${function(e){if(e.target===e.currentTarget)props.onClose();}} onKeyDown=${function(e){if(e.key==='Escape')props.onClose();}}>
+        <div class="modal-content" role="dialog" aria-modal="true" style="max-width:28rem">
+          <h3 class="text-base font-semibold mb-4" style="color:var(--color-text)">${t('osinstall_iso_trigger')}</h3>
+          <div class="grid gap-3">
+            <div><label class="text-xs font-medium" style="color:var(--color-text-secondary)">${t('osinstall_iso_url')}</label><input class="input" placeholder="https://example.com/path/to/file.iso" style=${fz} value=${u} onInput=${function(e){setU(e.target.value);}} /></div>
+            <div><label class="text-xs font-medium" style="color:var(--color-text-secondary)">${t('osinstall_iso_filename')}</label><input class="input" placeholder="ubuntu-24.04-live-server-amd64.iso" style=${fz} value=${fn} onInput=${function(e){setFn(e.target.value);}} /></div>
+          </div>
+          <div class="flex justify-end gap-3 mt-6">
+            <button class="btn btn-secondary" onClick=${props.onClose}>${t('cancel')}</button>
+            <button class="btn btn-primary" onClick=${submit} disabled=${s}>${s?'...':t('osinstall_iso_trigger')}</button>
+          </div>
+        </div>
+      </div>`;
   }
 
   // ── Catalog Entry Modal ──────────────────────────────────────────────
@@ -325,8 +366,6 @@ const DeployISO = (function () {
     var loading = _loading[0], setLoading = _loading[1];
     var _catError = useState(null);
     var catError = _catError[0], setCatError = _catError[1];
-    var _isoError = useState(null);
-    var isoError = _isoError[0], setIsoError = _isoError[1];
     var _catFilter = useState('');
     var catFilter = _catFilter[0], setCatFilter = _catFilter[1];
     var _showCatModal = useState(false);
@@ -334,17 +373,12 @@ const DeployISO = (function () {
     var _editEntry = useState(null);
     var editEntry = _editEntry[0], setEditEntry = _editEntry[1];
 
-    // ISO trigger form
-    var _isoFilename = useState('');
-    var isoFilename = _isoFilename[0], setIsoFilename = _isoFilename[1];
-    var _isoUrl = useState('');
-    var isoUrl = _isoUrl[0], setIsoUrl = _isoUrl[1];
+    var _showDlModal = useState(false);
+    var showDlModal = _showDlModal[0], setShowDlModal = _showDlModal[1];
 
     // Button states
     var _checkAllBtn = useState(false);
     var checkAllBtn = _checkAllBtn[0], setCheckAllBtn = _checkAllBtn[1];
-    var _triggerBtn = useState(false);
-    var triggerBtn = _triggerBtn[0], setTriggerBtn = _triggerBtn[1];
 
     var mountedRef = useRef(true);
     var overlayRef = useRef(null);
@@ -363,12 +397,7 @@ const DeployISO = (function () {
         } else {
           setCatError(t('error_load_failed'));
         }
-        if (isoOk) {
-          setIsos(r[1].data || []);
-          setIsoError(null);
-        } else {
-          setIsoError(t('error_load_failed'));
-        }
+        if (isoOk) setIsos(r[1].data || []);
         setLoading(false);
 
         // Fetch initial progress
@@ -431,14 +460,13 @@ const DeployISO = (function () {
       return m;
     }, [progress]);
 
-    // ── Group catalog by distro then arch ───────────────────────────────
+    // ── Group catalog + standalone ISOs by distro then arch ──────────
     var grouped = useMemo(function () {
       var filtered = catFilter ? catalog.filter(function (e) {
         if (catFilter === 'downloaded') return e.status === 'downloaded';
         return e.status !== 'downloaded';
       }) : catalog;
 
-      if (!filtered.length) return [];
       var groups = {};
       filtered.forEach(function (e) {
         var key = e.distro || 'other';
@@ -446,6 +474,36 @@ const DeployISO = (function () {
         var arch = e.arch || 'unknown';
         if (!groups[key][arch]) groups[key][arch] = [];
         groups[key][arch].push(e);
+      });
+
+      // Build set of filenames already covered by catalog entries
+      var catalogFiles = {};
+      catalog.forEach(function (e) {
+        if (e.current_url) {
+          catalogFiles[e.current_url.split('/').pop()] = true;
+        }
+      });
+
+      // Merge standalone ISO files not in catalog
+      var standaloneFiltered = catFilter === 'pending' ? [] : isos;
+      standaloneFiltered.forEach(function (iso) {
+        if (catalogFiles[iso.name]) return;
+        var parsed = parseISOFilename(iso.name);
+        var key = parsed.distro;
+        if (!groups[key]) groups[key] = {};
+        var arch = parsed.arch;
+        if (!groups[key][arch]) groups[key][arch] = [];
+        groups[key][arch].push({
+          id: 'file-' + iso.name,
+          name: iso.name,
+          distro: parsed.distro,
+          arch: parsed.arch,
+          status: 'downloaded',
+          download_status: 'downloaded',
+          size_bytes: iso.size_bytes,
+          mod_time: iso.mod_time,
+          _isStandalone: true
+        });
       });
 
       var sections = [];
@@ -456,7 +514,7 @@ const DeployISO = (function () {
         sections.push({ distro: distro, archGroups: archGroups, totalCount: totalCount });
       });
       return sections;
-    }, [catalog, catFilter]);
+    }, [catalog, isos, catFilter]);
 
     // ── Actions ─────────────────────────────────────────────────────────
     function handleCheckAll() {
@@ -580,30 +638,18 @@ const DeployISO = (function () {
       if (previousFocusRef.current && previousFocusRef.current.focus) previousFocusRef.current.focus();
     }
 
-    function handleTriggerISO() {
-      var fn = isoFilename.trim(), u = isoUrl.trim();
-      if (!fn) { showToast(t('validation_required'), 'error'); return; }
-      if (!/\.iso$/i.test(fn)) { showToast(t('validation_iso_filename'), 'error'); return; }
-      if (!u) { showToast(t('validation_required'), 'error'); return; }
-      if (!Helpers.validateURL(u)) { showToast(t('validation_iso_url'), 'error'); return; }
+    function handleDownloadISO(){previousFocusRef.current=document.activeElement;setShowDlModal(true);}
+    function closeDlModal(){setShowDlModal(false);if(previousFocusRef.current&&previousFocusRef.current.focus)previousFocusRef.current.focus();}
 
-      setTriggerBtn(true);
+    function handleTriggerISO(fn, u, done) {
       Api.get('/admin/dashboard/summary', { silent: true }).then(function (r) {
         var diskPct = (r && r.success && r.data && r.data.system) ? r.data.system.disk_usage_percent : 0;
-        if (diskPct > 95) {
-          showToast((t('disk_full_error') || 'Insufficient disk space (' + Math.round(diskPct) + '% used)'), 'error');
-          setTriggerBtn(false);
-          return;
-        }
-        if (diskPct > 85) {
-          showToast((t('disk_space_warning') || 'Low disk space: ' + Math.round(diskPct) + '% used'), 'warning');
-        }
+        if(diskPct>95){showToast((t('disk_full_error')||'Insufficient disk space ('+Math.round(diskPct)+'% used)'),'error');done();return;}
+        if(diskPct>85)showToast((t('disk_space_warning')||'Low disk space: '+Math.round(diskPct)+'% used'),'warning');
         Api.post('/admin/os-install/iso/download', { filename: fn, url: u }).then(function (r) {
-          setTriggerBtn(false);
+          done();
           if (!r || !r.success) { showToast((r && r.message) || t('error'), 'error'); return; }
           showToast(r.message || 'OK', 'success');
-          setIsoFilename('');
-          setIsoUrl('');
           fetchData();
         });
       });
@@ -639,6 +685,8 @@ const DeployISO = (function () {
               onClick=${handleCheckAll} disabled=${checkAllBtn}>
               ${checkAllBtn ? '...' : t('catalog_check_all')}
             </button>
+            <button class="btn btn-secondary btn-sm"
+              onClick=${handleDownloadISO}>${t('osinstall_iso_trigger')}</button>
             <button class="btn btn-primary btn-sm"
               onClick=${handleAddCatEntry}>${t('catalog_add_entry')}</button>
           </div>
@@ -646,20 +694,19 @@ const DeployISO = (function () {
 
         <div ref=${filterBarContainerRef} class="mb-4"></div>
 
-        <!-- Catalog section -->
         ${loading ? html`<div dangerouslySetInnerHTML=${{ __html: Components.skeletonTable(4, 7) }} />` : null}
         ${!loading && catError ? html`
           <div class="anim-fade-in empty-state">
             <p class="text-sm" style="color:var(--color-text-tertiary);margin-bottom:1rem">${catError}</p>
             <button class="btn btn-primary btn-sm" onClick=${function () { setLoading(true); setCatError(null); fetchData(); }}>${t('error_retry')}</button>
           </div>` : null}
-        ${!loading && !catError && !catalog.length ? html`
+        ${!loading && !catError && !catalog.length && !isos.length ? html`
           <div dangerouslySetInnerHTML=${{ __html: Components.emptyState({
             message: t('osinstall_empty'),
             description: t('cta_add_iso_entry_desc'),
             actionLabel: t('cta_add_iso_entry')
           }) }} />` : null}
-        ${!loading && !catError && catalog.length && !grouped.length ? html`
+        ${!loading && !catError && (catalog.length || isos.length) && !grouped.length ? html`
           <div dangerouslySetInnerHTML=${{ __html: Components.emptyState({ message: t('no_results') }) }} />` : null}
         ${!loading && !catError ? html`
           <div id="di-catalog">
@@ -669,54 +716,9 @@ const DeployISO = (function () {
                 onCheck=${handleCheckEntry} onDownload=${handleDownloadEntry}
                 onRetry=${handleRetry} onCancel=${handleCancel}
                 onEdit=${handleEditEntry} onDelete=${handleDeleteEntry}
+                onDeleteStandalone=${handleIsoDelete}
                 onToggleAuto=${handleToggleAuto} />`;
             })}
-          </div>` : null}
-
-        <div class="divider" style="margin:1.5rem 0"></div>
-
-        <!-- ISO files section -->
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-base font-semibold" style="color:var(--color-text)">${t('osinstall_iso_title')}</h2>
-        </div>
-
-        <div class="mb-4">
-          <div class="grid gap-3" style="grid-template-columns:1fr 2fr auto">
-            <input class="input" placeholder="${t('osinstall_iso_filename')}" style="font-size:0.8125rem"
-              value=${isoFilename} onInput=${function (e) { setIsoFilename(e.target.value); }} />
-            <input class="input" placeholder="${t('osinstall_iso_url')}" style="font-size:0.8125rem"
-              value=${isoUrl} onInput=${function (e) { setIsoUrl(e.target.value); }} />
-            <button class="btn btn-primary btn-sm" style="white-space:nowrap"
-              onClick=${handleTriggerISO} disabled=${triggerBtn}>
-              ${triggerBtn ? '...' : t('osinstall_iso_trigger')}
-            </button>
-          </div>
-        </div>
-
-        <!-- ISO list -->
-        ${loading ? html`<div dangerouslySetInnerHTML=${{ __html: Components.skeletonTable(3, 3) }} />` : null}
-        ${!loading && isoError ? html`
-          <div dangerouslySetInnerHTML=${{ __html: Components.emptyState({ message: t('error_load_failed') }) }} />` : null}
-        ${!loading && !isoError && !isos.length ? html`
-          <div dangerouslySetInnerHTML=${{ __html: Components.emptyState({
-            message: t('osinstall_iso_empty'),
-            description: t('cta_browse_iso_catalog_desc'),
-            actionLabel: t('cta_browse_iso_catalog')
-          }) }} />` : null}
-        ${!loading && !isoError && isos.length ? html`
-          <div class="table-wrap overflow-x-auto">
-            <table>
-              <thead><tr>
-                <th>${t('osinstall_iso_filename')}</th>
-                <th>${t('osinstall_iso_size')}</th>
-                <th style="text-align:right">${t('actions')}</th>
-              </tr></thead>
-              <tbody>
-                ${isos.map(function (iso) {
-                  return html`<${IsoRow} key=${iso.name} iso=${iso} onDelete=${handleIsoDelete} />`;
-                })}
-              </tbody>
-            </table>
           </div>` : null}
 
         <!-- Modals -->
@@ -728,6 +730,12 @@ const DeployISO = (function () {
             onSaved=${fetchData}
             handleOverlayClick=${handleOverlayClick}
             handleKeyDown=${handleKeyDown}
+          />` : null}
+        ${showDlModal ? html`
+          <${DownloadISOModal}
+            overlayRef=${overlayRef}
+            onClose=${closeDlModal}
+            onSubmit=${handleTriggerISO}
           />` : null}
       </div>`;
   }

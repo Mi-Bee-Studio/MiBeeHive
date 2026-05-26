@@ -52,6 +52,14 @@ func (r *StorageResolver) ResolveISO() string {
 	return filepath.Join(r.cfg.Storage.BasePath, "os-install")
 }
 
+// ResolveWebDAV returns the storage path for WebDAV shared files.
+// Fallback: base_path/webdav
+func (r *StorageResolver) ResolveWebDAV() string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return filepath.Join(r.cfg.Storage.BasePath, "webdav")
+}
+
 // UpdateConfig atomically swaps the config for hot-reload.
 func (r *StorageResolver) UpdateConfig(newCfg *config.Config) {
 	r.mu.Lock()

@@ -275,7 +275,7 @@ func TestTriggerCrawl_NewReleases(t *testing.T) {
 	cfg.Storage.BasePath = tmpDir
 	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
 
-	fileService := service.NewFileService(db, tmpDir, 2, nil)
+	fileService := service.NewFileService(db, service.NewStorageResolver(&config.Config{Storage: config.StorageConfig{BasePath: tmpDir}}), 2, nil)
 
 	mc := &MockCrawler{
 		name:       "github",
@@ -318,7 +318,7 @@ func TestConcurrentCrawlLock(t *testing.T) {
 	cfg.Storage.BasePath = tmpDir
 	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
 
-	fileService := service.NewFileService(db, tmpDir, 2, nil)
+	fileService := service.NewFileService(db, service.NewStorageResolver(&config.Config{Storage: config.StorageConfig{BasePath: tmpDir}}), 2, nil)
 
 	// Crawler that blocks until signaled.
 	unblock := make(chan struct{})
@@ -374,7 +374,7 @@ func TestTriggerCrawl_ProjectNotFound(t *testing.T) {
 	cfg.Storage.BasePath = tmpDir
 	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
 
-	fileService := service.NewFileService(db, tmpDir, 2, nil)
+	fileService := service.NewFileService(db, service.NewStorageResolver(&config.Config{Storage: config.StorageConfig{BasePath: tmpDir}}), 2, nil)
 	mgr := NewCrawlManager(db, fileService, cfg, logger, nil)
 
 	_, err := mgr.TriggerCrawl(context.Background(), "nonexistent")
@@ -394,7 +394,7 @@ func TestTriggerCrawl_FetchError(t *testing.T) {
 	cfg.Storage.BasePath = tmpDir
 	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
 
-	fileService := service.NewFileService(db, tmpDir, 2, nil)
+	fileService := service.NewFileService(db, service.NewStorageResolver(&config.Config{Storage: config.StorageConfig{BasePath: tmpDir}}), 2, nil)
 
 	mc := &MockCrawler{
 		name:       "github",
@@ -435,7 +435,7 @@ func TestTriggerCrawl_RateLimited(t *testing.T) {
 	cfg.Storage.BasePath = tmpDir
 	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
 
-	fileService := service.NewFileService(db, tmpDir, 2, nil)
+	fileService := service.NewFileService(db, service.NewStorageResolver(&config.Config{Storage: config.StorageConfig{BasePath: tmpDir}}), 2, nil)
 
 	mc := &MockCrawler{
 		name:       "github",
@@ -466,7 +466,7 @@ func TestGetCrawlStatus(t *testing.T) {
 	cfg.Storage.BasePath = tmpDir
 	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
 
-	fileService := service.NewFileService(db, tmpDir, 2, nil)
+	fileService := service.NewFileService(db, service.NewStorageResolver(&config.Config{Storage: config.StorageConfig{BasePath: tmpDir}}), 2, nil)
 	mgr := NewCrawlManager(db, fileService, cfg, logger, nil)
 
 	statuses := mgr.GetCrawlStatus()

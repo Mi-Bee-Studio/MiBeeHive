@@ -117,4 +117,8 @@ const (
 	RouteRetentionUpdate  = "PUT /api/v1/admin/retention/{id}"
 	RouteRetentionDelete  = "DELETE /api/v1/admin/retention/{id}"
 	RouteRetentionExecute = "POST /api/v1/admin/retention/{id}/execute"
+	// Storage config
+	RouteStorageConfig        = "/api/v1/admin/config/storage"
+	RouteStorageMigrations    = "/api/v1/admin/storage/migrations"
+	RouteStorageMigrationByID = "/api/v1/admin/storage/migrations/"
 )

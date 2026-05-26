@@ -41,7 +41,7 @@ var retryBackoffs = []time.Duration{5 * time.Second, 10 * time.Second, 15 * time
 type FileService struct {
 	db         *sql.DB
 	fileRepo   *dbrepo.FileRepo
-	basePath   string
+	resolver   *StorageResolver
 	semaphore  chan struct{}
 	httpClient *http.Client
 	progress   sync.Map    // int64 (fileID) → *DownloadProgress
@@ -71,11 +71,11 @@ func (s *FileService) GetActiveProgress() map[int64]*DownloadProgress {
 }
 
 // NewFileService creates a new FileService with concurrency control.
-func NewFileService(db *sql.DB, basePath string, maxConcurrent int, m *metrics.Metrics) *FileService {
+func NewFileService(db *sql.DB, resolver *StorageResolver, maxConcurrent int, m *metrics.Metrics) *FileService {
 	return &FileService{
 		db:       db,
 		fileRepo: dbrepo.NewFileRepo(db),
-		basePath: basePath,
+		resolver: resolver,
 		semaphore: make(chan struct{}, maxConcurrent),
 		httpClient: &http.Client{
 			Transport: &http.Transport{
@@ -467,7 +467,7 @@ func (s *FileService) GetDiskUsage(basePath string) (total, used, avail int64, e
 // CheckDiskSpace verifies that the filesystem has at least 110% of the
 // required bytes available (10% safety margin).
 func (s *FileService) CheckDiskSpace(requiredBytes int64) error {
-	_, _, avail, err := s.GetDiskUsage(s.basePath)
+	_, _, avail, err := s.GetDiskUsage(s.resolver.ResolveOSS())
 	if err != nil {
 		return err
 	}

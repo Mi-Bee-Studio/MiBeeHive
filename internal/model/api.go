@@ -239,3 +239,43 @@ type MonitorConfigResponse struct {
 	DiskCriticalPercent int  `json:"disk_critical_percent"`
 	DiskCheckEnabled    bool `json:"disk_check_enabled"`
 }
+
+// StorageConfigResponse returns current storage path configuration.
+type StorageConfigResponse struct {
+	OSS              string `json:"oss"`
+	OSInstall        string `json:"os_install"`
+	ISO              string `json:"iso"`
+	OSSFallback      string `json:"oss_fallback"`
+	OSInstallFallback string `json:"os_install_fallback"`
+	ISOFallback      string `json:"iso_fallback"`
+}
+
+// StorageConfigUpdateRequest updates storage module paths.
+type StorageConfigUpdateRequest struct {
+	OSS       *string `json:"oss,omitempty"`
+	OSInstall *string `json:"os_install,omitempty"`
+	ISO       *string `json:"iso,omitempty"`
+}
+
+// StorageConfigUpdateResponse returns migration task IDs triggered by the update.
+type StorageConfigUpdateResponse struct {
+	MigrationIDs []int64 `json:"migration_ids"`
+}
+
+// MigrationTaskResponse represents a migration task for the API.
+type MigrationTaskResponse struct {
+	ID            int64  `json:"id"`
+	Module        string `json:"module"`
+	OldPath       string `json:"old_path"`
+	NewPath       string `json:"new_path"`
+	Status        string `json:"status"`
+	Progress      int    `json:"progress"`
+	TotalFiles    int    `json:"total_files"`
+	MigratedFiles int    `json:"migrated_files"`
+	TotalBytes    int64  `json:"total_bytes"`
+	MigratedBytes int64  `json:"migrated_bytes"`
+	StartedAt     string `json:"started_at,omitempty"`
+	CompletedAt   string `json:"completed_at,omitempty"`
+	ErrorMessage  string `json:"error_message,omitempty"`
+	CreatedAt     string `json:"created_at"`
+}

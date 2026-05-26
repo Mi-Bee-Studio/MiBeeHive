@@ -371,7 +371,7 @@ func TestDownloadFile(t *testing.T) {
 		t.Fatalf("failed to update file path: %v", err)
 	}
 
-	fileService := service.NewFileService(database, tmpDir, 2, nil)
+	fileService := service.NewFileService(database, service.NewStorageResolver(&config.Config{Storage: config.StorageConfig{BasePath: tmpDir}}), 2, nil)
 	h := NewFileHandler(database, fileService, testJWTSecret)
 
 	mux := http.NewServeMux()
@@ -402,7 +402,7 @@ func TestSystemInfo(t *testing.T) {
 	database := setupTestDB(t)
 	defer database.Close()
 	tmpDir := t.TempDir()
-	fileService := service.NewFileService(database, tmpDir, 2, nil)
+	fileService := service.NewFileService(database, service.NewStorageResolver(&config.Config{Storage: config.StorageConfig{BasePath: tmpDir}}), 2, nil)
 	h := NewSystemHandler(database, fileService, tmpDir, "test-version", "http://localhost:9100/metrics")
 
 	mux := http.NewServeMux()
@@ -657,12 +657,12 @@ func TestAdminEndpoints_Return401WithoutJWT(t *testing.T) {
 		Crawler: config.CrawlerConfig{MaxConcurrent: 2, DefaultInterval: "6h"},
 	}
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
-	fileService := service.NewFileService(database, tmpDir, 2, nil)
+	fileService := service.NewFileService(database, service.NewStorageResolver(&config.Config{Storage: config.StorageConfig{BasePath: tmpDir}}), 2, nil)
 	cm := crawler.NewCrawlManager(database, fileService, cfg, logger, nil)
 
 	projectRepo := db.NewProjectRepo(database)
 	credRepo := db.NewSourceCredentialRepo(database)
-	adminH := NewAdminHandler(projectRepo, db.NewFileRepo(database), credRepo, cm, cfg, "")
+	adminH := NewAdminHandler(projectRepo, db.NewFileRepo(database), credRepo, cm, cfg, "", service.NewStorageResolver(cfg))
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET "+model.RouteAdminProjectsList, adminH.ListProjects)

@@ -142,6 +142,39 @@ func (r *MigrationTaskRepo) UpdateError(ctx context.Context, id int64, errMsg st
 	return nil
 }
 
+// SetStarted sets status to 'running' and records started_at.
+func (r *MigrationTaskRepo) SetStarted(ctx context.Context, id int64) error {
+	_, err := r.db.ExecContext(ctx,
+		"UPDATE storage_migrations SET status = 'running', started_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+		id)
+	if err != nil {
+		return fmt.Errorf("setting migration task %d as started: %w", id, err)
+	}
+	return nil
+}
+
+// SetCompleted sets status to 'completed' and records completed_at.
+func (r *MigrationTaskRepo) SetCompleted(ctx context.Context, id int64) error {
+	_, err := r.db.ExecContext(ctx,
+		"UPDATE storage_migrations SET status = 'completed', completed_at = CURRENT_TIMESTAMP, progress = 100, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+		id)
+	if err != nil {
+		return fmt.Errorf("setting migration task %d as completed: %w", id, err)
+	}
+	return nil
+}
+
+// UpdateTotals sets total_files and total_bytes for a migration task.
+func (r *MigrationTaskRepo) UpdateTotals(ctx context.Context, id int64, totalFiles int, totalBytes int64) error {
+	_, err := r.db.ExecContext(ctx,
+		"UPDATE storage_migrations SET total_files = ?, total_bytes = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+		totalFiles, totalBytes, id)
+	if err != nil {
+		return fmt.Errorf("updating totals for migration task %d: %w", id, err)
+	}
+	return nil
+}
+
 func scanMigrationTask(s interface{ Scan(dest ...any) error }) (*MigrationTask, error) {
 	task := &MigrationTask{}
 	var startedAt, completedAt sql.NullTime

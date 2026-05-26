@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/Mi-Bee-Studio/mibeehive/internal/config"
 	"github.com/Mi-Bee-Studio/mibeehive/internal/model"
 	"github.com/Mi-Bee-Studio/mibeehive/internal/service"
 )
@@ -21,7 +22,7 @@ func TestRetry_Success(t *testing.T) {
 	}
 
 	tmpDir := t.TempDir()
-	fileService := service.NewFileService(database, tmpDir, 2, nil)
+	fileService := service.NewFileService(database, service.NewStorageResolver(&config.Config{Storage: config.StorageConfig{BasePath: tmpDir}}), 2, nil)
 	h := NewFileHandler(database, fileService, testJWTSecret)
 
 	mux := http.NewServeMux()
@@ -114,7 +115,7 @@ func TestRetry_FailedPermanentStatus(t *testing.T) {
 	}
 
 	tmpDir := t.TempDir()
-	fileService := service.NewFileService(database, tmpDir, 2, nil)
+	fileService := service.NewFileService(database, service.NewStorageResolver(&config.Config{Storage: config.StorageConfig{BasePath: tmpDir}}), 2, nil)
 	h := NewFileHandler(database, fileService, testJWTSecret)
 
 	mux := http.NewServeMux()
@@ -204,7 +205,7 @@ func TestQueueProgress(t *testing.T) {
 	defer database.Close()
 
 	tmpDir := t.TempDir()
-	fileService := service.NewFileService(database, tmpDir, 2, nil)
+	fileService := service.NewFileService(database, service.NewStorageResolver(&config.Config{Storage: config.StorageConfig{BasePath: tmpDir}}), 2, nil)
 	h := NewFileHandler(database, fileService, testJWTSecret)
 
 	mux := http.NewServeMux()

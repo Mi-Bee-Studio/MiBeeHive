@@ -7,6 +7,7 @@ import (
 
 	"github.com/Mi-Bee-Studio/mibeehive/internal/config"
 	"github.com/Mi-Bee-Studio/mibeehive/internal/crawler"
+	"github.com/Mi-Bee-Studio/mibeehive/internal/service"
 
 	dbrepo "github.com/Mi-Bee-Studio/mibeehive/internal/db"
 )
@@ -22,12 +23,12 @@ type AdminHandler struct {
 }
 
 // NewAdminHandler creates a new AdminHandler with all sub-handlers.
-func NewAdminHandler(projectRepo *dbrepo.ProjectRepo, fileRepo *dbrepo.FileRepo, credRepo *dbrepo.SourceCredentialRepo, crawlManager *crawler.CrawlManager, cfg *config.Config, configPath string) *AdminHandler {
+func NewAdminHandler(projectRepo *dbrepo.ProjectRepo, fileRepo *dbrepo.FileRepo, credRepo *dbrepo.SourceCredentialRepo, crawlManager *crawler.CrawlManager, cfg *config.Config, configPath string, resolver *service.StorageResolver) *AdminHandler {
 	return &AdminHandler{
 		ProjectAdminHandler: NewProjectAdminHandler(projectRepo, fileRepo, crawlManager, cfg),
 		CrawlControlHandler: NewCrawlControlHandler(projectRepo, credRepo, crawlManager),
 		ConfigHandler:       NewConfigHandler(cfg, configPath),
-		WebDAVAdminHandler:  NewWebDAVAdminHandler(cfg),
+		WebDAVAdminHandler:  NewWebDAVAdminHandler(cfg, resolver),
 	}
 }
 

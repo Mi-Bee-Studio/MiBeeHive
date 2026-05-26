@@ -11,17 +11,20 @@ import (
 	"github.com/Mi-Bee-Studio/mibeehive/internal/config"
 	"github.com/Mi-Bee-Studio/mibeehive/internal/middleware"
 	"github.com/Mi-Bee-Studio/mibeehive/internal/model"
+	"github.com/Mi-Bee-Studio/mibeehive/internal/service"
 )
 
 // WebDAVAdminHandler handles admin WebDAV status and file listing endpoints.
 type WebDAVAdminHandler struct {
-	config *config.Config
+	config   *config.Config
+	resolver *service.StorageResolver
 }
 
 // NewWebDAVAdminHandler creates a new WebDAVAdminHandler.
-func NewWebDAVAdminHandler(cfg *config.Config) *WebDAVAdminHandler {
+func NewWebDAVAdminHandler(cfg *config.Config, resolver *service.StorageResolver) *WebDAVAdminHandler {
 	return &WebDAVAdminHandler{
-		config: cfg,
+		config:   cfg,
+		resolver: resolver,
 	}
 }
 
@@ -35,7 +38,7 @@ func (h *WebDAVAdminHandler) WebDAVStatus(w http.ResponseWriter, r *http.Request
 	resp := model.WebDAVStatusResponse{
 		Enabled:     true,
 		HTTPURL:     httpURL,
-		StoragePath: filepath.Join(h.config.Storage.BasePath, "webdav"),
+		StoragePath: h.resolver.ResolveWebDAV(),
 	}
 	if h.config.Server.HTTPSPort > 0 {
 		resp.HTTPSURL = fmt.Sprintf("https://%s:%d/webdav/", host, h.config.Server.HTTPSPort)
@@ -50,7 +53,7 @@ func (h *WebDAVAdminHandler) WebDAVStatus(w http.ResponseWriter, r *http.Request
 // It lists files in the WebDAV storage directory with recursive navigation.
 // Accepts optional ?path=subdirectory query parameter for browsing subdirectories.
 func (h *WebDAVAdminHandler) WebDAVFileList(w http.ResponseWriter, r *http.Request) {
-	webdavPath := filepath.Join(h.config.Storage.BasePath, "webdav")
+	webdavPath := h.resolver.ResolveWebDAV()
 	absWebdavRoot, err := filepath.Abs(webdavPath)
 	if err != nil {
 		middleware.WriteError(w, http.StatusInternalServerError, model.ERR_INTERNAL, "操作失败，请稍后重试", err)

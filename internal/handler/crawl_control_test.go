@@ -31,7 +31,7 @@ func setupCrawlControlHandler(t *testing.T, database *sql.DB) (*CrawlControlHand
 		Crawler: config.CrawlerConfig{MaxConcurrent: 2, DefaultInterval: "6h"},
 	}
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
-	fileService := service.NewFileService(database, tmpDir, 2, nil)
+	fileService := service.NewFileService(database, service.NewStorageResolver(&config.Config{Storage: config.StorageConfig{BasePath: tmpDir}}), 2, nil)
 	cm := crawler.NewCrawlManager(database, fileService, cfg, logger, nil)
 
 	return NewCrawlControlHandler(projectRepo, credRepo, cm), cm, cfg

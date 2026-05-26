@@ -425,3 +425,17 @@ func (r *FileRepo) UpdateLocalPath(ctx context.Context, id int64, newPath string
 	}
 	return nil
 }
+
+// FindByLocalPath finds a file record by its local_path. Returns nil, nil if not found.
+func (r *FileRepo) FindByLocalPath(ctx context.Context, localPath string) (*File, error) {
+	row := r.db.QueryRowContext(ctx,
+		"SELECT "+fileColumns+" FROM files WHERE local_path = ?", localPath)
+	f, err := scanFileRow(row)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return f, nil
+}

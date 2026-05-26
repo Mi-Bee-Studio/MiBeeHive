@@ -8,12 +8,11 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/Mi-Bee-Studio/mibeehive/internal/config"
 	"github.com/Mi-Bee-Studio/mibeehive/internal/model"
 	"github.com/Mi-Bee-Studio/mibeehive/internal/service"
 )
 
-// setupISOHandler creates an ISOHandler with a temp ISO directory.
-// The ISO service's base path is set up so that ISOs are stored under basePath/os-install/.
 func setupISOHandler(t *testing.T) (*ISOHandler, string) {
 	t.Helper()
 	tmpDir := t.TempDir()
@@ -21,7 +20,8 @@ func setupISOHandler(t *testing.T) (*ISOHandler, string) {
 	if err := os.MkdirAll(isoDir, 0755); err != nil {
 		t.Fatalf("failed to create iso dir: %v", err)
 	}
-	isoService := service.NewISOService(tmpDir, 1, nil)
+	resolver := service.NewStorageResolver(&config.Config{Storage: config.StorageConfig{BasePath: tmpDir}})
+	isoService := service.NewISOService(resolver, 1, nil)
 	h := NewISOHandler(isoService, nil, testJWTSecret)
 	return h, isoDir
 }

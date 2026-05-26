@@ -34,7 +34,7 @@ func TestCrawlTrigger_RateLimited(t *testing.T) {
 	defer database.Close()
 
 	tmpDir := t.TempDir()
-	fileService := service.NewFileService(database, tmpDir, 2, nil)
+	fileService := service.NewFileService(database, service.NewStorageResolver(&config.Config{Storage: config.StorageConfig{BasePath: tmpDir}}), 2, nil)
 
 	cfg := &config.Config{
 		Server:  config.ServerConfig{Port: 9090, BindAddr: "0.0.0.0"},

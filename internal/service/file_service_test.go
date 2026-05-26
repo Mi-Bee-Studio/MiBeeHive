@@ -19,6 +19,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Mi-Bee-Studio/mibeehive/internal/config"
 	"github.com/Mi-Bee-Studio/mibeehive/internal/db"
 	"github.com/Mi-Bee-Studio/mibeehive/internal/model"
 	_ "modernc.org/sqlite"
@@ -59,6 +60,12 @@ func setupTestDB(t *testing.T) *sql.DB {
 		t.Fatalf("create table: %v", err)
 	}
 	return d
+}
+
+// newTestResolver creates a StorageResolver pointing at the given base directory.
+func newTestResolver(t *testing.T, basePath string) *StorageResolver {
+	t.Helper()
+	return NewStorageResolver(&config.Config{Storage: config.StorageConfig{BasePath: basePath}})
 }
 
 // insertTestFile inserts a file record and returns it as a model.File.
@@ -129,7 +136,7 @@ func TestDownloadFile(t *testing.T) {
 
 	mf := insertTestFile(t, testDB, "testfile.tar.gz", server.URL+"/testfile.tar.gz", localPath)
 
-	svc := NewFileService(testDB, tmpDir, 2, nil)
+	svc := NewFileService(testDB, newTestResolver(t, tmpDir), 2, nil)
 	err := svc.DownloadFile(context.Background(), mf)
 	if err != nil {
 		t.Fatalf("DownloadFile failed: %v", err)
@@ -168,7 +175,7 @@ func TestDownloadFile_TempFileCleanupOnSuccess(t *testing.T) {
 
 	mf := insertTestFile(t, testDB, "myapp.tar.gz", server.URL+"/myapp.tar.gz", localPath)
 
-	svc := NewFileService(testDB, tmpDir, 2, nil)
+	svc := NewFileService(testDB, newTestResolver(t, tmpDir), 2, nil)
 	err := svc.DownloadFile(context.Background(), mf)
 	if err != nil {
 		t.Fatalf("DownloadFile failed: %v", err)
@@ -206,7 +213,7 @@ func TestVerifyIntegrity_ValidTarGz(t *testing.T) {
 	gw.Close()
 	f.Close()
 
-	svc := NewFileService(nil, tmpDir, 2, nil)
+	svc := NewFileService(nil, newTestResolver(t, tmpDir), 2, nil)
 	if err := svc.VerifyIntegrity(path); err != nil {
 		t.Fatalf("VerifyIntegrity valid tar.gz failed: %v", err)
 	}
@@ -221,7 +228,7 @@ func TestVerifyIntegrity_InvalidTarGz(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	svc := NewFileService(nil, tmpDir, 2, nil)
+	svc := NewFileService(nil, newTestResolver(t, tmpDir), 2, nil)
 	err := svc.VerifyIntegrity(path)
 	if err == nil {
 		t.Fatal("VerifyIntegrity should have failed for invalid tar.gz")
@@ -236,7 +243,7 @@ func TestVerifyIntegrity_EmptyFile(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	svc := NewFileService(nil, tmpDir, 2, nil)
+	svc := NewFileService(nil, newTestResolver(t, tmpDir), 2, nil)
 	err := svc.VerifyIntegrity(path)
 	if err == nil {
 		t.Fatal("VerifyIntegrity should have failed for empty file")
@@ -244,7 +251,7 @@ func TestVerifyIntegrity_EmptyFile(t *testing.T) {
 }
 
 func TestVerifyIntegrity_NonExistent(t *testing.T) {
-	svc := NewFileService(nil, t.TempDir(), 2, nil)
+	svc := NewFileService(nil, newTestResolver(t, t.TempDir()), 2, nil)
 	err := svc.VerifyIntegrity("/nonexistent/path/file.tar.gz")
 	if err == nil {
 		t.Fatal("VerifyIntegrity should have failed for non-existent file")
@@ -253,7 +260,7 @@ func TestVerifyIntegrity_NonExistent(t *testing.T) {
 
 func TestCheckDiskSpace(t *testing.T) {
 	tmpDir := t.TempDir()
-	svc := NewFileService(nil, tmpDir, 2, nil)
+	svc := NewFileService(nil, newTestResolver(t, tmpDir), 2, nil)
 
 	// Requesting 0 bytes should always succeed.
 	if err := svc.CheckDiskSpace(0); err != nil {
@@ -273,7 +280,7 @@ func TestCheckDiskSpace(t *testing.T) {
 
 func TestGetDiskUsage(t *testing.T) {
 	tmpDir := t.TempDir()
-	svc := NewFileService(nil, tmpDir, 2, nil)
+	svc := NewFileService(nil, newTestResolver(t, tmpDir), 2, nil)
 
 	total, used, avail, err := svc.GetDiskUsage(tmpDir)
 	if err != nil {
@@ -320,7 +327,7 @@ func TestConcurrentLimit(t *testing.T) {
 
 	tmpDir := t.TempDir()
 	testDB := setupTestDB(t)
-	svc := NewFileService(testDB, tmpDir, 2, nil) // maxConcurrent = 2
+	svc := NewFileService(testDB, newTestResolver(t, tmpDir), 2, nil) // maxConcurrent = 2
 
 	var wg sync.WaitGroup
 	for i := 0; i < 4; i++ {
@@ -367,7 +374,7 @@ func TestRetryOnFailure(t *testing.T) {
 	retryBackoffs = []time.Duration{10 * time.Millisecond, 10 * time.Millisecond, 10 * time.Millisecond}
 	defer func() { retryBackoffs = origBackoffs }()
 
-	svc := NewFileService(testDB, tmpDir, 2, nil)
+	svc := NewFileService(testDB, newTestResolver(t, tmpDir), 2, nil)
 	err := svc.DownloadFile(context.Background(), mf)
 	if err != nil {
 		t.Fatalf("DownloadFile with retries failed: %v", err)
@@ -415,7 +422,7 @@ func TestRetryNoRetryOn4xx(t *testing.T) {
 	retryBackoffs = []time.Duration{10 * time.Millisecond, 10 * time.Millisecond, 10 * time.Millisecond}
 	defer func() { retryBackoffs = origBackoffs }()
 
-	svc := NewFileService(testDB, tmpDir, 2, nil)
+	svc := NewFileService(testDB, newTestResolver(t, tmpDir), 2, nil)
 	err := svc.DownloadFile(context.Background(), mf)
 	if err == nil {
 		t.Fatal("DownloadFile should have failed on 404")
@@ -450,7 +457,7 @@ func TestStreamFile(t *testing.T) {
 		LocalPath: path,
 	}
 
-	svc := NewFileService(nil, tmpDir, 2, nil)
+	svc := NewFileService(nil, newTestResolver(t, tmpDir), 2, nil)
 
 	w := httptest.NewRecorder()
 	err := svc.StreamFile(w, mf)
@@ -489,7 +496,7 @@ func TestStreamFile_NotFound(t *testing.T) {
 		LocalPath: "/nonexistent/missing.txt",
 	}
 
-	svc := NewFileService(nil, t.TempDir(), 2, nil)
+	svc := NewFileService(nil, newTestResolver(t, t.TempDir()), 2, nil)
 	w := httptest.NewRecorder()
 	err := svc.StreamFile(w, mf)
 	if err == nil {
@@ -504,7 +511,7 @@ func TestVerifyIntegrity_ValidZip(t *testing.T) {
 	// Create a valid zip file.
 	createTestZip(t, path, "test.txt", []byte("hello zip"))
 
-	svc := NewFileService(nil, tmpDir, 2, nil)
+	svc := NewFileService(nil, newTestResolver(t, tmpDir), 2, nil)
 	if err := svc.VerifyIntegrity(path); err != nil {
 		t.Fatalf("VerifyIntegrity valid zip failed: %v", err)
 	}
@@ -517,7 +524,7 @@ func TestVerifyIntegrity_InvalidZip(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	svc := NewFileService(nil, tmpDir, 2, nil)
+	svc := NewFileService(nil, newTestResolver(t, tmpDir), 2, nil)
 	err := svc.VerifyIntegrity(path)
 	if err == nil {
 		t.Fatal("VerifyIntegrity should fail for invalid zip")
@@ -531,7 +538,7 @@ func TestVerifyIntegrity_UnknownExtension(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	svc := NewFileService(nil, tmpDir, 2, nil)
+	svc := NewFileService(nil, newTestResolver(t, tmpDir), 2, nil)
 	if err := svc.VerifyIntegrity(path); err != nil {
 		t.Fatalf("VerifyIntegrity should pass for unknown extension: %v", err)
 	}
@@ -576,7 +583,7 @@ func TestDownloadFile_SizeMismatch(t *testing.T) {
 	mf := insertTestFile(t, testDB, "mismatch.tar.gz", server.URL+"/mismatch.tar.gz", localPath)
 	mf.SizeBytes = int64(len(content)) * 10 // Expected 10x the actual content.
 
-	svc := NewFileService(testDB, tmpDir, 2, nil)
+	svc := NewFileService(testDB, newTestResolver(t, tmpDir), 2, nil)
 	err := svc.DownloadFile(context.Background(), mf)
 	if err == nil {
 		t.Fatal("expected size mismatch error")
@@ -613,7 +620,7 @@ func TestFileService_Cancel(t *testing.T) {
 	mf := insertTestFile(t, testDB, "cancel-test.bin", server.URL+"/cancel-test.bin", localPath)
 	mf.SizeBytes = 0 // Unknown size so no size mismatch
 
-	svc := NewFileService(testDB, tmpDir, 2, nil)
+	svc := NewFileService(testDB, newTestResolver(t, tmpDir), 2, nil)
 
 	ctx, cancel := context.WithCancel(context.Background())
 

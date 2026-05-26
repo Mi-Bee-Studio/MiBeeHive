@@ -145,7 +145,7 @@ func TestAdminChangePassword_InvalidatesOldToken(t *testing.T) {
 	}
 	tmpDir := t.TempDir()
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
-	fileService := service.NewFileService(database, tmpDir, 2, nil)
+	fileService := service.NewFileService(database, service.NewStorageResolver(&config.Config{Storage: config.StorageConfig{BasePath: tmpDir}}), 2, nil)
 	cm := crawler.NewCrawlManager(database, fileService, cfg, logger, nil)
 
 	projectRepo := db.NewProjectRepo(database)

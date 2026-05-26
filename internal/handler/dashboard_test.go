@@ -26,7 +26,7 @@ func TestDashboardSummary_Success(t *testing.T) {
 	crawlLogRepo := dbrepo.NewCrawlLogRepo(database)
 	osConfigRepo := dbrepo.NewOsInstallConfigRepo(database)
 	isoCatalogRepo := dbrepo.NewISOCatalogRepo(database)
-	fileService := service.NewFileService(database, tmpDir, 2, nil)
+	fileService := service.NewFileService(database, service.NewStorageResolver(&config.Config{Storage: config.StorageConfig{BasePath: tmpDir}}), 2, nil)
 
 	dashSvc := service.NewDashboardService(fileService, projectRepo, fileRepo, crawlLogRepo, osConfigRepo, isoCatalogRepo, cfg, "test-version")
 	h := NewDashboardHandler(dashSvc)
@@ -100,7 +100,7 @@ func TestDashboardSummary_EmptyData(t *testing.T) {
 	crawlLogRepo := dbrepo.NewCrawlLogRepo(database)
 	osConfigRepo := dbrepo.NewOsInstallConfigRepo(database)
 	isoCatalogRepo := dbrepo.NewISOCatalogRepo(database)
-	fileService := service.NewFileService(database, tmpDir, 2, nil)
+	fileService := service.NewFileService(database, service.NewStorageResolver(&config.Config{Storage: config.StorageConfig{BasePath: tmpDir}}), 2, nil)
 
 	dashSvc := service.NewDashboardService(fileService, projectRepo, fileRepo, crawlLogRepo, osConfigRepo, isoCatalogRepo, cfg, "test-version")
 	h := NewDashboardHandler(dashSvc)
@@ -176,7 +176,7 @@ func TestDashboardSummary_AuthRequired(t *testing.T) {
 	crawlLogRepo := dbrepo.NewCrawlLogRepo(database)
 	osConfigRepo := dbrepo.NewOsInstallConfigRepo(database)
 	isoCatalogRepo := dbrepo.NewISOCatalogRepo(database)
-	fileService := service.NewFileService(database, tmpDir, 2, nil)
+	fileService := service.NewFileService(database, service.NewStorageResolver(&config.Config{Storage: config.StorageConfig{BasePath: tmpDir}}), 2, nil)
 
 	dashSvc := service.NewDashboardService(fileService, projectRepo, fileRepo, crawlLogRepo, osConfigRepo, isoCatalogRepo, cfg, "test-version")
 	h := NewDashboardHandler(dashSvc)

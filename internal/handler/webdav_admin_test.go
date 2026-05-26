@@ -8,6 +8,7 @@ import (
 
 	"github.com/Mi-Bee-Studio/mibeehive/internal/config"
 	"github.com/Mi-Bee-Studio/mibeehive/internal/model"
+	"github.com/Mi-Bee-Studio/mibeehive/internal/service"
 )
 
 func setupWebDAVAdminHandler(t *testing.T) (*WebDAVAdminHandler, *config.Config) {
@@ -21,7 +22,8 @@ func setupWebDAVAdminHandler(t *testing.T) (*WebDAVAdminHandler, *config.Config)
 		Storage: config.StorageConfig{BasePath: tmpDir},
 		Server:  config.ServerConfig{Port: 9090},
 	}
-	return NewWebDAVAdminHandler(cfg), cfg
+	resolver := service.NewStorageResolver(cfg)
+	return NewWebDAVAdminHandler(cfg, resolver), cfg
 }
 
 func registerWebDAVAdminRoutes(mux *http.ServeMux, h *WebDAVAdminHandler) {

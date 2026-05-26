@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Mi-Bee-Studio/mibeehive/internal/config"
 	"github.com/Mi-Bee-Studio/mibeehive/internal/db"
 	"github.com/Mi-Bee-Studio/mibeehive/internal/model"
 	_ "modernc.org/sqlite"
@@ -66,8 +67,6 @@ func newTestCatalogService(t *testing.T, database *sql.DB, isoService *ISOServic
 	return NewISOCatalogService(repo, isoService, slog.Default(), nil)
 }
 
-// newTestISOService creates an ISOService rooted at a temp directory with an httptest server.
-// Returns the service, the temp dir (for assertions), and a server URL builder.
 func newCatalogTestISOService(t *testing.T) (*ISOService, string) {
 	t.Helper()
 	tmpDir := t.TempDir()
@@ -75,7 +74,8 @@ func newCatalogTestISOService(t *testing.T) (*ISOService, string) {
 	if err := os.MkdirAll(isoDir, 0755); err != nil {
 		t.Fatalf("mkdir: %v", err)
 	}
-	svc := NewISOService(tmpDir, 2, nil)
+	resolver := NewStorageResolver(&config.Config{Storage: config.StorageConfig{BasePath: tmpDir}})
+	svc := NewISOService(resolver, 2, nil)
 	t.Cleanup(func() { svc.Shutdown() })
 	return svc, tmpDir
 }

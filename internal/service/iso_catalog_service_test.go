@@ -1143,6 +1143,9 @@ func TestDbEntryToModel(t *testing.T) {
 		Arch:               "amd64",
 		CheckURL:           "https://example.com/",
 		FilenamePattern:    `debian-\d+\.iso`,
+		BaseURL:            "https://example.com/base/",
+		VersionDirPattern:  `\d+\.\d+/`,
+		ISOPathTemplate:    "{version}/iso/{arch}/",
 		CurrentURL:         "https://example.com/debian-12.iso",
 		AutoUpdate:         true,
 		CheckIntervalHours: 12,
@@ -1174,4 +1177,158 @@ func TestDbEntryToModel(t *testing.T) {
 	if m.DownloadStatus != "downloaded" {
 		t.Errorf("expected DownloadStatus=downloaded, got %q", m.DownloadStatus)
 	}
+	if m.BaseURL != "https://example.com/base/" {
+		t.Errorf("expected BaseURL='https://example.com/base/', got %q", m.BaseURL)
+	}
+	if m.VersionDirPattern != `\d+\.\d+/` {
+		t.Errorf("expected VersionDirPattern='\\d+\\.\\d+/', got %q", m.VersionDirPattern)
+	}
+	if m.ISOPathTemplate != "{version}/iso/{arch}/" {
+		t.Errorf("expected ISOPathTemplate='{version}/iso/{arch}/', got %q", m.ISOPathTemplate)
+	}
+}
+
+// ---------- Test 19: CreateCatalogEntry with new two-level fields ----------
+
+func TestCreateCatalogEntry_WithNewFields(t *testing.T) {
+	t.Parallel()
+	dbase := setupCatalogTestDB(t)
+	svc := newTestCatalogService(t, dbase, nil)
+	ctx := context.Background()
+
+	t.Run("stores_base_url_and_patterns", func(t *testing.T) {
+		id, err := svc.CreateCatalogEntry(ctx, model.ISOCatalogCreateRequest{
+			Name:              "Ubuntu Two-Level",
+			Distro:            "ubuntu",
+			Arch:              "amd64",
+			CheckURL:          "https://releases.ubuntu.com/24.04/",
+			FilenamePattern:   `ubuntu-24\.04\.\d+-live-server-amd64\.iso`,
+			BaseURL:           "https://releases.ubuntu.com/",
+			VersionDirPattern: `\d+\.\d+/`,
+			ISOPathTemplate:   "{version}/iso/{arch}/",
+		})
+		if err != nil {
+			t.Fatalf("CreateCatalogEntry: %v", err)
+		}
+		entry, err := svc.GetCatalogEntry(ctx, id)
+		if err != nil {
+			t.Fatalf("GetCatalogEntry: %v", err)
+		}
+		if entry.BaseURL != "https://releases.ubuntu.com/" {
+			t.Errorf("expected base_url, got %q", entry.BaseURL)
+		}
+		if entry.VersionDirPattern != `\d+\.\d+/` {
+			t.Errorf("expected version_dir_pattern, got %q", entry.VersionDirPattern)
+		}
+		if entry.ISOPathTemplate != "{version}/iso/{arch}/" {
+			t.Errorf("expected iso_path_template, got %q", entry.ISOPathTemplate)
+		}
+	})
+
+	t.Run("update_new_fields", func(t *testing.T) {
+		id, err := svc.CreateCatalogEntry(ctx, model.ISOCatalogCreateRequest{
+			Name:            "Updatable Entry",
+			Distro:          "test",
+			CheckURL:        "https://example.com/old/",
+			FilenamePattern: `test-\d+\.iso`,
+		})
+		if err != nil {
+			t.Fatalf("CreateCatalogEntry: %v", err)
+		}
+
+		err = svc.UpdateCatalogEntry(ctx, id, model.ISOCatalogUpdateRequest{
+			BaseURL:           strPtr("https://new.example.com/"),
+			VersionDirPattern: strPtr(`v\d+/`),
+			ISOPathTemplate:   strPtr("{version}/{arch}/"),
+		})
+		if err != nil {
+			t.Fatalf("UpdateCatalogEntry: %v", err)
+		}
+
+		entry, err := svc.GetCatalogEntry(ctx, id)
+		if err != nil {
+			t.Fatalf("GetCatalogEntry: %v", err)
+		}
+		if entry.BaseURL != "https://new.example.com/" {
+			t.Errorf("expected base_url updated, got %q", entry.BaseURL)
+		}
+		if entry.VersionDirPattern != `v\d+/` {
+			t.Errorf("expected version_dir_pattern updated, got %q", entry.VersionDirPattern)
+		}
+		if entry.ISOPathTemplate != "{version}/{arch}/" {
+			t.Errorf("expected iso_path_template updated, got %q", entry.ISOPathTemplate)
+		}
+	})
+}
+
+// ---------- Test 20: CreateCatalogEntry with base_url but no check_url ----------
+
+func TestCreateCatalogEntry_BaseURLWithoutCheckURL(t *testing.T) {
+	t.Parallel()
+	dbase := setupCatalogTestDB(t)
+	svc := newTestCatalogService(t, dbase, nil)
+	ctx := context.Background()
+
+	t.Run("base_url_only_succeeds", func(t *testing.T) {
+		id, err := svc.CreateCatalogEntry(ctx, model.ISOCatalogCreateRequest{
+			Name:            "BaseURL Only",
+			Distro:          "debian",
+			FilenamePattern: `debian-12\..*-amd64-netinst\.iso`,
+			BaseURL:         "https://cdimage.debian.org/release/",
+		})
+		if err != nil {
+			t.Fatalf("CreateCatalogEntry with base_url only: %v", err)
+		}
+		if id <= 0 {
+			t.Fatalf("expected positive ID, got %d", id)
+		}
+		entry, err := svc.GetCatalogEntry(ctx, id)
+		if err != nil {
+			t.Fatalf("GetCatalogEntry: %v", err)
+		}
+		if entry.BaseURL != "https://cdimage.debian.org/release/" {
+			t.Errorf("expected base_url, got %q", entry.BaseURL)
+		}
+		// check_url should be empty string (not set).
+		if entry.CheckURL != "" {
+			t.Errorf("expected empty check_url, got %q", entry.CheckURL)
+		}
+	})
+
+	t.Run("both_base_url_and_check_url_succeeds", func(t *testing.T) {
+		id, err := svc.CreateCatalogEntry(ctx, model.ISOCatalogCreateRequest{
+			Name:            "Both URLs",
+			Distro:          "ubuntu",
+			FilenamePattern: `ubuntu-\d+\.iso`,
+			CheckURL:        "https://releases.ubuntu.com/24.04/",
+			BaseURL:         "https://releases.ubuntu.com/",
+		})
+		if err != nil {
+			t.Fatalf("CreateCatalogEntry with both URLs: %v", err)
+		}
+		if id <= 0 {
+			t.Fatalf("expected positive ID, got %d", id)
+		}
+		entry, _ := svc.GetCatalogEntry(ctx, id)
+		if entry.CheckURL != "https://releases.ubuntu.com/24.04/" {
+			t.Errorf("expected check_url, got %q", entry.CheckURL)
+		}
+		if entry.BaseURL != "https://releases.ubuntu.com/" {
+			t.Errorf("expected base_url, got %q", entry.BaseURL)
+		}
+	})
+
+	t.Run("neither_check_url_nor_base_url_fails", func(t *testing.T) {
+		_, err := svc.CreateCatalogEntry(ctx, model.ISOCatalogCreateRequest{
+			Name:            "No URLs",
+			Distro:          "test",
+			FilenamePattern: `test-\d+\.iso`,
+		})
+		if err == nil {
+			t.Fatal("expected error when neither check_url nor base_url provided")
+		}
+		if !strings.Contains(err.Error(), "either check_url or base_url is required") {
+			t.Errorf("error should mention required URLs, got: %v", err)
+		}
+	})
 }

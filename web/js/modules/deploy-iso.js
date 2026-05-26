@@ -182,6 +182,19 @@ const DeployISO = (function () {
     var interval = _interval[0], setInterval2 = _interval[1];
     var _submitting = useState(false);
     var submitting = _submitting[0], setSubmitting = _submitting[1];
+    var _profiles = useState([]);
+    var profiles = _profiles[0], setProfiles = _profiles[1];
+    var _baseUrl = useState(isEdit ? (entry.base_url || '') : '');
+    var baseUrl = _baseUrl[0], setBaseUrl = _baseUrl[1];
+    var _versionDirPattern = useState(isEdit ? (entry.version_dir_pattern || '') : '');
+    var versionDirPattern = _versionDirPattern[0], setVersionDirPattern = _versionDirPattern[1];
+    var _isoPathTemplate = useState(isEdit ? (entry.iso_path_template || '') : '');
+    var isoPathTemplate = _isoPathTemplate[0], setIsoPathTemplate = _isoPathTemplate[1];
+    useEffect(function() {
+      Api.get('/admin/os-install/catalog/profiles').then(function(r) {
+        if (r && r.success) setProfiles(r.data || []);
+      });
+    }, []);
 
     var lbl = 'color:var(--color-text-secondary)';
     var fz = 'font-size:0.8125rem';
@@ -190,10 +203,10 @@ const DeployISO = (function () {
       var nm = name.trim(), di = distro.trim(), cu = checkUrl.trim(), pt = pattern.trim();
       if (!nm) { showToast(t('catalog_name') + ': ' + t('validation_required'), 'error'); return; }
       if (!di) { showToast(t('catalog_distro') + ': ' + t('validation_required'), 'error'); return; }
-      if (!cu) { showToast(t('catalog_check_url') + ': ' + t('validation_required'), 'error'); return; }
+      if (!cu && !baseUrl.trim()) { showToast(t('catalog_check_url') + ': ' + t('validation_required'), 'error'); return; }
       if (!pt) { showToast(t('catalog_filename_pattern') + ': ' + t('validation_required'), 'error'); return; }
       setSubmitting(true);
-      var body = { name: nm, distro: di, variant: variant.trim(), arch: arch, check_url: cu, filename_pattern: pt, auto_update: autoUpdate, check_interval_hours: parseInt(interval) || 24 };
+      var body = { name: nm, distro: di, variant: variant.trim(), arch: arch, check_url: cu, filename_pattern: pt, base_url: baseUrl.trim(), version_dir_pattern: versionDirPattern.trim(), iso_path_template: isoPathTemplate.trim(), auto_update: autoUpdate, check_interval_hours: parseInt(interval) || 24 };
       var req = isEdit ? Api.put('/admin/os-install/catalog/' + entry.id, body) : Api.post('/admin/os-install/catalog', body);
       req.then(function (r) {
         setSubmitting(false);
@@ -209,6 +222,21 @@ const DeployISO = (function () {
         <div class="modal-content" role="dialog" aria-modal="true" style="max-width:32rem">
           <h3 class="text-base font-semibold mb-4" style="color:var(--color-text)">${isEdit ? t('catalog_edit') : t('catalog_add_entry')}</h3>
           <div class="grid gap-3">
+            <div>
+              <label class="text-xs font-medium" style="${lbl}">${t('catalog_distro_template')}</label>
+              <select class="input select" style="${fz}" onChange=${function(ev) {
+                var p = profiles.find(function(x) { return x.id == ev.target.value; });
+                if (p) {
+                  setDistro(p.distro || ''); setVariant(p.variant || ''); setArch(p.arch || 'amd64');
+                  setBaseUrl(p.base_url || ''); setVersionDirPattern(p.version_dir_pattern || '');
+                  setIsoPathTemplate(p.iso_path_template || ''); setPattern(p.filename_pattern || '');
+                }
+                ev.target.selectedIndex = 0;
+              }}>
+                <option value="">${t('catalog_select_template')}</option>
+                ${profiles.map(function(p) { return html`<option value=${p.id}>${p.name}</option>`; })}
+              </select>
+            </div>
             <div>
               <label class="text-xs font-medium" style="${lbl}">${t('catalog_name')}</label>
               <input class="input" value=${name} placeholder="Ubuntu Server 24.04 LTS (amd64)" style="${fz}"
@@ -235,7 +263,7 @@ const DeployISO = (function () {
               </div>
             </div>
             <div>
-              <label class="text-xs font-medium" style="${lbl}">${t('catalog_check_url')}</label>
+              <label class="text-xs font-medium" style="${lbl}">${t('catalog_check_url')}${baseUrl.trim() ? html`<span class="text-xs" style="color:var(--color-text-tertiary);margin-left:0.25rem">(${t('catalog_check_url_optional')})</span>` : ''}</label>
               <input class="input" value=${checkUrl} placeholder="https://releases.ubuntu.com/24.04/" style="${fz}"
                 onInput=${function (e) { setCheckUrl(e.target.value); }} />
             </div>
@@ -243,6 +271,23 @@ const DeployISO = (function () {
               <label class="text-xs font-medium" style="${lbl}">${t('catalog_filename_pattern')}</label>
               <input class="input" value=${pattern} placeholder="ubuntu-24\\.04\\.\\d+-live-server-amd64\\.iso" style="${fz}"
                 onInput=${function (e) { setPattern(e.target.value); }} />
+            </div>
+            <div>
+              <label class="text-xs font-medium" style="${lbl}">${t('catalog_base_url')}</label>
+              <input class="input" value=${baseUrl} placeholder="https://releases.ubuntu.com/" style="${fz}"
+                onInput=${function (e) { setBaseUrl(e.target.value); }} />
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="text-xs font-medium" style="${lbl}">${t('catalog_version_dir_pattern')}</label>
+                <input class="input" value=${versionDirPattern} placeholder="\\d+\\.\\d+(\\.\\d+)?" style="${fz}"
+                  onInput=${function (e) { setVersionDirPattern(e.target.value); }} />
+              </div>
+              <div>
+                <label class="text-xs font-medium" style="${lbl}">${t('catalog_iso_path_template')}</label>
+                <input class="input" value=${isoPathTemplate} placeholder="{version}/{arch}/" style="${fz}"
+                  onInput=${function (e) { setIsoPathTemplate(e.target.value); }} />
+              </div>
             </div>
             <div class="grid grid-cols-2 gap-3">
               <div class="flex items-center gap-3">

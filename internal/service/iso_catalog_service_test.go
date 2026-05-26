@@ -1092,7 +1092,7 @@ func TestScrapeLatestISO(t *testing.T) {
 	defer srv.Close()
 
 	t.Run("finds_latest_match", func(t *testing.T) {
-		url, err := ScrapeLatestISO(context.Background(), srv.URL+"/", `debian-12\.\d+\.\d+-amd64-netinst\.iso`)
+		url, err := ScrapeLatestISO(context.Background(), srv.URL+"/", "", "", `debian-12\.\d+\.\d+-amd64-netinst\.iso$`, "amd64")
 		if err != nil {
 			t.Fatalf("ScrapeLatestISO: %v", err)
 		}
@@ -1102,7 +1102,7 @@ func TestScrapeLatestISO(t *testing.T) {
 	})
 
 	t.Run("no_match_returns_empty", func(t *testing.T) {
-		url, err := ScrapeLatestISO(context.Background(), srv.URL+"/", `nonexistent-\d+\.iso`)
+		url, err := ScrapeLatestISO(context.Background(), srv.URL+"/", "", "", `nonexistent-\d+\.iso$`, "amd64")
 		if err != nil {
 			t.Fatalf("ScrapeLatestISO: %v", err)
 		}
@@ -1112,7 +1112,7 @@ func TestScrapeLatestISO(t *testing.T) {
 	})
 
 	t.Run("invalid_pattern", func(t *testing.T) {
-		_, err := ScrapeLatestISO(context.Background(), srv.URL+"/", `[invalid`)
+		_, err := ScrapeLatestISO(context.Background(), srv.URL+"/", "", "", `[invalid`, "amd64")
 		if err == nil {
 			t.Fatal("expected error for invalid regex")
 		}
@@ -1124,7 +1124,7 @@ func TestScrapeLatestISO(t *testing.T) {
 		}))
 		defer badSrv.Close()
 
-		_, err := ScrapeLatestISO(context.Background(), badSrv.URL+"/", `test-\d+\.iso`)
+		_, err := ScrapeLatestISO(context.Background(), badSrv.URL+"/", "", "", `test-\d+\.iso$`, "amd64")
 		if err == nil {
 			t.Fatal("expected error for HTTP 404")
 		}

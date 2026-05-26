@@ -180,8 +180,13 @@ func (s *ISOCatalogService) CheckVersion(ctx context.Context, id int64) (*model.
 	if entry == nil {
 		return nil, fmt.Errorf("catalog entry %d not found", id)
 	}
-
-	foundURL, err := ScrapeLatestISO(ctx, entry.CheckURL, entry.FilenamePattern)
+	// Use base_url for two-level scraping; fall back to check_url for backward compatibility.
+	baseURL := entry.BaseURL
+	if baseURL == "" {
+		baseURL = entry.CheckURL
+	}
+	var foundURL string
+	foundURL, err = ScrapeLatestISO(ctx, baseURL, entry.VersionDirPattern, entry.ISOPathTemplate, entry.FilenamePattern, entry.Arch)
 	if err != nil {
 		_ = s.catalogRepo.UpdateAfterCheck(ctx, id, "", "error", err.Error())
 		return nil, err

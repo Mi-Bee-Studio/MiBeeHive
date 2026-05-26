@@ -378,7 +378,20 @@ const I18N = {
 	storage_saved: "存储路径已保存，文件迁移已在后台启动",
 	storage_no_change: "没有需要更新的路径",
 	storage_edit: "编辑",
-	storage_cancel: "取消"
+	storage_cancel: "取消",
+
+	// Migration tasks
+	mig_title: "存储迁移",
+	mig_none: "暂无存储迁移任务",
+	mig_files: "个文件",
+	mig_started: "开始",
+	mig_completed: "完成",
+	mig_cancelled: "已取消",
+	mig_status_completed: "已完成",
+	mig_status_failed: "失败",
+	mig_module_oss: "软件仓库",
+	mig_module_os_install: "OS 安装配置",
+	mig_module_iso: "ISO 镜像",
 	sort_by_name: "按名称",
 	sort_by_file_count: "按文件数",
 	sort_by_last_activity: "按最近活动",
@@ -960,7 +973,20 @@ const I18N = {
 	storage_saved: "Storage paths saved. File migration started in background.",
 	storage_no_change: "No paths to update",
 	storage_edit: "Edit",
-	storage_cancel: "Cancel"
+	storage_cancel: "Cancel",
+
+	// Migration tasks
+	mig_title: "Storage Migrations",
+	mig_none: "No storage migrations",
+	mig_files: "files",
+	mig_started: "Started",
+	mig_completed: "Done",
+	mig_cancelled: "Cancelled",
+	mig_status_completed: "Completed",
+	mig_status_failed: "Failed",
+	mig_module_oss: "Software Repos",
+	mig_module_os_install: "OS Install Configs",
+	mig_module_iso: "ISO Images",
 	sort_by_name: "By Name",
 	sort_by_file_count: "By File Count",
 	sort_by_last_activity: "By Last Activity",

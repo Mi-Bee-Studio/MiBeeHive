@@ -6,160 +6,95 @@ import (
 	"testing"
 )
 
-// TestMigration018FreshInstall verifies that fresh DB with all 18 migrations
-// has the new distro-level seed entries and the 3 new columns.
+// TestMigration018FreshInstall verifies that a fresh DB with all 18 migrations
+// has the storage_migrations table with correct columns and index.
 func TestMigration018FreshInstall(t *testing.T) {
 	db := testDB(t)
 	ctx := context.Background()
 
-	// Verify new columns exist.
-	rows, err := db.QueryContext(ctx, "PRAGMA table_info(iso_catalog)")
+	// Verify storage_migrations table exists.
+	var name string
+	err := db.QueryRowContext(ctx,
+		"SELECT name FROM sqlite_master WHERE type='table' AND name='storage_migrations'",
+	).Scan(&name)
 	if err != nil {
-		t.Fatalf("PRAGMA table_info(iso_catalog): %v", err)
+		t.Fatalf("storage_migrations table not found: %v", err)
+	}
+
+	// Verify index exists.
+	err = db.QueryRowContext(ctx,
+		"SELECT name FROM sqlite_master WHERE type='index' AND name='idx_storage_migrations_status'",
+	).Scan(&name)
+	if err != nil {
+		t.Errorf("idx_storage_migrations_status index not found: %v", err)
+	}
+
+	// Verify columns via PRAGMA table_info.
+	rows, err := db.QueryContext(ctx, "PRAGMA table_info(storage_migrations)")
+	if err != nil {
+		t.Fatalf("PRAGMA table_info(storage_migrations): %v", err)
 	}
 	defer rows.Close()
 
 	columns := make(map[string]bool)
 	for rows.Next() {
 		var cid int
-		var name, typ string
+		var colName, colType string
 		var notnull int
 		var dflt sql.NullString
 		var pk int
-		if err := rows.Scan(&cid, &name, &typ, &notnull, &dflt, &pk); err != nil {
+		if err := rows.Scan(&cid, &colName, &colType, &notnull, &dflt, &pk); err != nil {
 			t.Fatalf("scanning table_info: %v", err)
 		}
-		columns[name] = true
+		columns[colName] = true
 	}
 
-	newCols := []string{"base_url", "version_dir_pattern", "iso_path_template"}
-	for _, col := range newCols {
+	expectedCols := []string{
+		"id", "module", "old_path", "new_path", "status",
+		"progress", "total_files", "migrated_files", "total_bytes", "migrated_bytes",
+		"started_at", "completed_at", "error_message", "created_at", "updated_at",
+	}
+	for _, col := range expectedCols {
 		if !columns[col] {
-			t.Errorf("column %q not found in iso_catalog", col)
+			t.Errorf("column %q not found in storage_migrations", col)
 		}
 	}
 
-	// Verify new distro-level seed entries exist.
-	type expectedEntry struct {
-		name       string
-		distro     string
-		variant    string
-		arch       string
-		hasBaseURL bool
-	}
-	expected := []expectedEntry{
-		{"Ubuntu Server (amd64)", "ubuntu", "server", "amd64", true},
-		{"Ubuntu Server (arm64)", "ubuntu", "server", "arm64", true},
-		{"Debian Netinst (amd64)", "debian", "netinst", "amd64", true},
-		{"Debian Netinst (arm64)", "debian", "netinst", "arm64", true},
-		{"Rocky Minimal (amd64)", "rocky", "minimal", "amd64", true},
-		{"Alpine Standard (amd64)", "alpine", "standard", "amd64", true},
+	// Verify CHECK constraint on status by testing valid insert.
+	_, err = db.ExecContext(ctx,
+		`INSERT INTO storage_migrations (module, old_path, new_path, status) VALUES (?, ?, ?, ?)`,
+		"oss", "/old", "/new", "pending")
+	if err != nil {
+		t.Fatalf("insert valid migration task: %v", err)
 	}
 
-	for _, e := range expected {
-		var name, distro, variant, arch, baseURL string
-		err := db.QueryRowContext(ctx,
-			"SELECT name, distro, variant, arch, base_url FROM iso_catalog WHERE name = ?", e.name,
-		).Scan(&name, &distro, &variant, &arch, &baseURL)
-		if err != nil {
-			t.Errorf("expected entry %q not found: %v", e.name, err)
-			continue
-		}
-		if distro != e.distro {
-			t.Errorf("entry %q: expected distro=%q, got %q", e.name, e.distro, distro)
-		}
-		if variant != e.variant {
-			t.Errorf("entry %q: expected variant=%q, got %q", e.name, e.variant, variant)
-		}
-		if arch != e.arch {
-			t.Errorf("entry %q: expected arch=%q, got %q", e.name, e.arch, arch)
-		}
-		if e.hasBaseURL && baseURL == "" {
-			t.Errorf("entry %q: expected non-empty base_url", e.name)
-		}
-	}
-
-	// Verify old version-specific names that are NOT reused by new seeds are absent.
-	// Note: "Debian Netinst (amd64)" and "Debian Netinst (arm64)" are reused names
-	// (DELETE then INSERT replaces them), so they're not in this list.
-	oldNames := []string{
-		"Ubuntu Server 22.04 LTS (amd64)",
-		"Ubuntu Server 24.04 LTS (amd64)",
-		"Ubuntu Server 22.04 LTS (arm64)",
-		"Ubuntu Server 24.04 LTS (arm64)",
-		"Rocky Linux 9 Minimal (amd64)",
-		"AlmaLinux 9 Minimal (amd64)",
-		"CentOS Stream 9 (amd64)",
-		"Alpine Standard x86_64",
-		"Alpine Virt x86_64",
-		"Alpine Standard aarch64",
-		"Kali Linux (amd64)",
-		"Arch Linux (x86_64)",
-		"Fedora Server (amd64)",
-		"openSUSE Leap 15 (amd64)",
-	}
-	for _, name := range oldNames {
-		var count int
-		err := db.QueryRowContext(ctx, "SELECT COUNT(*) FROM iso_catalog WHERE name = ?", name).Scan(&count)
-		if err != nil {
-			t.Fatalf("querying old entry %q: %v", name, err)
-		}
-		if count > 0 {
-			t.Errorf("old version-specific entry %q should have been deleted, but found %d", name, count)
-		}
-	}
-
-	// Verify new entries have correct column defaults (base_url NOT empty, etc).
-	for _, e := range expected {
-		var baseURL, versionPattern, isoPath string
-		err := db.QueryRowContext(ctx,
-			"SELECT base_url, version_dir_pattern, iso_path_template FROM iso_catalog WHERE name = ?", e.name,
-		).Scan(&baseURL, &versionPattern, &isoPath)
-		if err != nil {
-			t.Errorf("querying columns for %q: %v", e.name, err)
-			continue
-		}
-		if baseURL == "" {
-			t.Errorf("entry %q: base_url should not be empty", e.name)
-		}
-		// Ubuntu and Alpine should have version_dir_pattern, Debian should not (uses current/ symlink).
-		if e.distro == "ubuntu" || e.distro == "alpine" || e.distro == "rocky" {
-			if versionPattern == "" && e.distro != "rocky" {
-				// Actually, Rocky uses \d+ pattern but let's just check ubuntu and alpine
-			}
-		}
-		_ = versionPattern
-		_ = isoPath
+	// Verify invalid status is rejected.
+	_, err = db.ExecContext(ctx,
+		`INSERT INTO storage_migrations (module, old_path, new_path, status) VALUES (?, ?, ?, ?)`,
+		"oss", "/old", "/new", "invalid")
+	if err == nil {
+		t.Error("expected CHECK constraint to reject invalid status 'invalid'")
 	}
 }
 
-// TestMigration018UpgradePath verifies the upgrade path:
-// 1. Apply 001-016 (schema without new columns)
-// 2. Seed old version-specific entries
-// 3. Apply 017-018
-// 4. Verify old entries replaced and user entries preserved.
+// TestMigration018UpgradePath verifies that applying migration 018 after 001-017
+// creates the storage_migrations table correctly.
 func TestMigration018UpgradePath(t *testing.T) {
 	ctx := context.Background()
 
-	// Create a fresh DB and manually apply only up to migration 016.
+	// Create a fresh DB and manually apply only up to migration 017.
 	db, err := Open(":memory:")
 	if err != nil {
 		t.Fatalf("Open(:memory:): %v", err)
 	}
 	defer db.Close()
 
-	// Apply migrations 001-016 only.
-	partialMigrations := []string{
-		"001", "002", "003", "004", "005", "006", "007",
-		"008", "009", "010", "011", "012", "013", "014",
-		"015", "016",
-	}
-
-	// Disable foreign keys.
+	// Disable foreign keys before transaction.
 	if _, err := db.Exec("PRAGMA foreign_keys = OFF"); err != nil {
 		t.Fatalf("disable foreign_keys: %v", err)
 	}
 
+	// Apply migrations 001-017 only.
 	tx, err := db.Begin()
 	if err != nil {
 		t.Fatalf("Begin tx: %v", err)
@@ -170,8 +105,13 @@ func TestMigration018UpgradePath(t *testing.T) {
 		t.Fatalf("create schema_migrations: %v", err)
 	}
 
-	for _, name := range partialMigrations {
-		// Find the exact file for this migration name.
+	allMigrations := []string{
+		"001", "002", "003", "004", "005", "006", "007",
+		"008", "009", "010", "011", "012", "013", "014",
+		"015", "016", "017",
+	}
+
+	for _, name := range allMigrations {
 		entries, err := migrationsFS.ReadDir("migrations")
 		if err != nil {
 			t.Fatalf("ReadDir migrations: %v", err)
@@ -206,164 +146,88 @@ func TestMigration018UpgradePath(t *testing.T) {
 		t.Fatalf("re-enable foreign_keys: %v", err)
 	}
 
-	// Verify the 3 new columns do NOT exist before migration 018.
-	rows, err := db.QueryContext(ctx, "PRAGMA table_info(iso_catalog)")
-	if err != nil {
-		t.Fatalf("PRAGMA table_info: %v", err)
-	}
-	var hasBaseURL bool
-	for rows.Next() {
-		var cid int
-		var name, typ string
-		var notnull int
-		var dflt sql.NullString
-		var pk int
-		if err := rows.Scan(&cid, &name, &typ, &notnull, &dflt, &pk); err != nil {
-			t.Fatalf("scan table_info: %v", err)
-		}
-		if name == "base_url" {
-			hasBaseURL = true
-		}
-	}
-	rows.Close()
-	if hasBaseURL {
-		t.Fatal("base_url column should not exist before migration 018")
+	// Verify storage_migrations does NOT exist before migration 018.
+	var tblName string
+	err = db.QueryRowContext(ctx,
+		"SELECT name FROM sqlite_master WHERE type='table' AND name='storage_migrations'",
+	).Scan(&tblName)
+	if err == nil {
+		t.Fatal("storage_migrations table should not exist before migration 018")
 	}
 
-	// Seed old version-specific entries (mimicking what migration 007 did).
-	// Using entries whose names differ from new 018 seeds to verify deletion.
-	oldSeed := []struct {
-		name, distro, variant, arch, checkURL, filenamePattern string
-	}{
-		{"Ubuntu Server 22.04 LTS (amd64)", "ubuntu", "server", "amd64", "https://releases.ubuntu.com/22.04/", "ubuntu-22\\.04\\.\\d+-live-server-amd64\\.iso$"},
-		{"Ubuntu Server 24.04 LTS (amd64)", "ubuntu", "server", "amd64", "https://releases.ubuntu.com/24.04/", "ubuntu-24\\.04\\.\\d+-live-server-amd64\\.iso$"},
-		{"Rocky Linux 9 Minimal (amd64)", "rocky", "minimal", "amd64", "https://download.rockylinux.org/pub/rocky/9/isos/x86_64/", "Rocky-9\\.[\\d]+-x86_64-minimal\\.iso$"},
-		{"Alpine Standard x86_64", "alpine", "standard", "amd64", "https://dl-cdn.alpinelinux.org/alpine/v3.21/releases/x86_64/", "alpine-standard-\\d+\\.\\d+\\.\\d+-x86_64\\.iso$"},
-	}
-
-	for _, s := range oldSeed {
-		_, err := db.ExecContext(ctx,
-			`INSERT INTO iso_catalog (name, distro, variant, arch, check_url, filename_pattern, auto_update, check_interval_hours, status)
-			 VALUES (?, ?, ?, ?, ?, ?, 0, 24, 'available')`,
-			s.name, s.distro, s.variant, s.arch, s.checkURL, s.filenamePattern)
-		if err != nil {
-			t.Fatalf("seeding old entry %q: %v", s.name, err)
-		}
-	}
-
-	// Add a user-modified entry (has current_url set — should be preserved).
-	_, err = db.ExecContext(ctx,
-		`INSERT INTO iso_catalog (name, distro, variant, arch, check_url, filename_pattern, current_url, auto_update, check_interval_hours, status)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, 0, 24, 'available')`,
-		"My Custom Ubuntu", "ubuntu", "server", "amd64", "https://my-mirror.example.com/", "ubuntu-.*\\.iso$", "https://my-mirror.example.com/ubuntu-24.04.iso")
-	if err != nil {
-		t.Fatalf("seeding user entry: %v", err)
-	}
-
-	// Count entries before migration 018.
-	var countBefore int
-	db.QueryRowContext(ctx, "SELECT COUNT(*) FROM iso_catalog").Scan(&countBefore)
-	t.Logf("entries before migration 018: %d", countBefore)
-
-	// Now apply migrations 017-018.
-	finalMigrations := []string{"017", "018"}
 	tx, err = db.Begin()
 	if err != nil {
-		t.Fatalf("Begin tx for upgrade: %v", err)
+		t.Fatalf("Begin tx for 018: %v", err)
 	}
 	defer tx.Rollback()
 
-	for _, name := range finalMigrations {
-		entries, err := migrationsFS.ReadDir("migrations")
-		if err != nil {
-			t.Fatalf("ReadDir: %v", err)
-		}
-		var filePath string
-		for _, e := range entries {
-			if len(e.Name()) > 7 && e.Name()[:3] == name {
-				filePath = "migrations/" + e.Name()
-				break
-			}
-		}
-		data, err := migrationsFS.ReadFile(filePath)
-		if err != nil {
-			t.Fatalf("read migration %s: %v", name, err)
-		}
-		if err := execMigration(tx, string(data)); err != nil {
-			t.Fatalf("exec migration %s: %v", name, err)
-		}
-		if _, err := tx.Exec("INSERT INTO schema_migrations (version) VALUES (?)", name); err != nil {
-			t.Fatalf("record migration %s: %v", name, err)
+	// Find and apply migration 018.
+	entries, err := migrationsFS.ReadDir("migrations")
+	if err != nil {
+		t.Fatalf("ReadDir: %v", err)
+	}
+	var filePath string
+	for _, e := range entries {
+		if len(e.Name()) > 7 && e.Name()[:3] == "018" {
+			filePath = "migrations/" + e.Name()
+			break
 		}
 	}
 
+	data, err := migrationsFS.ReadFile(filePath)
+	if err != nil {
+		t.Fatalf("read migration 018: %v", err)
+	}
+	if err := execMigration(tx, string(data)); err != nil {
+		t.Fatalf("exec migration 018: %v", err)
+	}
+	if _, err := tx.Exec("INSERT INTO schema_migrations (version) VALUES ('018')"); err != nil {
+		t.Fatalf("record migration 018: %v", err)
+	}
+
 	if err := tx.Commit(); err != nil {
-		t.Fatalf("commit upgrade migrations: %v", err)
+		t.Fatalf("commit 018: %v", err)
 	}
 	if _, err := db.Exec("PRAGMA foreign_keys = ON"); err != nil {
 		t.Fatalf("re-enable foreign_keys: %v", err)
 	}
 
-	// Verify 3 new columns exist.
-	rows, err = db.QueryContext(ctx, "PRAGMA table_info(iso_catalog)")
+	// Verify storage_migrations table now exists after migration 018.
+	err = db.QueryRowContext(ctx,
+		"SELECT name FROM sqlite_master WHERE type='table' AND name='storage_migrations'",
+	).Scan(&tblName)
 	if err != nil {
-		t.Fatalf("PRAGMA table_info after upgrade: %v", err)
-	}
-	cols := make(map[string]bool)
-	for rows.Next() {
-		var cid int
-		var name, typ string
-		var notnull int
-		var dflt sql.NullString
-		var pk int
-		if err := rows.Scan(&cid, &name, &typ, &notnull, &dflt, &pk); err != nil {
-			t.Fatalf("scan table_info: %v", err)
-		}
-		cols[name] = true
-	}
-	rows.Close()
-
-	for _, col := range []string{"base_url", "version_dir_pattern", "iso_path_template"} {
-		if !cols[col] {
-			t.Errorf("column %q missing after migration 018", col)
-		}
+		t.Fatalf("storage_migrations should exist after migration 018: %v", err)
 	}
 
-	// Verify old seed entries (by name) are deleted.
-	// These old names are NOT reused by new 018 seeds.
-	for _, s := range oldSeed {
-		var count int
-		db.QueryRowContext(ctx, "SELECT COUNT(*) FROM iso_catalog WHERE name = ?", s.name).Scan(&count)
-		if count > 0 {
-			t.Errorf("old seed entry %q should have been deleted", s.name)
-		}
-	}
-
-	// Verify new distro-level entries exist.
-	newEntries := []string{"Ubuntu Server (amd64)", "Debian Netinst (amd64)", "Rocky Minimal (amd64)", "Alpine Standard (amd64)"}
-	for _, name := range newEntries {
-		var count int
-		db.QueryRowContext(ctx, "SELECT COUNT(*) FROM iso_catalog WHERE name = ?", name).Scan(&count)
-		if count == 0 {
-			t.Errorf("new distro entry %q not found after upgrade", name)
-		}
-	}
-
-	// Verify user-created entry is preserved.
-	var userCount int
-	db.QueryRowContext(ctx, "SELECT COUNT(*) FROM iso_catalog WHERE name = 'My Custom Ubuntu'").Scan(&userCount)
-	if userCount != 1 {
-		t.Errorf("user-created entry should be preserved, found %d", userCount)
-	}
-
-	var currentURL string
-	err = db.QueryRowContext(ctx, "SELECT current_url FROM iso_catalog WHERE name = 'My Custom Ubuntu'").Scan(&currentURL)
+	// Verify we can CRUD on the new table.
+	_, err = db.ExecContext(ctx,
+		`INSERT INTO storage_migrations (module, old_path, new_path, status) VALUES (?, ?, ?, ?)`,
+		"oss", "/mnt/old/oss", "/mnt/new/oss", "pending")
 	if err != nil {
-		t.Fatalf("query user entry: %v", err)
-	}
-	if currentURL != "https://my-mirror.example.com/ubuntu-24.04.iso" {
-		t.Errorf("user entry current_url should be preserved, got %q", currentURL)
+		t.Fatalf("insert into storage_migrations after upgrade: %v", err)
 	}
 
-	t.Log("upgrade path test passed: old entries removed, new entries added, user entry preserved")
+	var count int
+	db.QueryRowContext(ctx, "SELECT COUNT(*) FROM storage_migrations").Scan(&count)
+	if count != 1 {
+		t.Errorf("expected 1 row in storage_migrations, got %d", count)
+	}
+
+	// Verify migration 018 is idempotent.
+	// Re-applying should not fail.
+	tx, err = db.Begin()
+	if err != nil {
+		t.Fatalf("Begin tx for re-apply 018: %v", err)
+	}
+	defer tx.Rollback()
+
+	if err := execMigration(tx, string(data)); err != nil {
+		t.Fatalf("re-exec migration 018: %v", err)
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatalf("commit re-apply 018: %v", err)
+	}
+
+	t.Log("upgrade path test passed: storage_migrations created, CRUD works, idempotent")
 }

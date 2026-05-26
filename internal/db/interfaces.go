@@ -45,6 +45,7 @@ type FileRepository interface {
 	ResetRetry(ctx context.Context, fileID int64) error
 	ListRetryable(ctx context.Context, maxRetries int) ([]*File, error)
 	GetQueueStats(ctx context.Context) (*QueueStats, error)
+	UpdateLocalPath(ctx context.Context, id int64, newPath string) error
 }
 
 // CrawlLogRepository describes the contract for crawl log persistence.

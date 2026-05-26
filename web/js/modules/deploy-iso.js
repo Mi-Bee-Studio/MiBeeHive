@@ -86,9 +86,25 @@ const DeployISO = (function () {
       </tr>`;
   }
 
+  // ── Architecture Sub-section (collapsible) ──────────────────────────
+  function ArchSection(props) {
+    var _aOpen = useState(false);
+    var aOpen = _aOpen[0], setAOpen = _aOpen[1];
+    var entries = props.entries;
+    return html`
+      <div style="border-top:1px solid var(--color-border)">
+        <button onClick=${function(){setAOpen(!aOpen);}} style="width:100%;display:flex;align-items:center;gap:var(--space-xs);padding:var(--space-xs) var(--space-sm);background:none;border:none;color:var(--color-text-secondary);cursor:pointer;font-size:var(--font-size-xs);text-transform:uppercase;letter-spacing:0.05em">
+          <svg width="12" height="12" viewBox="0 0 12 12" style="transform:rotate(${aOpen?'90':'0'}deg);transition:transform 0.2s;flex-shrink:0"><path d="M4 2l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+          <span>${Helpers.escapeHtml(props.arch)}</span>
+          <span style="opacity:0.5">(${entries.length})</span>
+        </button>
+        ${aOpen ? html`<div class="table-wrap overflow-x-auto" style="padding:0 var(--space-sm) var(--space-sm)"><table style="margin-bottom:var(--space-sm)"><thead><tr><th>${t('catalog_name')}</th><th>${t('catalog_status')}</th><th>${t('catalog_last_checked')}</th><th>${t('catalog_auto_update')}</th><th style="text-align:right">${t('actions')}</th></tr></thead><tbody>${entries.map(function(e){var fn=e.current_url?e.current_url.split('/').pop():'';return html`<${CatalogEntryRow} key=${e.id} entry=${e} progress=${props.progressMap[fn]} onCheck=${props.onCheck} onDownload=${props.onDownload} onRetry=${props.onRetry} onCancel=${props.onCancel} onEdit=${props.onEdit} onDelete=${props.onDelete} onToggleAuto=${props.onToggleAuto} />`;})}</tbody></table></div>` : null}
+      </div>`;
+  }
+
   // ── Catalog Section (grouped by distro) ──────────────────────────────
   function CatalogSection(props) {
-    var _open = useState(true);
+    var _open = useState(false);
     var open = _open[0], setOpen = _open[1];
     var distro = props.distro;
     var archGroups = props.archGroups;
@@ -105,37 +121,18 @@ const DeployISO = (function () {
           </div>
           <svg style="transform:rotate(${open ? '180' : '0'}deg);transition:transform 0.2s;width:1rem;height:1rem;color:var(--color-text-quaternary)" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
         </button>
-        ${open ? html`
           <div>
             ${Object.keys(archGroups).sort().map(function (arch) {
               var entries = archGroups[arch];
-              return html`
-                <div key=${arch}>
-                  <div style="padding:var(--space-xs) var(--space-sm);font-size:var(--font-size-xs);font-weight:var(--font-weight-semibold);color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:0.05em">${Helpers.escapeHtml(arch)}</div>
-                  <div class="table-wrap overflow-x-auto">
-                    <table style="margin-bottom:var(--space-sm)">
-                      <thead><tr>
-                        <th>${t('catalog_name')}</th><th>${t('catalog_status')}</th>
-                        <th>${t('catalog_last_checked')}</th><th>${t('catalog_auto_update')}</th>
-                        <th style="text-align:right">${t('actions')}</th>
-                      </tr></thead>
-                      <tbody>
-                        ${entries.map(function (e) {
-                          var fn = e.current_url ? e.current_url.split('/').pop() : '';
-                          return html`<${CatalogEntryRow} key=${e.id} entry=${e}
-                            progress=${progressMap[fn]}
-                            onCheck=${props.onCheck}
-                            onDownload=${props.onDownload}
-                            onRetry=${props.onRetry}
-                            onCancel=${props.onCancel}
-                            onEdit=${props.onEdit}
-                            onDelete=${props.onDelete}
-                            onToggleAuto=${props.onToggleAuto} />`;
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>`;
+              return html`<${ArchSection} key=${arch} arch=${arch} entries=${entries}
+                progressMap=${progressMap}
+                onCheck=${props.onCheck}
+                onDownload=${props.onDownload}
+                onRetry=${props.onRetry}
+                onCancel=${props.onCancel}
+                onEdit=${props.onEdit}
+                onDelete=${props.onDelete}
+                onToggleAuto=${props.onToggleAuto} />`;
             })}
           </div>` : null}
       </div>`;

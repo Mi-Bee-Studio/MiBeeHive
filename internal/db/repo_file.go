@@ -415,3 +415,13 @@ func (r *FileRepo) BackfillEmptyVersions(ctx context.Context) (int, error) {
 	}
 	return count, nil
 }
+
+// UpdateLocalPath updates the local_path of a file record. Used during storage migration.
+func (r *FileRepo) UpdateLocalPath(ctx context.Context, id int64, newPath string) error {
+	_, err := r.db.ExecContext(ctx,
+		"UPDATE files SET local_path = ? WHERE id = ?", newPath, id)
+	if err != nil {
+		return fmt.Errorf("updating local_path for file %d: %w", id, err)
+	}
+	return nil
+}

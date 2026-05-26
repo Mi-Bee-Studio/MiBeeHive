@@ -410,3 +410,69 @@ func TestContainerConfigYAMLWithoutSection(t *testing.T) {
 		t.Errorf("expected RetentionCheckInterval 1h (default), got %q", cfg.Container.Remote.RetentionCheckInterval)
 	}
 }
+
+func TestStorageDefaultConfigEmptyModulePaths(t *testing.T) {
+	cfg := DefaultConfig()
+	if cfg.Storage.Modules.OSS != "" {
+		t.Errorf("expected empty OSS module path, got %q", cfg.Storage.Modules.OSS)
+	}
+	if cfg.Storage.Modules.OSInstall != "" {
+		t.Errorf("expected empty OSInstall module path, got %q", cfg.Storage.Modules.OSInstall)
+	}
+	if cfg.Storage.Modules.ISO != "" {
+		t.Errorf("expected empty ISO module path, got %q", cfg.Storage.Modules.ISO)
+	}
+	if cfg.Storage.BasePath != "./data" {
+		t.Errorf("expected BasePath ./data, got %q", cfg.Storage.BasePath)
+	}
+}
+
+func TestStorageModulePathsValidation_ValidAbsolute(t *testing.T) {
+	cfg := DefaultConfig()
+	cfg.Storage.Modules = ModulePaths{
+		OSS:       "/mnt/data/oss",
+		OSInstall: "/mnt/data/os-install",
+		ISO:       "/mnt/data/iso",
+	}
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("expected no error for valid absolute paths, got: %v", err)
+	}
+}
+
+func TestStorageModulePathsValidation_EmptyOK(t *testing.T) {
+	cfg := DefaultConfig()
+	cfg.Storage.Modules = ModulePaths{}
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("expected no error for empty module paths, got: %v", err)
+	}
+}
+
+func TestStorageModulePathsValidation_RelativePathFails(t *testing.T) {
+	tests := []struct {
+		name string
+		mp   ModulePaths
+	}{
+		{
+			name: "oss relative",
+			mp:   ModulePaths{OSS: "relative/path"},
+		},
+		{
+			name: "os_install relative",
+			mp:   ModulePaths{OSInstall: "../some/path"},
+		},
+		{
+			name: "iso relative",
+			mp:   ModulePaths{ISO: "iso_storage"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := DefaultConfig()
+			cfg.Storage.Modules = tt.mp
+			err := cfg.Validate()
+			if err == nil {
+				t.Fatal("expected validation error for relative path, got nil")
+			}
+		})
+	}
+}

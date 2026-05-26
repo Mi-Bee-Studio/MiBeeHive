@@ -142,3 +142,40 @@ func TestBackfillEmptyVersions_SkipsNoVersion(t *testing.T) {
 		t.Errorf("expected empty version, got %q", files[0].Version)
 	}
 }
+
+func TestFileRepo_UpdateLocalPath(t *testing.T) {
+	db := testDB(t)
+	pRepo := NewProjectRepo(db)
+	fRepo := NewFileRepo(db)
+	ctx := context.Background()
+
+	p, err := pRepo.Create(ctx, "test", "Test", "github", "https://example.com")
+	if err != nil {
+		t.Fatalf("Create project: %v", err)
+	}
+
+	initialPath := "/old/path/file.tar.gz"
+	id, err := fRepo.Create(ctx, &File{
+		ProjectID:   p.ID,
+		Filename:    "file.tar.gz",
+		Status:      "complete",
+		LocalPath:   initialPath,
+	})
+	if err != nil {
+		t.Fatalf("Create file: %v", err)
+	}
+
+	newPath := "/new/path/file.tar.gz"
+	err = fRepo.UpdateLocalPath(ctx, id, newPath)
+	if err != nil {
+		t.Fatalf("UpdateLocalPath: %v", err)
+	}
+
+	got, err := fRepo.GetByID(ctx, id)
+	if err != nil {
+		t.Fatalf("GetByID: %v", err)
+	}
+	if got.LocalPath != newPath {
+		t.Errorf("UpdateLocalPath: expected local_path=%q, got %q", newPath, got.LocalPath)
+	}
+}

@@ -56,7 +56,16 @@ type DatabaseConfig struct {
 
 // StorageConfig holds file storage settings.
 type StorageConfig struct {
-	BasePath string `yaml:"base_path"`
+	BasePath string      `yaml:"base_path" json:"base_path"`
+	Modules  ModulePaths `yaml:"modules" json:"modules"`
+}
+
+// ModulePaths holds per-module storage path overrides.
+// Empty paths fall back to {BasePath}/{module} convention.
+type ModulePaths struct {
+	OSS       string `yaml:"oss" json:"oss"`
+	OSInstall string `yaml:"os_install" json:"os_install"`
+	ISO       string `yaml:"iso" json:"iso"`
 }
 
 // AuthConfig holds authentication settings.
@@ -166,6 +175,7 @@ func DefaultConfig() *Config {
 		},
 		Storage: StorageConfig{
 			BasePath: "./data",
+			Modules:  ModulePaths{},
 		},
 		Auth: AuthConfig{
 			PasswordHash:      defaultPasswordHash,
@@ -385,6 +395,11 @@ func (c *Config) Validate() error {
 	if c.Storage.BasePath == "" {
 		return fmt.Errorf("storage base_path is required")
 	}
+
+	// Validate module storage paths
+	if err := validateModulePaths(c.Storage.Modules); err != nil {
+		return fmt.Errorf("storage modules: %w", err)
+	}
 	if c.Crawler.MaxConcurrent < 1 {
 		return fmt.Errorf("crawler max_concurrent must be >= 1")
 	}
@@ -445,6 +460,36 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("invalid container remote retention_check_interval %q: %w", c.Container.Remote.RetentionCheckInterval, err)
 	}
 
+	return nil
+}
+
+// validateModulePaths checks per-module storage path overrides.
+func validateModulePaths(mp ModulePaths) error {
+	paths := map[string]string{
+		"oss":        mp.OSS,
+		"os_install": mp.OSInstall,
+		"iso":        mp.ISO,
+	}
+	for name, p := range paths {
+		if p == "" {
+			continue // empty = use fallback
+		}
+		if p[0] != '/' {
+			return fmt.Errorf("%s path %q is not absolute (must start with /)", name, p)
+		}
+		// If dir exists, verify it's writable
+		if fi, err := os.Stat(p); err == nil {
+			if !fi.IsDir() {
+				return fmt.Errorf("%s path %q exists but is not a directory", name, p)
+			}
+			// Check write permission by creating a temp file
+			tmp := p + "/.mibeehive_write_test"
+			if err := os.WriteFile(tmp, []byte{}, 0o644); err != nil {
+				return fmt.Errorf("%s path %q exists but is not writable: %w", name, p, err)
+			}
+			os.Remove(tmp)
+		}
+	}
 	return nil
 }
 

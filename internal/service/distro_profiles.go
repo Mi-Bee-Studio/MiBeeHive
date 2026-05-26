@@ -5,36 +5,36 @@ package service
 // and download ISO images for a specific distro/variant/arch combination.
 type DistroProfile struct {
 	// ID is the unique identifier, e.g. "ubuntu-server-amd64".
-	ID string
+	ID string `json:"id"`
 
 	// Name is the human-readable display name, e.g. "Ubuntu Server (amd64)".
-	Name string
+	Name string `json:"name"`
 
 	// Distro is the distribution name, e.g. "ubuntu", "debian", "rocky", "alpine".
-	Distro string
+	Distro string `json:"distro"`
 
 	// Variant identifies the edition, e.g. "server", "netinst", "minimal", "standard".
-	Variant string
+	Variant string `json:"variant"`
 
 	// Arch is the CPU architecture as used by the DB, e.g. "amd64", "arm64".
-	Arch string
+	Arch string `json:"arch"`
 
 	// BaseURL is the top-level mirror URL used for version directory discovery.
-	BaseURL string
+	BaseURL string `json:"base_url"`
 
 	// VersionDirPattern is the regex pattern to identify version subdirectories
 	// when scraping the BaseURL directory listing. Empty means single-level (no version discovery).
-	VersionDirPattern string
+	VersionDirPattern string `json:"version_dir_pattern"`
 
 	// ISOPathTemplate is the relative path template under BaseURL where ISO files live.
 	// The "{version}" placeholder is replaced with the discovered version string.
-	ISOPathTemplate string
+	ISOPathTemplate string `json:"iso_path_template"`
 
 	// FilenamePattern is the regex pattern used to match ISO filenames on the mirror.
-	FilenamePattern string
+	FilenamePattern string `json:"filename_pattern"`
 
 	// DefaultInterval is the default polling interval in hours for version checks.
-	DefaultInterval int
+	DefaultInterval int `json:"default_interval"`
 }
 
 // distroProfiles is the built-in registry of distribution profiles.

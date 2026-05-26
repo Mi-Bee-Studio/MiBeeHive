@@ -58,6 +58,7 @@ const (
 	RouteISODownload                 = "/api/v1/isos/{name}/download"
 	RouteAdminISOCatalogQueue        = "/api/v1/admin/os-install/catalog/queue"
 	RouteAdminISOCatalogDownloadAll  = "/api/v1/admin/os-install/catalog/download-all"
+	RouteAdminISOCatalogProfiles  = "GET /api/v1/admin/os-install/catalog/profiles"
 	RouteAdminDashboardSummary = "/api/v1/admin/dashboard/summary"
 	RouteAdminISOQueueProgress    = "/api/v1/admin/os-install/catalog/progress"
 	// File management (admin)

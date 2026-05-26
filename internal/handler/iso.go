@@ -177,8 +177,8 @@ func (h *ISOHandler) ISOCatalogCreate(w http.ResponseWriter, r *http.Request) {
 	if req.Arch == "" {
 		missingFields = append(missingFields, "arch")
 	}
-	if req.CheckURL == "" {
-		missingFields = append(missingFields, "check_url")
+	if req.CheckURL == "" && req.BaseURL == "" {
+		missingFields = append(missingFields, "check_url or base_url")
 	}
 	if req.FilenamePattern == "" {
 		missingFields = append(missingFields, "filename_pattern")
@@ -467,6 +467,17 @@ func (h *ISOHandler) ISOQueueProgress(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, model.ApiResponse[[]isoProgressItem]{
 		Success: true,
 		Data:    resp,
+	})
+}
+
+// ISOCatalogProfiles handles GET /api/v1/admin/os-install/catalog/profiles.
+// Returns the list of built-in distro profiles available as catalog templates.
+func (h *ISOHandler) ISOCatalogProfiles(w http.ResponseWriter, r *http.Request) {
+	profiles := service.ListProfiles()
+
+	writeJSON(w, http.StatusOK, model.ApiResponse[[]service.DistroProfile]{
+		Success: true,
+		Data:    profiles,
 	})
 }
 

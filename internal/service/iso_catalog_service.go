@@ -91,8 +91,11 @@ func (s *ISOCatalogService) GetCatalogEntry(ctx context.Context, id int64) (*mod
 
 // CreateCatalogEntry validates and creates a new catalog entry.
 func (s *ISOCatalogService) CreateCatalogEntry(ctx context.Context, req model.ISOCatalogCreateRequest) (int64, error) {
-	if req.Name == "" || req.CheckURL == "" || req.FilenamePattern == "" {
-		return 0, fmt.Errorf("name, check_url, and filename_pattern are required")
+	if req.Name == "" || req.FilenamePattern == "" {
+		return 0, fmt.Errorf("name and filename_pattern are required")
+	}
+	if req.CheckURL == "" && req.BaseURL == "" {
+		return 0, fmt.Errorf("either check_url or base_url is required")
 	}
 	if req.Arch == "" {
 		req.Arch = "amd64"

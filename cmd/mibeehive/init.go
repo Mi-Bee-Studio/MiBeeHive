@@ -506,6 +506,7 @@ func buildRouter(cfg *config.Config, h *appHandlers, svcs *appServices, database
 	apiMux.HandleFunc("GET "+model.RouteAdminISOCatalogQueue, h.iso.ISOCatalogQueue)
 	apiMux.HandleFunc("POST "+model.RouteAdminISOCatalogDownloadAll, h.iso.ISOCatalogDownloadAll)
 	apiMux.HandleFunc("GET "+model.RouteAdminISOQueueProgress, h.iso.ISOQueueProgress)
+	apiMux.HandleFunc(model.RouteAdminISOCatalogProfiles, h.iso.ISOCatalogProfiles)
 	// File management routes (admin).
 	apiMux.HandleFunc("POST "+model.RouteAdminFileRetry, h.file.Retry)
 

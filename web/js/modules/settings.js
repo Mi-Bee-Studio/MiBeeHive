@@ -442,6 +442,105 @@ const Settings = (function () {
     `;
   }
 
+  // ── Storage Paths Card ────────────────────────────────────────────────
+
+  function StoragePathsCard() {
+    var pathsState = useState({ oss: '', os_install: '', iso: '' });
+    var paths = pathsState[0], setPaths = pathsState[1];
+    var origState = useState({ oss: '', os_install: '', iso: '' });
+    var origPaths = origState[0], setOrigPaths = origState[1];
+    var loadState = useState(true);
+    var loading = loadState[0], setLoading = loadState[1];
+    var savingState = useState(false);
+    var isSaving = savingState[0], setSaving = savingState[1];
+    var editState = useState(false);
+    var isEditing = editState[0], setEditing = editState[1];
+
+    useEffect(function () {
+      Api.get('/admin/config/storage').then(function (res) {
+        setLoading(false);
+        if (res && res.success && res.data) {
+          var p = { oss: res.data.oss || '', os_install: res.data.os_install || '', iso: res.data.iso || '' };
+          setPaths(p);
+          setOrigPaths(p);
+        }
+      });
+    }, []);
+
+    function handleSave() {
+      var changed = {};
+      if (paths.oss && paths.oss !== origPaths.oss) changed.oss = paths.oss;
+      if (paths.os_install && paths.os_install !== origPaths.os_install) changed.os_install = paths.os_install;
+      if (paths.iso && paths.iso !== origPaths.iso) changed.iso = paths.iso;
+      if (!Object.keys(changed).length) {
+        Components.showToast(t('storage_no_change'), 'warning');
+        return;
+      }
+      for (var k in changed) {
+        if (changed[k] && changed[k][0] !== '/') {
+          Components.showToast(t('storage_invalid_path'), 'error');
+          return;
+        }
+      }
+      Components.showConfirmModal(t('storage_confirm'), function () {
+        setSaving(true);
+        Api.put('/admin/config/storage', changed).then(function (r) {
+          setSaving(false);
+          if (r && r.success) {
+            setOrigPaths(Object.assign({}, origPaths, changed));
+            setEditing(false);
+            Components.showToast(t('storage_saved'), 'success', { duration: 6000 });
+          } else {
+            Components.showToast((r && r.message) || t('error'), 'error');
+          }
+        });
+      });
+    }
+
+    if (loading) {
+      return html`<div class="flex-center" style="padding:1rem"><div class="spinner" style="width:1.25rem;height:1.25rem;border-width:2px"></div></div>`;
+    }
+
+    var lblStyle = 'display:block;margin-bottom:0.25rem;font-size:0.8125rem;color:var(--color-text-secondary)';
+    var fields = [
+      { key: 'oss', label: t('storage_oss') },
+      { key: 'os_install', label: t('storage_os_install') },
+      { key: 'iso', label: t('storage_iso') }
+    ];
+
+    return html`
+      <div style="display:flex;flex-direction:column;gap:1rem">
+        ${fields.map(function (f) {
+          return html`
+            <div key=${f.key}>
+              <label class="form-label" style=${lblStyle}>${f.label}</label>
+              <div class="flex items-center" style="gap:0.5rem">
+                <input type="text" class="input" readonly=${!isEditing}
+                  style=${{ flex: '1', fontSize: '0.8125rem', opacity: isEditing ? '1' : '0.8', background: isEditing ? '' : 'var(--color-bg-secondary)' }}
+                  value=${paths[f.key] || ''}
+                  onInput=${function (e) { setPaths(Object.assign({}, paths, { [f.key]: e.target.value })); }} />
+              </div>
+            </div>
+          `;
+        })}
+        <div style="font-size:0.75rem;color:var(--color-warning);border-left:3px solid var(--color-warning);padding:0.375rem 0.625rem;background:var(--color-warning-light);border-radius:0 var(--radius-md) var(--radius-md) 0">
+          ${t('storage_warning')}
+        </div>
+        <div class="flex gap-2">
+          ${!isEditing ? html`
+            <button class="btn btn-secondary" onClick=${function () { setEditing(true); }}>${t('storage_edit')}</button>
+          ` : html`
+            <button class="btn btn-primary" disabled=${isSaving} onClick=${handleSave}>
+              ${isSaving ? html`<div class="spinner" style="width:1rem;height:1rem;border-width:2px"></div>` : null}
+              ${t('storage_save')}
+            </button>
+            <button class="btn btn-secondary" disabled=${isSaving} onClick=${function () { setPaths(Object.assign({}, origPaths)); setEditing(false); }}>${t('storage_cancel')}</button>
+          `}
+        </div>
+      </div>
+    `;
+  }
+
   // ── Backup List ───────────────────────────────────────────────────────
 
   function BackupList() {
@@ -607,6 +706,10 @@ const Settings = (function () {
 
         <${SectionCard} title=${t('settings_disk_threshold')} noPad=${true}>
           <${DiskThresholdCard} />
+        <//>
+
+        <${SectionCard} title=${t('storage_paths_title')} noPad=${true}>
+          <${StoragePathsCard} />
         <//>
 
         <${SectionCard} title=${t('backup_restore_title')}>

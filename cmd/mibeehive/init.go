@@ -69,6 +69,9 @@ type appServices struct {
 	retentionSvc       *service.RetentionService
 	retentionScheduler *service.RetentionScheduler
 
+	// Storage resolver
+	storageResolver *service.StorageResolver
+	migrationSvc    *service.MigrationService
 	// Cancel funcs for background goroutines started during init
 	diskCancel     context.CancelFunc
 	retryCancel    context.CancelFunc
@@ -97,6 +100,7 @@ type appHandlers struct {
 	appTemplate   *handler.AppTemplateHandler
 	container     *handler.ContainerHandler
 	registry      *handler.RegistryHandler // nil if remote registry disabled
+	storageConfig *handler.StorageConfigHandler
 }
 
 // loadConfig initializes the logger, loads or generates the config file,
@@ -249,7 +253,8 @@ func initServices(cfg *config.Config, database *sql.DB) *appServices {
 	// Ensure storage directories exist.
 	os.MkdirAll(filepath.Join(cfg.Storage.BasePath, "webdav"), 0o755)
 	os.MkdirAll(filepath.Join(cfg.Storage.BasePath, "os-install"), 0o755)
-	s.fileService = service.NewFileService(database, cfg.Storage.BasePath, cfg.Crawler.MaxConcurrent, s.appMetrics)
+	s.storageResolver = service.NewStorageResolver(cfg)
+	s.fileService = service.NewFileService(database, s.storageResolver, cfg.Crawler.MaxConcurrent, s.appMetrics)
 
 	// Read API tokens from DB for crawlers that need them.
 	s.credRepo = db.NewSourceCredentialRepo(database)
@@ -318,7 +323,7 @@ func initServices(cfg *config.Config, database *sql.DB) *appServices {
 	slog.Info("download retry worker started", "interval", "5m", "max_retries", maxDownloadRetries)
 
 	// Initialize ISO service for OS install provisioning.
-	s.isoService = service.NewISOService(cfg.Storage.BasePath, 2, s.appMetrics)
+	s.isoService = service.NewISOService(s.storageResolver, 2, s.appMetrics)
 
 	// Initialize ISO catalog service.
 	s.catalogRepo = db.NewISOCatalogRepo(database)
@@ -327,6 +332,13 @@ func initServices(cfg *config.Config, database *sql.DB) *appServices {
 		slog.Error("failed to create os-install directory", "error", err)
 		os.Exit(1)
 	}
+	// Initialize storage migration service.
+	migrationTaskRepo := db.NewMigrationTaskRepo(database)
+	s.migrationSvc = service.NewMigrationService(migrationTaskRepo, s.fileRepo, logger)
+	if err := s.migrationSvc.ResetStaleMigrations(context.Background()); err != nil {
+		slog.Warn("resetting stale migrations", "error", err)
+	}
+
 
 	// Initialize Docker client for container management (optional).
 	if cfg.Container.Local.Enabled {
@@ -397,8 +409,10 @@ func initHandlers(cfg *config.Config, svcs *appServices, database *sql.DB, confi
 	h.system = handler.NewSystemHandler(database, svcs.fileService, cfg.Storage.BasePath, version, cfg.Monitor.NodeExporterURL)
 	h.osInstall = handler.NewOSInstallHandler(db.NewOsInstallConfigRepo(database), service.NewOsTemplateService(), cfg.Storage.BasePath)
 	h.projectAdmin = handler.NewProjectAdminHandler(db.NewProjectRepo(database), db.NewFileRepo(database), svcs.crawlManager, cfg)
-	h.webdavAdmin = handler.NewWebDAVAdminHandler(cfg)
+	h.webdavAdmin = handler.NewWebDAVAdminHandler(cfg, svcs.storageResolver)
 	h.configHandler = handler.NewConfigHandler(cfg, configPath)
+	migrationAdapter := service.NewMigrationAdapter(svcs.migrationSvc, slog.Default())
+	h.storageConfig = handler.NewStorageConfigHandler(cfg, configPath, svcs.storageResolver, migrationAdapter, slog.Default())
 	h.crawlControl = handler.NewCrawlControlHandler(db.NewProjectRepo(database), db.NewSourceCredentialRepo(database), svcs.crawlManager)
 	h.iso = handler.NewISOHandler(svcs.isoService, svcs.catalogService, jwtSecret)
 	h.backupH = handler.NewBackupHandler(cfg.Backup.LocalPath, cfg.Database.Path, requestShutdown)
@@ -487,6 +501,13 @@ func buildRouter(cfg *config.Config, h *appHandlers, svcs *appServices, database
 	apiMux.HandleFunc("GET "+model.RouteAdminWebDAVList, h.webdavAdmin.WebDAVFileList)
 	apiMux.HandleFunc("GET "+model.RouteAdminConfigMonitor, h.configHandler.GetMonitorConfig)
 	apiMux.HandleFunc("PUT "+model.RouteAdminConfigMonitor, h.configHandler.UpdateMonitorConfig)
+	// Storage config routes (admin).
+	apiMux.HandleFunc("GET "+model.RouteStorageConfig, h.storageConfig.GetStorageConfig)
+	apiMux.HandleFunc("PUT "+model.RouteStorageConfig, h.storageConfig.UpdateStorageConfig)
+	apiMux.HandleFunc("GET "+model.RouteStorageMigrations, h.storageConfig.ListMigrations)
+	apiMux.HandleFunc("GET "+model.RouteStorageMigrationByID+"{id}", h.storageConfig.GetMigration)
+	apiMux.HandleFunc("POST "+model.RouteStorageMigrationByID+"{id}/cancel", h.storageConfig.CancelMigration)
+
 
 	// ISO management routes (admin).
 	apiMux.HandleFunc("POST "+model.RouteAdminISODownload, h.iso.TriggerDownload)

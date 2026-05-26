@@ -140,8 +140,8 @@ func TestScrapeLatestISO_UserAgentHeader(t *testing.T) {
 
 	ScrapeLatestISO(context.Background(), server.URL, "", "", `test\.iso`, "arm64")
 
-	if userAgent != "MiBeeHive/1.0" {
-		t.Errorf("expected User-Agent 'MiBeeHive/1.0', got %q", userAgent)
+	if userAgent != "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" {
+		t.Errorf("expected browser User-Agent, got %q", userAgent)
 	}
 }
 
@@ -354,9 +354,13 @@ func TestScrapeLatestISO_TwoLevel_HTTPErrorOnVersionDirURL(t *testing.T) {
 	}))
 	defer server.Close()
 
-	_, err := ScrapeLatestISO(context.Background(), server.URL+"/", `\d+`, "{version}/", `.*\.iso`, "amd64")
-	if err == nil {
-		t.Fatal("expected error when version dir listing returns HTTP error")
+	// With fallback loop, all version dirs tried and exhausted -> empty result, no error
+	result, err := ScrapeLatestISO(context.Background(), server.URL+"/", `\d+`, "{version}/", `.*\.iso`, "amd64")
+	if err != nil {
+		t.Fatalf("unexpected error (fallback returns nil): %v", err)
+	}
+	if result != "" {
+		t.Errorf("expected empty URL when all version dirs fail, got %q", result)
 	}
 }
 

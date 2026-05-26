@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"path"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 )
@@ -84,18 +86,25 @@ func scrapeTwoLevel(ctx context.Context, baseURL, versionDirPattern string, isoP
 		return "", nil
 	}
 
-	// Find the latest version directory.
-	latest := dirs[0]
-	for _, d := range dirs[1:] {
-		if CompareVersion(d.version, latest.version) > 0 {
-			latest = d
+	// Sort dirs by version descending (latest first).
+	sort.Slice(dirs, func(i, j int) bool {
+		return CompareVersion(dirs[i].version, dirs[j].version) > 0
+	})
+
+	// Try each version directory from latest to oldest.
+	// This handles cases where the latest version dir exists but has no
+	// ISO files yet (e.g., Alpine v3.24 has no releases/ subdir).
+	for _, d := range dirs {
+		isoURL := joinURL(baseURL, replacePlaceholders(isoPathTemplate, d.dirName, mirrorArch))
+		result, err := scrapeISOFiles(ctx, isoURL, fileRe)
+		if err == nil && result != "" {
+			return result, nil
+		}
+		if err != nil {
+			slog.Debug("version dir has no ISO files, trying next", "dir", d.dirName, "error", err)
 		}
 	}
-
-	// Construct the ISO listing URL by replacing placeholders in the template.
-	isoURL := joinURL(baseURL, replacePlaceholders(isoPathTemplate, latest.dirName, mirrorArch))
-
-	return scrapeISOFiles(ctx, isoURL, fileRe)
+	return "", nil
 }
 
 // scrapeSingleLevel performs single-level scraping: directly find ISO files.
@@ -170,30 +179,47 @@ func scrapeISOFiles(ctx context.Context, listingURL string, fileRe *regexp.Regex
 	return files[len(files)-1].fullURL, nil
 }
 
-// fetchPage performs an HTTP GET with the standard client and returns the body.
+// fetchPage performs an HTTP GET with retry and returns the body.
 func fetchPage(ctx context.Context, pageURL string) ([]byte, error) {
-	client := &http.Client{Timeout: 30 * time.Second}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, pageURL, nil)
-	if err != nil {
-		return nil, fmt.Errorf("creating request: %w", err)
-	}
-	req.Header.Set("User-Agent", "MiBeeHive/1.0")
+	const maxRetries = 3
+	const browserUA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+	var lastErr error
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		if attempt > 0 {
+			backoff := time.Duration(attempt) * 2 * time.Second
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			case <-time.After(backoff):
+			}
+		}
+		client := &http.Client{Timeout: 30 * time.Second}
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, pageURL, nil)
+		if err != nil {
+			return nil, fmt.Errorf("creating request: %w", err)
+		}
+		req.Header.Set("User-Agent", browserUA)
 
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("fetching %s: %w", pageURL, err)
-	}
-	defer resp.Body.Close()
+		resp, err := client.Do(req)
+		if err != nil {
+			lastErr = fmt.Errorf("fetching %s: %w", pageURL, err)
+			continue
+		}
 
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("fetching %s: HTTP %d", pageURL, resp.StatusCode)
-	}
+		if resp.StatusCode != http.StatusOK {
+			resp.Body.Close()
+			lastErr = fmt.Errorf("fetching %s: HTTP %d", pageURL, resp.StatusCode)
+			continue
+		}
 
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 1024*1024))
-	if err != nil {
-		return nil, fmt.Errorf("reading response body: %w", err)
+		body, err := io.ReadAll(io.LimitReader(resp.Body, 1024*1024))
+		resp.Body.Close()
+		if err != nil {
+			return nil, fmt.Errorf("reading response body: %w", err)
+		}
+		return body, nil
 	}
-	return body, nil
+	return nil, lastErr
 }
 
 // replacePlaceholders replaces {version} and {arch} placeholders in the template.

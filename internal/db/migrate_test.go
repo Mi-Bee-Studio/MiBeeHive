@@ -27,6 +27,7 @@ func TestMigrationCountMatchesFiles(t *testing.T) {
 		{"017", "migrations/017_consolidated.sql"},
 		{"018", "migrations/018_iso_catalog_v2.sql"},
 		{"019", "migrations/019_storage_paths.sql"},
+		{"020", "migrations/020_fix_iso_catalog.sql"},
 	}
 
 	// Read all files in the embedded migrations directory.

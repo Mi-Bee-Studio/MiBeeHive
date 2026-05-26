@@ -1,0 +1,17 @@
+# Example systemd service file - adjust paths and user for your system
+
+[Unit]
+Description=MiBeeHive File Resource Manager
+After=network.target
+
+[Service]
+Type=simple
+User=mibeehive
+WorkingDirectory=/opt/mibeehive
+ExecStart=/opt/mibeehive/bin/mibeehive --config=/opt/mibeehive/config.yaml
+Restart=always
+RestartSec=5
+Environment=GOMEMLIMIT=256MiB
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,48 @@
+# Binaries
+/mibeehive
+mibeehive-arm64
+/migrate
+migrate-arm64
+*.exe
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+
+# Runtime data
+data/
+*.db
+
+# TLS certificates (auto-generated)
+configs/server.crt
+configs/server.key
+
+# Sisyphus work directory
+.sisyphus/
+.playwright-mcp/
+
+# Playwright
+tests/
+node_modules/
+
+# Generated
+AGENTS.md
+
+# QA Reports
+docs/qa-report/
+
+# Migrations (legacy duplicate of internal/db/migrations/)
+migrations/
+
+# TLS/SSL certificate files
+*.crt
+*.key
+*.pem
+
+# Log files
+*.log

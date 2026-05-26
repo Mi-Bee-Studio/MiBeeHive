@@ -1,0 +1,141 @@
+server:
+  port: 9090
+  bind_addr: "0.0.0.0"
+  # TLS settings for HTTPS certificate generation.
+  # If empty, IPs are auto-detected from network interfaces; 127.0.0.1 is always included.
+  # TLS IP addresses - customize for your network
+  tls_ip_addresses: []
+  # If empty, ["localhost"] is used as the default.
+  tls_dns_names:
+    - localhost
+database:
+  path: "./mibeehive.db"
+storage:
+  base_path: "./data"
+auth:
+  password_hash: ""  # default password is "admin"
+  # jwt_secret will be auto-generated on first run if empty
+  jwt_secret: ""
+crawler:
+  max_concurrent: 2
+  default_interval: "6h"
+# Monitor settings for system stats sampling and disk monitoring.
+monitor:
+  sample_interval: 30       # seconds between system stat samples
+  retention_days: 7         # how long to keep stat history
+  disk_warning_percent: 90  # warn when disk usage reaches this %
+  disk_critical_percent: 95 # enter degraded mode at this %
+  disk_check_enabled: true  # enable/disable disk monitoring
+# Log rotation settings (lumberjack).
+logging:
+  filename: "./mibeehive.log"  # log file path
+  max_size: 10                 # MB before rotation
+  max_backups: 3               # number of old log files to keep
+  max_age: 30                  # days to retain old logs
+  compress: true               # compress rotated logs
+  local_time: true             # use local time for rotation timestamps
+# Backup settings for automated database + config backup.
+backup:
+  enabled: false               # enable scheduled backups
+  schedule: "03:00"            # daily backup time (HH:MM)
+  retention: 5                 # number of backups to keep
+  local_path: "./backups"      # backup output directory
+  # remote_url: ""             # optional WebDAV URL for remote backup
+  # remote_username: ""        # WebDAV username
+  # remote_password: ""        # WebDAV password
+# Container management settings (local Docker and remote orchestration).
+container:
+  local:
+    enabled: true
+    docker_host: "unix:///var/run/docker.sock"
+  remote:
+    enabled: true
+    sync_concurrency: 2
+    retention_check_interval: "1h"
+
+projects:
+  # GitHub projects
+  - name: "prometheus"
+    display_name: "Prometheus"
+    source_type: "github"
+    source_url: "https://github.com/prometheus/prometheus"
+    crawl_interval: "6h"
+    github_owner: "prometheus"
+    github_repo: "prometheus"
+  - name: "node-exporter"
+    display_name: "Node Exporter"
+    source_type: "github"
+    source_url: "https://github.com/prometheus/node_exporter"
+    crawl_interval: "6h"
+    github_owner: "prometheus"
+    github_repo: "node_exporter"
+  - name: "blackbox-exporter"
+    display_name: "Blackbox Exporter"
+    source_type: "github"
+    source_url: "https://github.com/prometheus/blackbox_exporter"
+    crawl_interval: "6h"
+    github_owner: "prometheus"
+    github_repo: "blackbox_exporter"
+  - name: "mysqld-exporter"
+    display_name: "MySQLd Exporter"
+    source_type: "github"
+    source_url: "https://github.com/prometheus/mysqld_exporter"
+    crawl_interval: "6h"
+    github_owner: "prometheus"
+    github_repo: "mysqld_exporter"
+  - name: "victoriametrics"
+    display_name: "VictoriaMetrics"
+    source_type: "github"
+    source_url: "https://github.com/VictoriaMetrics/VictoriaMetrics"
+    crawl_interval: "6h"
+    github_owner: "VictoriaMetrics"
+    github_repo: "VictoriaMetrics"
+  - name: "victorialogs"
+    display_name: "VictoriaLogs"
+    source_type: "github"
+    source_url: "https://github.com/VictoriaMetrics/VictoriaLogs"
+    crawl_interval: "6h"
+    github_owner: "VictoriaMetrics"
+    github_repo: "VictoriaLogs"
+  - name: "vmagent"
+    display_name: "VMAgent"
+    source_type: "github"
+    source_url: "https://github.com/VictoriaMetrics/vmagent"
+    crawl_interval: "6h"
+    github_owner: "VictoriaMetrics"
+    github_repo: "vmagent"
+  # Go official
+  - name: "golang"
+    display_name: "Go"
+    source_type: "go"
+    source_url: "https://go.dev/dl/"
+    crawl_interval: "24h"
+  # HashiCorp projects
+  - name: "consul"
+    display_name: "Consul"
+    source_type: "hashicorp"
+    source_url: "https://releases.hashicorp.com/consul/"
+    crawl_interval: "6h"
+  - name: "packer"
+    display_name: "Packer"
+    source_type: "hashicorp"
+    source_url: "https://releases.hashicorp.com/packer/"
+    crawl_interval: "6h"
+  - name: "vagrant"
+    display_name: "Vagrant"
+    source_type: "hashicorp"
+    source_url: "https://releases.hashicorp.com/vagrant/"
+    crawl_interval: "6h"
+  - name: "nomad"
+    display_name: "Nomad"
+    source_type: "hashicorp"
+    source_url: "https://releases.hashicorp.com/nomad/"
+    crawl_interval: "6h"
+  # Grafana
+  - name: "grafana"
+    display_name: "Grafana"
+    source_type: "grafana"
+    source_url: "https://github.com/grafana/grafana"
+    crawl_interval: "6h"
+    github_owner: "grafana"
+    github_repo: "grafana"

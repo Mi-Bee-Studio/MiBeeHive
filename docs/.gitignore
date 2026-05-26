@@ -1,0 +1,9 @@
+# Internal planning documents
+*
+!.gitignore
+!en/
+!en/**
+!zh/
+!zh/**
+!roadmap/
+!roadmap/**

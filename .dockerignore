@@ -1,0 +1,16 @@
+.git
+.github
+*.md
+docs/
+migrations/
+configs/mibeehive.service
+mibeehive
+mibeehive-arm64
+migrate
+*.tar.gz
+*.db
+*.log
+backups/
+data/
+.opencode/
+.sisyphus/

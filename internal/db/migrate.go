@@ -35,6 +35,7 @@ func Migrate(db *sql.DB) error {
 		{"015", "migrations/015_registry.sql"},
 		{"016", "migrations/016_add_indexes.sql"},
 		{"017", "migrations/017_consolidated.sql"},
+		{"018", "migrations/018_iso_catalog_v2.sql"},
 	}
 	tx, err := db.Begin()
 	if err != nil {

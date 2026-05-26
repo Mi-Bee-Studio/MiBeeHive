@@ -9,6 +9,7 @@ import (
 
 const isoCatalogColumns = `
 	id, name, distro, variant, arch, check_url, filename_pattern,
+	base_url, version_dir_pattern, iso_path_template,
 	current_url, auto_update, check_interval_hours, last_checked,
 	last_error, status, download_status, sha256, created_at, updated_at
 `
@@ -32,6 +33,9 @@ type ISOCatalogDBEntry struct {
 	Arch               string
 	CheckURL           string
 	FilenamePattern    string
+	BaseURL            string
+	VersionDirPattern  string
+	ISOPathTemplate    string
 	CurrentURL         string
 	AutoUpdate         bool
 	CheckIntervalHours int
@@ -48,7 +52,8 @@ func scanISOCatalog(scanner interface{ Scan(dest ...any) error }) (*ISOCatalogDB
 	var e ISOCatalogDBEntry
 	err := scanner.Scan(
 		&e.ID, &e.Name, &e.Distro, &e.Variant, &e.Arch,
-		&e.CheckURL, &e.FilenamePattern, &e.CurrentURL,
+		&e.CheckURL, &e.FilenamePattern, &e.BaseURL, &e.VersionDirPattern, &e.ISOPathTemplate,
+		&e.CurrentURL,
 		&e.AutoUpdate, &e.CheckIntervalHours, &e.LastChecked,
 		&e.LastError, &e.Status, &e.DownloadStatus, &e.SHA256, &e.CreatedAt, &e.UpdatedAt,
 )
@@ -95,9 +100,10 @@ func (r *ISOCatalogRepo) GetByID(ctx context.Context, id int64) (*ISOCatalogDBEn
 // Create inserts a new catalog entry and returns its ID.
 func (r *ISOCatalogRepo) Create(ctx context.Context, e *ISOCatalogDBEntry) (int64, error) {
 	result, err := r.db.ExecContext(ctx,
-		`INSERT INTO iso_catalog (name, distro, variant, arch, check_url, filename_pattern, auto_update, check_interval_hours, sha256, status)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		`INSERT INTO iso_catalog (name, distro, variant, arch, check_url, filename_pattern, base_url, version_dir_pattern, iso_path_template, auto_update, check_interval_hours, sha256, status)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		e.Name, e.Distro, e.Variant, e.Arch, e.CheckURL, e.FilenamePattern,
+		e.BaseURL, e.VersionDirPattern, e.ISOPathTemplate,
 		e.AutoUpdate, e.CheckIntervalHours, e.SHA256, e.Status)
 	if err != nil {
 		return 0, fmt.Errorf("creating iso_catalog entry: %w", err)
@@ -105,12 +111,12 @@ func (r *ISOCatalogRepo) Create(ctx context.Context, e *ISOCatalogDBEntry) (int6
 	return result.LastInsertId()
 }
 
-// Update modifies an existing catalog entry.
 func (r *ISOCatalogRepo) Update(ctx context.Context, id int64, e *ISOCatalogDBEntry) error {
 	_, err := r.db.ExecContext(ctx,
-		`UPDATE iso_catalog SET name=?, distro=?, variant=?, arch=?, check_url=?, filename_pattern=?,
+		`UPDATE iso_catalog SET name=?, distro=?, variant=?, arch=?, check_url=?, filename_pattern=?, base_url=?, version_dir_pattern=?, iso_path_template=?,
 		 auto_update=?, check_interval_hours=?, sha256=?, updated_at=CURRENT_TIMESTAMP WHERE id=?`,
 		e.Name, e.Distro, e.Variant, e.Arch, e.CheckURL, e.FilenamePattern,
+		e.BaseURL, e.VersionDirPattern, e.ISOPathTemplate,
 		e.AutoUpdate, e.CheckIntervalHours, e.SHA256, id)
 	if err != nil {
 		return fmt.Errorf("updating iso_catalog entry %d: %w", id, err)

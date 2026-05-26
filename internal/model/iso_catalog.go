@@ -9,6 +9,9 @@ type ISOCatalogEntry struct {
 	Arch               string `json:"arch"`
 	CheckURL           string `json:"check_url"`
 	FilenamePattern    string `json:"filename_pattern"`
+	BaseURL            string `json:"base_url"`
+	VersionDirPattern  string `json:"version_dir_pattern"`
+	ISOPathTemplate    string `json:"iso_path_template"`
 	CurrentURL         string `json:"current_url"`
 	AutoUpdate         bool   `json:"auto_update"`
 	CheckIntervalHours int    `json:"check_interval_hours"`
@@ -29,6 +32,9 @@ type ISOCatalogCreateRequest struct {
 	Arch               string `json:"arch"`
 	CheckURL           string `json:"check_url"`
 	FilenamePattern    string `json:"filename_pattern"`
+	BaseURL            string `json:"base_url"`
+	VersionDirPattern  string `json:"version_dir_pattern"`
+	ISOPathTemplate    string `json:"iso_path_template"`
 	AutoUpdate         bool   `json:"auto_update"`
 	CheckIntervalHours int    `json:"check_interval_hours"`
 SHA256             string `json:"sha256"`
@@ -43,6 +49,9 @@ type ISOCatalogUpdateRequest struct {
 	Arch               *string `json:"arch,omitempty"`
 	CheckURL           *string `json:"check_url,omitempty"`
 	FilenamePattern    *string `json:"filename_pattern,omitempty"`
+	BaseURL            *string `json:"base_url,omitempty"`
+	VersionDirPattern  *string `json:"version_dir_pattern,omitempty"`
+	ISOPathTemplate    *string `json:"iso_path_template,omitempty"`
 	AutoUpdate         *bool   `json:"auto_update,omitempty"`
 	CheckIntervalHours *int    `json:"check_interval_hours,omitempty"`
 SHA256             *string `json:"sha256,omitempty"`

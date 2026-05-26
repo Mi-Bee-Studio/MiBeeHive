@@ -47,6 +47,9 @@ func dbEntryToModel(e *db.ISOCatalogDBEntry) model.ISOCatalogEntry {
 		Arch:               e.Arch,
 		CheckURL:           e.CheckURL,
 		FilenamePattern:    e.FilenamePattern,
+		BaseURL:            e.BaseURL,
+		VersionDirPattern:  e.VersionDirPattern,
+		ISOPathTemplate:    e.ISOPathTemplate,
 		CurrentURL:         e.CurrentURL,
 		AutoUpdate:         e.AutoUpdate,
 		CheckIntervalHours: e.CheckIntervalHours,
@@ -104,6 +107,9 @@ func (s *ISOCatalogService) CreateCatalogEntry(ctx context.Context, req model.IS
 		Arch:               req.Arch,
 		CheckURL:           req.CheckURL,
 		FilenamePattern:    req.FilenamePattern,
+		BaseURL:            req.BaseURL,
+		VersionDirPattern:  req.VersionDirPattern,
+		ISOPathTemplate:    req.ISOPathTemplate,
 		AutoUpdate:         req.AutoUpdate,
 		CheckIntervalHours: req.CheckIntervalHours,
 		SHA256:             req.SHA256,
@@ -138,6 +144,15 @@ func (s *ISOCatalogService) UpdateCatalogEntry(ctx context.Context, id int64, re
 	}
 	if req.FilenamePattern != nil {
 		existing.FilenamePattern = *req.FilenamePattern
+	}
+	if req.BaseURL != nil {
+		existing.BaseURL = *req.BaseURL
+	}
+	if req.VersionDirPattern != nil {
+		existing.VersionDirPattern = *req.VersionDirPattern
+	}
+	if req.ISOPathTemplate != nil {
+		existing.ISOPathTemplate = *req.ISOPathTemplate
 	}
 	if req.AutoUpdate != nil {
 		existing.AutoUpdate = *req.AutoUpdate

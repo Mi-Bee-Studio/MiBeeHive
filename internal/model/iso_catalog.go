@@ -68,6 +68,7 @@ type ISOQueueStats struct {
 	Pending     int `json:"pending"`
 	Downloading int `json:"downloading"`
 	Downloaded  int `json:"downloaded"`
+	Available   int `json:"available"`
 	Error       int `json:"error"`
 	Total       int `json:"total"`
 }

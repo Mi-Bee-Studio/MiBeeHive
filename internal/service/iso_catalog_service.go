@@ -305,7 +305,8 @@ func (s *ISOCatalogService) CheckAllAutoUpdate(ctx context.Context) error {
 			s.logger.Error("auto-check failed", "entry", entry.Name, "error", err)
 			continue
 		}
-		if resp.Status == "new_version" && entry.CurrentURL != "" {
+		shouldDownload := resp.FoundURL != "" && (resp.Status == "new_version" || (resp.Status == "up_to_date" && entry.DownloadStatus != "downloaded"))
+		if shouldDownload {
 			if err := s.DownloadFromCatalog(ctx, entry.ID); err != nil {
 				s.logger.Error("auto-download failed", "entry", entry.Name, "error", err)
 			}
@@ -321,6 +322,10 @@ func (s *ISOCatalogService) StartVersionChecker(ctx context.Context, interval ti
 	go func() {
 		defer ticker.Stop()
 		s.logger.Info("ISO catalog version checker started", "interval", interval)
+		// Run initial check immediately, then periodically.
+		if err := s.CheckAllAutoUpdate(ctx); err != nil {
+			s.logger.Error("initial version check failed", "error", err)
+		}
 		for {
 			select {
 			case <-ctx.Done():
@@ -475,37 +480,54 @@ func (s *ISOCatalogService) GetQueueStats(ctx context.Context) (*model.ISOQueueS
 	}
 	var stats model.ISOQueueStats
 	for _, e := range all {
-		switch e.DownloadStatus {
+		ds := e.DownloadStatus
+		if ds == "" {
+			if e.CurrentURL != "" {
+				ds = "available"
+			} else {
+				ds = "pending"
+			}
+		}
+	switch ds {
 		case "pending":
 			stats.Pending++
 		case "downloading":
 			stats.Downloading++
 		case "downloaded":
 			stats.Downloaded++
+		case "available":
+			stats.Available++
 		case "error":
 			stats.Error++
 		}
 	}
-	stats.Total = stats.Pending + stats.Downloading + stats.Downloaded + stats.Error
+	stats.Total = stats.Pending + stats.Downloading + stats.Downloaded + stats.Available + stats.Error
 	return &stats, nil
 }
 
 // GetQueueList returns all entries with non-empty download_status.
 func (s *ISOCatalogService) GetQueueList(ctx context.Context) ([]model.ISOQueueItem, error) {
-	statuses := []string{"pending", "downloading", "downloaded", "error"}
-	entries, err := s.catalogRepo.ListByDownloadStatuses(ctx, statuses)
+	entries, err := s.catalogRepo.List(ctx)
 	if err != nil {
 		return nil, err
 	}
 	items := make([]model.ISOQueueItem, 0, len(entries))
 	for _, e := range entries {
+		ds := e.DownloadStatus
+		if ds == "" {
+			if e.CurrentURL != "" {
+				ds = "available"
+			} else {
+				ds = "pending"
+			}
+		}
 		items = append(items, model.ISOQueueItem{
 			ID:             e.ID,
 			Name:           e.Name,
 			Distro:         e.Distro,
 			Arch:           e.Arch,
 			CurrentURL:     e.CurrentURL,
-			DownloadStatus: e.DownloadStatus,
+			DownloadStatus: ds,
 			Status:         e.Status,
 		})
 	}

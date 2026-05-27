@@ -738,14 +738,30 @@ func TestCatalogService_GetQueueList(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetQueueList: %v", err)
 	}
-	if len(items) != 1 {
-		t.Fatalf("expected 1 queue item, got %d", len(items))
+	if len(items) != 2 {
+		t.Fatalf("expected 2 queue items, got %d", len(items))
 	}
-	if items[0].Name != "Active" {
-		t.Errorf("expected name=Active, got %q", items[0].Name)
+	// Both entries should appear; empty status mapped to pending
+	var foundEmpty, foundActive bool
+	for _, item := range items {
+		if item.Name == "Empty Status" {
+			foundEmpty = true
+			if item.DownloadStatus != "pending" {
+				t.Errorf("empty entry: expected download_status=pending, got %q", item.DownloadStatus)
+			}
+		}
+		if item.Name == "Active" {
+			foundActive = true
+			if item.DownloadStatus != "pending" {
+				t.Errorf("active entry: expected download_status=pending, got %q", item.DownloadStatus)
+			}
+		}
 	}
-	if items[0].DownloadStatus != "pending" {
-		t.Errorf("expected download_status=pending, got %q", items[0].DownloadStatus)
+	if !foundEmpty {
+		t.Error("empty status entry not found in queue")
+	}
+	if !foundActive {
+		t.Error("active entry not found in queue")
 	}
 }
 

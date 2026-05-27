@@ -769,7 +769,7 @@ const DeployISO = (function () {
               ${checkAllBtn ? '...' : t('catalog_check_all')}
             </button>
             <button class="btn btn-secondary btn-sm"
-              onClick=${handleDownloadISO}>${t('iso_manual_download')}</button>
+              onClick=${handleDownloadISO}>${t('osinstall_manual_download')}</button>
             <button class="btn btn-primary btn-sm"
               onClick=${handleAddCatEntry}>${t('catalog_add_entry')}</button>
           </div>

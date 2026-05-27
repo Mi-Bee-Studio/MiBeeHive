@@ -36,7 +36,13 @@ const DeployISO = (function () {
     return { distro: 'other', arch: 'unknown' };
   }
 
-  // ── Catalog Entry Row ────────────────────────────────────────────────
+  // ── Arch badge helper ────────────────────────────────────────────────
+  function ArchBadge(props) {
+    var arch = props.arch || 'unknown';
+    return html`<span class="badge badge-default" style="font-size:0.625rem;margin-left:0.375rem;vertical-align:middle">${arch}</span>`;
+  }
+
+  // ── Catalog Entry Row (flat, with arch badge + ActionMenu) ───────────
   function CatalogEntryRow(props) {
     var e = props.entry;
     var lb = _getLabels();
@@ -52,14 +58,45 @@ const DeployISO = (function () {
       etaText = m > 0 ? m + 'm ' + s + 's' : s + 's';
     }
 
+    // Build overflow menu items for secondary actions
+    var menuItems = [];
+    menuItems.push({ label: t('catalog_check'), onClick: function () { props.onCheck(e.id); } });
+    menuItems.push({ label: t('catalog_edit'), onClick: function () { props.onEdit(e); } });
+    menuItems.push({ label: t('action_delete'), onClick: function () { props.onDelete(e); }, danger: true });
+
+    // Determine primary action button based on download state
+    var ds = e.download_status || '';
+    var primaryBtn = null;
+    var secondaryBtn = null;
+    if (ds === 'downloading') {
+      primaryBtn = html`<button class="btn btn-ghost btn-sm" style="color:var(--color-error)"
+        onClick=${function () { props.onCancel(e.id); }}>${t('catalog_cancel_download')}</button>`;
+    } else if (ds === 'error') {
+      primaryBtn = html`<button class="btn btn-ghost btn-sm" style="color:var(--color-warning)"
+        onClick=${function () { props.onRetry(e.id); }}>${t('catalog_retry')}</button>`;
+    } else {
+      primaryBtn = html`<button class="btn btn-ghost btn-sm"
+        onClick=${function () { props.onDownload(e.id); }}>${t('catalog_download')}</button>`;
+    }
+
+    // Status badge: combine catalog status with download status badge
+    var statusBadge;
+    if (props.queueStatus && props.queueStatus !== 'downloaded') {
+      var qCls = { pending: 'badge-warning', available: 'badge-warning', downloading: 'badge-blue', downloaded: 'badge-success', error: 'badge-error' };
+      var qLabel = props.queueStatus === 'available' ? t('catalog_available') : (t('iso_queue_' + props.queueStatus) || E(props.queueStatus));
+      statusBadge = html`<span class="badge ${qCls[props.queueStatus] || 'badge-default'}" style="font-size:0.6875rem">${qLabel}</span>`;
+    } else {
+      statusBadge = html`<span class="badge ${STATUS_CLS[e.status] || 'badge-default'}" style="font-size:0.6875rem">${lb[e.status] || E(e.status)}</span>`;
+    }
+
     return html`
       <tr data-cid=${e.id}>
         <td>
-          <div class="font-medium" style="color:var(--color-text)">${E(e.name)}</div>
+          <div class="font-medium" style="color:var(--color-text)">${E(e.name)}<${ArchBadge} arch=${e.arch} /></div>
           ${e.variant ? html`<span class="text-xs" style="color:var(--color-text-tertiary)">${E(e.variant)}</span>` : null}
-          ${e.download_status === 'error' && e.last_error ? html`
+          ${ds === 'error' && e.last_error ? html`
             <span class="text-xs" style="color:var(--color-error);display:block;margin-top:0.125rem" data-role="last-error">${E(e.last_error)}</span>` : null}
-          ${e.download_status === 'downloading' ? html`
+          ${ds === 'downloading' ? html`
             <div style="margin-top:0.25rem">
               <div class="dl-progress" id=${barId} style="background:var(--color-bg-tertiary);border-radius:var(--radius-sm);overflow:hidden;height:0.375rem">
                 <div class="dl-progress-bar" style="width:${progress ? progress.percent : 0}%;height:100%;background:var(--color-primary);transition:width 0.3s"></div>
@@ -67,7 +104,7 @@ const DeployISO = (function () {
               ${speedText ? html`<span class="text-xs" style="color:var(--color-text-tertiary)">${speedText}${etaText ? ' - ' + etaText : ''}</span>` : null}
             </div>` : null}
         </td>
-        <td><span class="badge ${STATUS_CLS[e.status] || 'badge-default'}" style="font-size:0.6875rem">${lb[e.status] || E(e.status)}</span></td>
+        <td>${statusBadge}</td>
         <td><span class="text-xs" style="color:var(--color-text-tertiary)">${lc}</span></td>
         <td>
           <label class="toggle-switch di-auto">
@@ -79,49 +116,69 @@ const DeployISO = (function () {
         </td>
         <td style="text-align:right">
           <div class="flex justify-end gap-1">
-            <button class="btn btn-ghost btn-sm"
-              onClick=${function () { props.onCheck(e.id); }}>${t('catalog_check')}</button>
-            <button class="btn btn-ghost btn-sm"
-              onClick=${function () { props.onDownload(e.id); }}>${t('catalog_download')}</button>
-            ${e.download_status === 'error' ? html`
-              <button class="btn btn-ghost btn-sm" style="color:var(--color-warning)"
-                onClick=${function () { props.onRetry(e.id); }}>${t('catalog_retry')}</button>` : null}
-            ${e.download_status === 'downloading' ? html`
-              <button class="btn btn-ghost btn-sm" style="color:var(--color-error)"
-                onClick=${function () { props.onCancel(e.id); }}>${t('catalog_cancel_download')}</button>` : null}
-            <button class="btn btn-ghost btn-sm"
-              onClick=${function () { props.onEdit(e); }}>${t('catalog_edit')}</button>
-            <button class="btn btn-ghost btn-danger-outline btn-sm"
-              onClick=${function () { props.onDelete(e); }}>${t('catalog_delete')}</button>
+            ${primaryBtn}
+            ${secondaryBtn}
+            <${Components.ActionMenu} items=${menuItems} />
           </div>
         </td>
       </tr>`;
   }
 
-  // ── Architecture Sub-section (collapsible) ──────────────────────────
-  function ArchSection(props) {
-    var _aOpen = useState(false);
-    var aOpen = _aOpen[0], setAOpen = _aOpen[1];
-    var entries = props.entries;
+  // ── Standalone File Row (with arch badge + ActionMenu) ───────────────
+  function StandaloneFileRow(props) {
+    var iso = props.iso, E = Helpers.escapeHtml;
+    var sz = iso.size_bytes > 0 ? Helpers.formatBytes(iso.size_bytes) : '';
+    var mt = iso.mod_time ? new Date(iso.mod_time).toLocaleString() : '';
+    var parsed = parseISOFilename(iso.name);
     return html`
-      <div style="border-top:1px solid var(--color-border)">
-        <button onClick=${function(){setAOpen(!aOpen);}} style="width:100%;display:flex;align-items:center;gap:var(--space-xs);padding:var(--space-xs) var(--space-sm);background:none;border:none;color:var(--color-text-secondary);cursor:pointer;font-size:var(--font-size-xs);text-transform:uppercase;letter-spacing:0.05em">
-          <svg width="12" height="12" viewBox="0 0 12 12" style="transform:rotate(${aOpen?'90':'0'}deg);transition:transform 0.2s;flex-shrink:0"><path d="M4 2l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
-          <span>${Helpers.escapeHtml(props.arch)}</span>
-          <span style="opacity:0.5">(${entries.length})</span>
-        </button>
-        ${aOpen ? html`<div class="table-wrap overflow-x-auto" style="padding:0 var(--space-sm) var(--space-sm)"><table style="margin-bottom:var(--space-sm)"><thead><tr><th>${t('catalog_name')}</th><th>${t('catalog_status')}</th><th>${t('catalog_last_checked')}</th><th>${t('catalog_auto_update')}</th><th style="text-align:right">${t('actions')}</th></tr></thead><tbody>${entries.map(function(e){if(e._isStandalone){return html`<${StandaloneFileRow} key=${e.id} iso=${e} onDelete=${props.onDeleteStandalone} />`;}var fn=e.current_url?e.current_url.split('/').pop():'';return html`<${CatalogEntryRow} key=${e.id} entry=${e} progress=${props.progressMap[fn]} onCheck=${props.onCheck} onDownload=${props.onDownload} onRetry=${props.onRetry} onCancel=${props.onCancel} onEdit=${props.onEdit} onDelete=${props.onDelete} onToggleAuto=${props.onToggleAuto} />`;})}</tbody></table></div>` : null}
+      <tr data-standalone=${iso.name}>
+        <td><div class="font-medium" style="color:var(--color-text)">${E(iso.name)}<${ArchBadge} arch=${parsed.arch} /></div><span class="badge badge-default" style="font-size:0.625rem;margin-top:0.125rem">${t('catalog_file_badge')}</span></td>
+        <td><span class="badge badge-blue" style="font-size:0.6875rem">${t('catalog_downloaded')}</span><span class="text-xs" style="color:var(--color-text-tertiary);margin-left:0.375rem">${sz}</span></td>
+        <td><span class="text-xs" style="color:var(--color-text-tertiary)">${mt}</span></td>
+        <td></td>
+        <td style="text-align:right">
+          <div class="flex justify-end">
+            <${Components.ActionMenu} items=${[{ label: t('action_delete'), onClick: function() { props.onDelete(iso.name); }, danger: true }]} />
+          </div>
+        </td>
+      </tr>`;
+  }
+
+  // ── Download Summary Bar ─────────────────────────────────────────────
+  function DownloadSummaryBar(props) {
+    var stats = props.stats || { pending: 0, downloading: 0, downloaded: 0, error: 0, total: 0 };
+    // Only show when there's meaningful activity
+    var hasActivity = stats.downloading > 0 || stats.pending > 0 || (stats.available && stats.available > 0) || stats.error > 0;
+    if (!hasActivity) return null;
+
+    return html`
+      <div class="download-summary-bar" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;padding:0.625rem 1rem;margin-bottom:0.75rem;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg-secondary)">
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-1" style="font-size:0.75rem;color:var(--color-text-tertiary)">
+          <span style="font-weight:var(--font-weight-semibold);color:var(--color-text)">${t('iso_download_summary')}</span>
+          ${stats.downloading > 0 ? html`<span>${t('iso_queue_downloading')}: <span style="color:var(--color-primary)">${stats.downloading}</span></span>` : null}
+          ${(stats.available || 0) > 0 ? html`<span>${t('catalog_available')}: <span style="color:var(--color-warning)">${stats.available}</span></span>` : null}
+          ${stats.pending > 0 ? html`<span>${t('iso_queue_pending')}: <span style="color:var(--color-warning)">${stats.pending}</span></span>` : null}
+          ${stats.error > 0 ? html`<span>${t('iso_queue_error')}: <span style="color:var(--color-error)">${stats.error}</span></span>` : null}
+          ${stats.downloaded > 0 ? html`<span>${t('iso_queue_downloaded')}: <span style="color:var(--color-success)">${stats.downloaded}</span></span>` : null}
+          <span>${t('iso_queue_total')}: <span style="color:var(--color-text-secondary)">${stats.total}</span></span>
+        </div>
+        ${props.onDownloadAll && (stats.pending > 0 || (stats.available || 0) > 0 || stats.error > 0) ? html`
+          <button class="btn btn-ghost btn-sm" onClick=${props.onDownloadAll}>${t('iso_queue_download_all')}</button>
+        ` : null}
       </div>`;
   }
 
-  // ── Catalog Section (grouped by distro) ──────────────────────────────
+  // ── Catalog Section (distro accordion, flat rows) ────────────────────
   function CatalogSection(props) {
     var _open = useState(false);
     var open = _open[0], setOpen = _open[1];
     var distro = props.distro;
-    var archGroups = props.archGroups;
-    var totalCount = props.totalCount;
+    var entries = props.entries;
+    var totalCount = entries.length;
     var progressMap = props.progressMap;
+
+    // Build queue status lookup from queueItems
+    var queueLookup = props.queueLookup || {};
 
     return html`
       <div style="border:1px solid var(--color-border);border-radius:var(--radius-md);margin-bottom:0.5rem;overflow:hidden">
@@ -134,159 +191,35 @@ const DeployISO = (function () {
           <svg style="transform:rotate(${open ? '180' : '0'}deg);transition:transform 0.2s;width:1rem;height:1rem;color:var(--color-text-quaternary)" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
         </button>
         ${open ? html`
-          <div>
-            ${Object.keys(archGroups).sort().map(function (arch) {
-              var entries = archGroups[arch];
-              return html`<${ArchSection} key=${arch} arch=${arch} entries=${entries}
-                progressMap=${progressMap}
-                onCheck=${props.onCheck}
-                onDownload=${props.onDownload}
-                onRetry=${props.onRetry}
-                onCancel=${props.onCancel}
-                onEdit=${props.onEdit}
-                onDelete=${props.onDelete}
-                onDeleteStandalone=${props.onDeleteStandalone}
-                onToggleAuto=${props.onToggleAuto} />`;
-            })}
-          </div>` : null}
-      </div>`;
-  }
-
-  function StandaloneFileRow(props) {
-    var iso = props.iso, E = Helpers.escapeHtml;
-    var sz = iso.size_bytes > 0 ? Helpers.formatBytes(iso.size_bytes) : '';
-    var mt = iso.mod_time ? new Date(iso.mod_time).toLocaleString() : '';
-    return html`
-      <tr data-standalone=${iso.name}>
-        <td><div class="font-medium" style="color:var(--color-text)">${E(iso.name)}</div><span class="badge badge-default" style="font-size:0.625rem;margin-top:0.125rem">${t('catalog_file_badge')}</span></td>
-        <td><span class="badge badge-blue" style="font-size:0.6875rem">${t('catalog_downloaded')}</span><span class="text-xs" style="color:var(--color-text-tertiary);margin-left:0.375rem">${sz}</span></td>
-        <td><span class="text-xs" style="color:var(--color-text-tertiary)">${mt}</span></td>
-        <td></td>
-        <td style="text-align:right"><button class="btn btn-ghost btn-danger-outline btn-sm" onClick=${function(){props.onDelete(iso.name);}}>${t('osinstall_delete')}</button></td>
-      </tr>`;
-  }
-
-  // ── Queue Status Badge Mapping ──────────────────────────────────────
-var QUEUE_STATUS_CLS = {
-    pending: 'badge-warning',
-    available: 'badge-warning',
-    downloading: 'badge-blue',
-    downloaded: 'badge-success',
-    error: 'badge-error'
-  };
-
-  // ── Download Queue Section (flat list) ───────────────────────────────
-  function QueueSection(props) {
-    var _open = useState(true);
-    var open = _open[0], setOpen = _open[1];
-    var items = props.items || [];
-    var stats = props.stats || { pending: 0, downloading: 0, downloaded: 0, error: 0, total: 0 };
-    var progressMap = props.progressMap;
-    var E = Helpers.escapeHtml;
-
-    // Auto-collapse when all done and no active downloads
-    useEffect(function () {
-      if (stats.downloading > 0) {
-        setOpen(true);
-      } else if (stats.total > 0 && stats.pending === 0 && stats.downloading === 0 && (stats.available || 0) === 0 && stats.error === 0) {
-        setOpen(false);
-      }
-    }, [stats.downloading, stats.pending, stats.error, stats.total]);
-
-    var statsBar = html`
-      <div class="flex flex-wrap items-center gap-x-3 gap-y-1" style="font-size:0.75rem;color:var(--color-text-tertiary)">
-${stats.pending > 0 ? html`<span>${t('iso_queue_pending')}: <span style="color:var(--color-warning)">${stats.pending}</span></span>` : null}
-        ${(stats.available || 0) > 0 ? html`<span>${t('catalog_available')}: <span style="color:var(--color-warning)">${stats.available}</span></span>` : null}
-        ${stats.downloading > 0 ? html`<span>${t('iso_queue_downloading')}: <span style="color:var(--color-primary)">${stats.downloading}</span></span>` : null}
-        ${stats.downloaded > 0 ? html`<span>${t('iso_queue_downloaded')}: <span style="color:var(--color-success)">${stats.downloaded}</span></span>` : null}
-        ${stats.error > 0 ? html`<span>${t('iso_queue_error')}: <span style="color:var(--color-error)">${stats.error}</span></span>` : null}
-        <span>${t('iso_queue_total')}: <span style="color:var(--color-text-secondary)">${stats.total}</span></span>
-      </div>`;
-
-    if (items.length === 0) {
-      return html`
-        <div style="border:1px solid var(--color-border);border-radius:var(--radius-md);margin-bottom:1rem;overflow:hidden">
-          <div style="padding:0.75rem 1rem;display:flex;align-items:center;justify-content:space-between;background:var(--color-bg-secondary)">
-            <span style="font-size:0.875rem;font-weight:var(--font-weight-semibold);color:var(--color-text)">${t('iso_queue_title')}</span>
-          </div>
-          <div style="padding:1.5rem;text-align:center">
-            <p class="text-sm" style="color:var(--color-text-tertiary)">${t('iso_queue_empty')}</p>
-          </div>
-        </div>`;
-    }
-
-    return html`
-      <div style="border:1px solid var(--color-border);border-radius:var(--radius-md);margin-bottom:1rem;overflow:hidden">
-        <div style="padding:0.75rem 1rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;background:var(--color-bg-secondary);cursor:pointer" onClick=${function(){ setOpen(!open); }}>
-          <div class="flex items-center gap-2">
-            <svg style="transform:rotate(${open?'180':'0'}deg);transition:transform 0.2s;width:1rem;height:1rem;color:var(--color-text-quaternary);flex-shrink:0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
-            <span style="font-size:0.875rem;font-weight:var(--font-weight-semibold);color:var(--color-text)">${t('iso_queue_title')}</span>
-            <span class="text-xs" style="color:var(--color-text-tertiary)">(${stats.total})</span>
-          </div>
-          <div class="flex items-center gap-2">
-            ${statsBar}
-            ${props.onDownloadAll && (stats.pending > 0 || (stats.available || 0) > 0 || stats.error > 0) ? html`
-              <button class="btn btn-ghost btn-sm" onClick=${function(ev){ ev.stopPropagation(); props.onDownloadAll(); }}>${t('iso_queue_download_all')}</button>
-            ` : null}
-          </div>
-        </div>
-        ${open ? html`
           <div class="table-wrap overflow-x-auto" style="padding:0">
             <table style="margin-bottom:0">
               <thead>
                 <tr>
                   <th>${t('catalog_name')}</th>
                   <th>${t('catalog_status')}</th>
+                  <th>${t('catalog_last_checked')}</th>
+                  <th>${t('catalog_auto_update')}</th>
                   <th style="text-align:right">${t('actions')}</th>
                 </tr>
               </thead>
               <tbody>
-                ${items.map(function (item) {
-                  var ds = item.download_status || 'pending';
-                  var fn = item.current_url ? item.current_url.split('/').pop() : '';
-                  var prog = progressMap[fn];
-                  var statusLabel = ds === 'available' ? t('catalog_available') : (t('iso_queue_' + ds) || E(ds));
-
-                  var speedText = prog && prog.speed > 0 ? Helpers.formatBytes(prog.speed) + '/s' : undefined;
-                  var etaText;
-                  if (prog && prog.eta > 0) {
-                    var m = Math.floor(prog.eta / 60), s = prog.eta % 60;
-                    etaText = m > 0 ? m + 'm ' + s + 's' : s + 's';
+                ${entries.map(function (e) {
+                  if (e._isStandalone) {
+                    return html`<${StandaloneFileRow} key=${e.id} iso=${e} onDelete=${props.onDeleteStandalone} />`;
                   }
-
-                  return html`
-                    <tr key=${item.id} data-qid=${item.id}>
-                      <td>
-                        <div class="font-medium" style="color:var(--color-text)">${E(item.name)}</div>
-                        ${ds === 'error' && item.last_error ? html`
-                          <span class="text-xs" style="color:var(--color-error);display:block;margin-top:0.125rem">${E(item.last_error)}</span>` : null}
-                        ${ds === 'downloading' ? html`
-                          <div style="margin-top:0.25rem">
-                            <div class="dl-progress" style="background:var(--color-bg-tertiary);border-radius:var(--radius-sm);overflow:hidden;height:0.375rem">
-                              <div class="dl-progress-bar" style="width:${prog ? prog.percent : 0}%;height:100%;background:var(--color-primary);transition:width 0.3s"></div>
-                            </div>
-                            ${speedText ? html`<span class="text-xs" style="color:var(--color-text-tertiary)">${speedText}${etaText ? ' - ' + etaText : ''}</span>` : null}
-                          </div>` : null}
-                      </td>
-                      <td><span class="badge ${QUEUE_STATUS_CLS[ds] || 'badge-default'}" style="font-size:0.6875rem">${statusLabel}</span></td>
-                      <td style="text-align:right">
-                        <div class="flex justify-end gap-1">
-                          ${(ds === 'pending' || ds === 'available') ? html`
-                            <button class="btn btn-ghost btn-sm" onClick=${function(){ props.onDownload(item.id); }}>${t('catalog_download')}</button>` : null}
-                          ${ds === 'downloading' ? html`
-                            <button class="btn btn-ghost btn-sm" style="color:var(--color-error)" onClick=${function(){ props.onCancel(item.id); }}>${t('catalog_cancel_download')}</button>` : null}
-                          ${ds === 'error' ? html`
-                            <button class="btn btn-ghost btn-sm" style="color:var(--color-warning)" onClick=${function(){ props.onRetry(item.id); }}>${t('catalog_retry')}</button>` : null}
-                        </div>
-                      </td>
-                    </tr>`;
+                  var fn = e.current_url ? e.current_url.split('/').pop() : '';
+                  var queueEntry = queueLookup[e.id];
+                  var queueStatus = queueEntry ? (queueEntry.download_status || 'pending') : null;
+                  return html`<${CatalogEntryRow} key=${e.id} entry=${e} progress=${progressMap[fn]} queueStatus=${queueStatus}
+                    onCheck=${props.onCheck} onDownload=${props.onDownload} onRetry=${props.onRetry}
+                    onCancel=${props.onCancel} onEdit=${props.onEdit} onDelete=${props.onDelete}
+                    onToggleAuto=${props.onToggleAuto} />`;
                 })}
               </tbody>
             </table>
           </div>` : null}
       </div>`;
   }
-
 
   function DownloadISOModal(props) {
     var _fn=useState(''),fn=_fn[0],setFn=_fn[1];
@@ -502,7 +435,7 @@ ${stats.pending > 0 ? html`<span>${t('iso_queue_pending')}: <span style="color:v
     var _checkAllBtn = useState(false);
     var checkAllBtn = _checkAllBtn[0], setCheckAllBtn = _checkAllBtn[1];
 
-    // Queue state
+    // Queue state (still fetched for summary stats + inline status)
     var _queueItems = useState([]);
     var queueItems = _queueItems[0], setQueueItems = _queueItems[1];
     var _queueStats = useState({ pending: 0, downloading: 0, downloaded: 0, error: 0, total: 0 });
@@ -535,7 +468,7 @@ ${stats.pending > 0 ? html`<span>${t('iso_queue_pending')}: <span style="color:v
         });
       });
 
-      // Fetch queue data
+      // Fetch queue data (for summary bar + inline status)
       Api.get('/admin/os-install/catalog/queue').then(function (r) {
         if (!mountedRef.current) return;
         if (r && r.success) {
@@ -602,7 +535,14 @@ ${stats.pending > 0 ? html`<span>${t('iso_queue_pending')}: <span style="color:v
       return m;
     }, [progress]);
 
-    // ── Group catalog + standalone ISOs by distro then arch ──────────
+    // ── Queue lookup by catalog entry ID ────────────────────────────────
+    var queueLookup = useMemo(function () {
+      var m = {};
+      queueItems.forEach(function (q) { m[q.id] = q; });
+      return m;
+    }, [queueItems]);
+
+    // ── Group catalog + standalone ISOs by distro (flat, no arch nesting) ─
     var grouped = useMemo(function () {
       var filtered = catFilter ? catalog.filter(function (e) {
         if (catFilter === 'downloaded') return e.status === 'downloaded';
@@ -612,10 +552,8 @@ ${stats.pending > 0 ? html`<span>${t('iso_queue_pending')}: <span style="color:v
       var groups = {};
       filtered.forEach(function (e) {
         var key = e.distro || 'other';
-        if (!groups[key]) groups[key] = {};
-        var arch = e.arch || 'unknown';
-        if (!groups[key][arch]) groups[key][arch] = [];
-        groups[key][arch].push(e);
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(e);
       });
 
       // Build set of filenames already covered by catalog entries
@@ -632,10 +570,8 @@ ${stats.pending > 0 ? html`<span>${t('iso_queue_pending')}: <span style="color:v
         if (catalogFiles[iso.name]) return;
         var parsed = parseISOFilename(iso.name);
         var key = parsed.distro;
-        if (!groups[key]) groups[key] = {};
-        var arch = parsed.arch;
-        if (!groups[key][arch]) groups[key][arch] = [];
-        groups[key][arch].push({
+        if (!groups[key]) groups[key] = [];
+        groups[key].push({
           id: 'file-' + iso.name,
           name: iso.name,
           distro: parsed.distro,
@@ -650,10 +586,7 @@ ${stats.pending > 0 ? html`<span>${t('iso_queue_pending')}: <span style="color:v
 
       var sections = [];
       Object.keys(groups).sort().forEach(function (distro) {
-        var archGroups = groups[distro];
-        var totalCount = 0;
-        for (var a in archGroups) totalCount += archGroups[a].length;
-        sections.push({ distro: distro, archGroups: archGroups, totalCount: totalCount });
+        sections.push({ distro: distro, entries: groups[distro] });
       });
       return sections;
     }, [catalog, isos, catFilter]);
@@ -836,7 +769,7 @@ ${stats.pending > 0 ? html`<span>${t('iso_queue_pending')}: <span style="color:v
               ${checkAllBtn ? '...' : t('catalog_check_all')}
             </button>
             <button class="btn btn-secondary btn-sm"
-              onClick=${handleDownloadISO}>${t('osinstall_iso_trigger')}</button>
+              onClick=${handleDownloadISO}>${t('iso_manual_download')}</button>
             <button class="btn btn-primary btn-sm"
               onClick=${handleAddCatEntry}>${t('catalog_add_entry')}</button>
           </div>
@@ -844,12 +777,8 @@ ${stats.pending > 0 ? html`<span>${t('iso_queue_pending')}: <span style="color:v
 
         <div ref=${filterBarContainerRef} class="mb-4"></div>
 
-        ${!loading ? html`<${QueueSection}
-          items=${queueItems}
+        ${!loading ? html`<${DownloadSummaryBar}
           stats=${queueStats}
-          progressMap=${progressMap}
-          onDownload=${handleDownloadEntry}
-          onRetry=${handleRetry} onCancel=${handleCancel}
           onDownloadAll=${handleDownloadAll}
         />` : null}
 
@@ -870,8 +799,8 @@ ${stats.pending > 0 ? html`<span>${t('iso_queue_pending')}: <span style="color:v
         ${!loading && !catError ? html`
           <div id="di-catalog">
             ${grouped.map(function (g) {
-              return html`<${CatalogSection} key=${g.distro} distro=${g.distro} archGroups=${g.archGroups}
-                totalCount=${g.totalCount} progressMap=${progressMap}
+              return html`<${CatalogSection} key=${g.distro} distro=${g.distro} entries=${g.entries}
+                progressMap=${progressMap} queueLookup=${queueLookup}
                 onCheck=${handleCheckEntry} onDownload=${handleDownloadEntry}
                 onRetry=${handleRetry} onCancel=${handleCancel}
                 onEdit=${handleEditEntry} onDelete=${handleDeleteEntry}

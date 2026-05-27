@@ -147,8 +147,6 @@ const DeployConfigs = (function () {
     var params = {};
     if (isEdit) { try { params = JSON.parse(config.config || '{}'); } catch (e) { /* */ } }
 
-    var _activeTab = useState('basic');
-    var activeTab = _activeTab[0], setActiveTab = _activeTab[1];
     var _submitting = useState(false);
     var submitting = _submitting[0], setSubmitting = _submitting[1];
     var _previewing = useState(false);
@@ -157,6 +155,9 @@ const DeployConfigs = (function () {
     var previewContent = _previewContent[0], setPreviewContent = _previewContent[1];
     var _errors = useState({});
     var errors = _errors[0], setErrors = _errors[1];
+    var _advancedOpen = useState(false);
+    var advancedOpen = _advancedOpen[0], setAdvancedOpen = _advancedOpen[1];
+    var autoSlugRef = useRef(true);
 
     // Form state
     var _name = useState(isEdit ? config.name : '');
@@ -197,6 +198,12 @@ const DeployConfigs = (function () {
     var packages = _packages[0], setPackages = _packages[1];
     var _additional = useState(params.additional_config || '');
     var additional = _additional[0], setAdditional = _additional[1];
+
+    // Auto-slug: if editing and config_name differs from slug of name, user set it manually
+    if (isEdit && autoSlugRef.current) {
+      var editSlug = Helpers.slugify(config.name || '');
+      autoSlugRef.current = (editSlug === (config.config_name || ''));
+    }
 
     function gatherParams() {
       var raw = packages.trim();
@@ -248,14 +255,22 @@ const DeployConfigs = (function () {
       });
     }
 
-    var TABS = [
-      { id: 'basic', label: t('osi_tab_basic') },
-      { id: 'network', label: t('osi_tab_network') },
-      { id: 'user', label: t('osi_tab_user') },
-      { id: 'disk', label: t('osi_tab_disk') },
-      { id: 'packages', label: t('osi_tab_packages') },
-      { id: 'additional', label: t('osi_tab_additional') }
-    ];
+    function handleNameInput(e) {
+      var val = e.target.value;
+      setName(val);
+      var slug = Helpers.slugify(val);
+      if (slug && (autoSlugRef.current || !configName)) {
+        setConfigName(slug);
+        autoSlugRef.current = true;
+      } else if (!slug && autoSlugRef.current) {
+        setConfigName('');
+      }
+    }
+
+    function handleConfigNameInput(e) {
+      setConfigName(e.target.value);
+      autoSlugRef.current = false;
+    }
 
     var lblStyle = 'color:var(--color-text-secondary)';
     var fz = 'font-size:0.8125rem';
@@ -265,177 +280,161 @@ const DeployConfigs = (function () {
         <div class="modal-content" role="dialog" aria-modal="true" style="max-width:40rem">
           <h3 class="text-base font-semibold mb-4" style="color:var(--color-text)">${isEdit ? t('osinstall_edit') : t('osinstall_new')}</h3>
 
-          <div class="osi-modal-tabs">
-            ${TABS.map(function (tb) {
-              return html`<button class="osi-modal-tab ${activeTab === tb.id ? 'osi-modal-tab-active' : ''}"
-                onClick=${function () { setActiveTab(tb.id); }}>${tb.label}</button>`;
-            })}
-          </div>
-
-          <div class="osi-tab-panels">
-            ${activeTab === 'basic' ? html`
-              <div class="osi-tab-panel" style="display:block">
-                <div class="grid gap-4">
-                  <div class="grid grid-cols-2 gap-3">
-                    <div>
-                      <label class="text-xs font-medium" style="${lblStyle}">${t('osinstall_name')}</label>
-                      <input class="input" placeholder="e.g. my-server" value=${name} style="${fz}"
-                        onInput=${function (e) { setName(e.target.value); }} />
-                      ${errors.name ? html`<span class="text-xs" style="color:var(--color-error)">${errors.name}</span>` : null}
-                    </div>
-                    <div>
-                      <label class="text-xs font-medium" style="${lblStyle}">${t('osinstall_config_name')}</label>
-                      <input class="input" placeholder="my-server" value=${configName} style="${fz}"
-                        onInput=${function (e) { setConfigName(e.target.value); }} />
-                    </div>
-                  </div>
-                  <div>
-                    <label class="text-xs font-medium" style="${lblStyle}">${t('osinstall_os_type')}</label>
-                    <select class="input select" style="${fz}" value=${osType}
-                      onChange=${function (e) { setOsType(e.target.value); }}>
-                      <option value="" disabled>--</option>
-                      ${Object.keys(OS_LABELS).map(function (k) {
-                        return html`<option value=${k}>${OS_LABELS[k]}</option>`;
-                      })}
-                    </select>
-                    ${errors.osType ? html`<span class="text-xs" style="color:var(--color-error)">${errors.osType}</span>` : null}
-                  </div>
-                  <div class="grid grid-cols-3 gap-3">
-                    <div>
-                      <label class="text-xs font-medium" style="${lblStyle}">${t('osinstall_hostname')}</label>
-                      <input class="input" placeholder="server01" value=${hostname} style="${fz}"
-                        onInput=${function (e) { setHostname(e.target.value); }} />
-                      ${errors.hostname ? html`<span class="text-xs" style="color:var(--color-error)">${errors.hostname}</span>` : null}
-                    </div>
-                    <div>
-                      <label class="text-xs font-medium" style="${lblStyle}">${t('osinstall_timezone')}</label>
-                      <input class="input" placeholder="Asia/Shanghai" value=${timezone} style="${fz}"
-                        onInput=${function (e) { setTimezone(e.target.value); }} />
-                    </div>
-                    <div>
-                      <label class="text-xs font-medium" style="${lblStyle}">${t('osinstall_language')}</label>
-                      <input class="input" placeholder="en_US" value=${language} style="${fz}"
-                        onInput=${function (e) { setLanguage(e.target.value); }} />
-                    </div>
-                  </div>
-                  <div class="grid grid-cols-2 gap-3">
-                    <div>
-                      <label class="text-xs font-medium" style="${lblStyle}">${t('osinstall_keyboard')}</label>
-                      <input class="input" placeholder="us" value=${keyboard} style="${fz}"
-                        onInput=${function (e) { setKeyboard(e.target.value); }} />
-                    </div>
-                  </div>
+          <div class="osi-tab-panels" style="max-height:60vh">
+            <div class="grid gap-4">
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="text-xs font-medium" style="${lblStyle}">${t('osinstall_name')}</label>
+                  <input class="input" placeholder="e.g. my-server" value=${name} style="${fz}"
+                    onInput=${handleNameInput} />
+                  ${errors.name ? html`<span class="text-xs" style="color:var(--color-error)">${errors.name}</span>` : null}
                 </div>
-              </div>` : null}
+                <div>
+                  <label class="text-xs font-medium" style="${lblStyle}">${t('osinstall_url_identifier')}</label>
+                  <input class="input" placeholder="my-server" value=${configName} style="${fz}"
+                    onInput=${handleConfigNameInput} />
+                  ${(!configName && !Helpers.slugify(name)) ? html`<span class="text-xs" style="color:var(--color-text-quaternary)">${t('osinstall_url_identifier_hint')}</span>` : null}
+                </div>
+              </div>
 
-            ${activeTab === 'network' ? html`
-              <div class="osi-tab-panel" style="display:block">
-                <div class="grid gap-4">
-                  <div class="flex items-center gap-3 mb-2">
-                    <label class="toggle-switch">
-                      <input type="checkbox" role="switch" checked=${dhcp}
-                        aria-checked="${dhcp ? 'true' : 'false'}"
-                        onChange=${function () { setDhcp(!dhcp); }} />
-                      <span class="toggle-slider"></span>
-                    </label>
-                    <span class="text-sm" style="${lblStyle}">${t('osinstall_dhcp')}</span>
-                  </div>
-                  <span class="text-xs" style="color:var(--color-text-tertiary)">${t('help_osi_dhcp')}</span>
-                  ${!dhcp ? html`
-                    <div class="grid gap-3">
-                      <div class="grid grid-cols-2 gap-3">
-                        <div>
-                          <label class="text-xs font-medium" style="${lblStyle}">${t('osinstall_ip_address')}</label>
-                          // Default placeholder IP for OS install config form (example value)
-                          <input class="input" placeholder="192.168.1.100" value=${ip} style="${fz}"
-                            onInput=${function (e) { setIp(e.target.value); }} />
-                          ${errors.ip ? html`<span class="text-xs" style="color:var(--color-error)">${errors.ip}</span>` : null}
+              <div>
+                <label class="text-xs font-medium" style="${lblStyle}">${t('osinstall_os_type')}</label>
+                <select class="input select" style="${fz}" value=${osType}
+                  onChange=${function (e) { setOsType(e.target.value); }}>
+                  <option value="" disabled>--</option>
+                  ${Object.keys(OS_LABELS).map(function (k) {
+                    return html`<option value=${k}>${OS_LABELS[k]}</option>`;
+                  })}
+                </select>
+                ${errors.osType ? html`<span class="text-xs" style="color:var(--color-error)">${errors.osType}</span>` : null}
+              </div>
+
+              <div class="grid grid-cols-3 gap-3">
+                <div>
+                  <label class="text-xs font-medium" style="${lblStyle}">${t('osinstall_hostname')}</label>
+                  <input class="input" placeholder="server01" value=${hostname} style="${fz}"
+                    onInput=${function (e) { setHostname(e.target.value); }} />
+                  ${errors.hostname ? html`<span class="text-xs" style="color:var(--color-error)">${errors.hostname}</span>` : null}
+                </div>
+                <div>
+                  <label class="text-xs font-medium" style="${lblStyle}">${t('osinstall_timezone')}</label>
+                  <input class="input" placeholder="Asia/Shanghai" value=${timezone} style="${fz}"
+                    onInput=${function (e) { setTimezone(e.target.value); }} />
+                </div>
+                <div>
+                  <label class="text-xs font-medium" style="${lblStyle}">${t('osinstall_language')}</label>
+                  <input class="input" placeholder="en_US" value=${language} style="${fz}"
+                    onInput=${function (e) { setLanguage(e.target.value); }} />
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="text-xs font-medium" style="${lblStyle}">${t('osinstall_keyboard')}</label>
+                  <input class="input" placeholder="us" value=${keyboard} style="${fz}"
+                    onInput=${function (e) { setKeyboard(e.target.value); }} />
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="text-xs font-medium" style="${lblStyle}">${t('osinstall_username')}</label>
+                  <input class="input" placeholder="admin" value=${username} style="${fz}"
+                    onInput=${function (e) { setUsername(e.target.value); }} />
+                </div>
+                <div>
+                  <label class="text-xs font-medium" style="${lblStyle}">${t('osinstall_password')}</label>
+                  <input type="password" class="input" placeholder="" value=${password} style="${fz}"
+                    onInput=${function (e) { setPassword(e.target.value); }} />
+                </div>
+              </div>
+              <div>
+                <label class="text-xs font-medium" style="${lblStyle}">${t('osinstall_ssh_key')}</label>
+                <textarea class="input" rows="3" placeholder="ssh-rsa AAA..." style="${fz};resize:vertical"
+                  onInput=${function (e) { setSshKey(e.target.value); }}>${sshKey}</textarea>
+              </div>
+
+              <div class="osi-advanced-section">
+                <button class="osi-advanced-toggle ${advancedOpen ? 'open' : ''}" type="button"
+                  onClick=${function () { setAdvancedOpen(!advancedOpen); }}>
+                  <svg class="osi-advanced-toggle-chevron" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                  ${t('osinstall_advanced_settings')}
+                </button>
+                ${advancedOpen ? html`
+                  <div class="grid gap-4" style="padding-top:0.5rem">
+                    <div class="flex items-center gap-3 mb-2">
+                      <label class="toggle-switch">
+                        <input type="checkbox" role="switch" checked=${dhcp}
+                          aria-checked="${dhcp ? 'true' : 'false'}"
+                          onChange=${function () { setDhcp(!dhcp); }} />
+                        <span class="toggle-slider"></span>
+                      </label>
+                      <span class="text-sm" style="${lblStyle}">${t('osinstall_dhcp')}</span>
+                    </div>
+                    <span class="text-xs" style="color:var(--color-text-tertiary)">${t('help_osi_dhcp')}</span>
+                    ${!dhcp ? html`
+                      <div class="grid gap-3">
+                        <div class="grid grid-cols-2 gap-3">
+                          <div>
+                            <label class="text-xs font-medium" style="${lblStyle}">${t('osinstall_ip_address')}</label>
+                            <input class="input" placeholder="192.168.1.100" value=${ip} style="${fz}"
+                              onInput=${function (e) { setIp(e.target.value); }} />
+                            ${errors.ip ? html`<span class="text-xs" style="color:var(--color-error)">${errors.ip}</span>` : null}
+                          </div>
+                          <div>
+                            <label class="text-xs font-medium" style="${lblStyle}">${t('osinstall_netmask')}</label>
+                            <input class="input" placeholder="255.255.255.0" value=${netmask} style="${fz}"
+                              onInput=${function (e) { setNetmask(e.target.value); }} />
+                            ${errors.netmask ? html`<span class="text-xs" style="color:var(--color-error)">${errors.netmask}</span>` : null}
+                          </div>
                         </div>
-                        <div>
-                          <label class="text-xs font-medium" style="${lblStyle}">${t('osinstall_netmask')}</label>
-                          <input class="input" placeholder="255.255.255.0" value=${netmask} style="${fz}"
-                            onInput=${function (e) { setNetmask(e.target.value); }} />
-                          ${errors.netmask ? html`<span class="text-xs" style="color:var(--color-error)">${errors.netmask}</span>` : null}
+                        <div class="grid grid-cols-2 gap-3">
+                          <div>
+                            <label class="text-xs font-medium" style="${lblStyle}">${t('osinstall_gateway')}</label>
+                            <input class="input" placeholder="192.168.1.1" value=${gateway} style="${fz}"
+                              onInput=${function (e) { setGateway(e.target.value); }} />
+                            ${errors.gateway ? html`<span class="text-xs" style="color:var(--color-error)">${errors.gateway}</span>` : null}
+                          </div>
+                          <div>
+                            <label class="text-xs font-medium" style="${lblStyle}">${t('osinstall_dns')}</label>
+                            <input class="input" placeholder="8.8.8.8" value=${dns} style="${fz}"
+                              onInput=${function (e) { setDns(e.target.value); }} />
+                            ${errors.dns ? html`<span class="text-xs" style="color:var(--color-error)">${errors.dns}</span>` : null}
+                          </div>
                         </div>
+                        <span class="text-xs" style="color:var(--color-text-tertiary)">${t('help_osi_network')}</span>
+                      </div>` : null}
+
+                    <div class="grid grid-cols-2 gap-3">
+                      <div>
+                        <label class="text-xs font-medium" style="${lblStyle}">${t('osinstall_disk')}</label>
+                        <input class="input" placeholder="/dev/sda" value=${disk} style="${fz}"
+                          onInput=${function (e) { setDisk(e.target.value); }} />
                       </div>
-                      <div class="grid grid-cols-2 gap-3">
-                        <div>
-                          <label class="text-xs font-medium" style="${lblStyle}">${t('osinstall_gateway')}</label>
-                          <input class="input" placeholder="192.168.1.1" value=${gateway} style="${fz}"
-                            onInput=${function (e) { setGateway(e.target.value); }} />
-                          ${errors.gateway ? html`<span class="text-xs" style="color:var(--color-error)">${errors.gateway}</span>` : null}
-                        </div>
-                        <div>
-                          <label class="text-xs font-medium" style="${lblStyle}">${t('osinstall_dns')}</label>
-                          <input class="input" placeholder="8.8.8.8" value=${dns} style="${fz}"
-                            onInput=${function (e) { setDns(e.target.value); }} />
-                          ${errors.dns ? html`<span class="text-xs" style="color:var(--color-error)">${errors.dns}</span>` : null}
-                        </div>
+                      <div>
+                        <label class="text-xs font-medium" style="${lblStyle}">${t('osinstall_partition')}</label>
+                        <select class="input select" style="${fz}" value=${partition}
+                          onChange=${function (e) { setPartition(e.target.value); }}>
+                          <option value="whole_disk">${t('osinstall_whole_disk')}</option>
+                          <option value="manual">${t('osinstall_manual')}</option>
+                        </select>
                       </div>
-                      <span class="text-xs" style="color:var(--color-text-tertiary)">${t('help_osi_network')}</span>
-                    </div>` : null}
-                </div>
-              </div>` : null}
-
-            ${activeTab === 'user' ? html`
-              <div class="osi-tab-panel" style="display:block">
-                <div class="grid gap-4">
-                  <div class="grid grid-cols-2 gap-3">
-                    <div>
-                      <label class="text-xs font-medium" style="${lblStyle}">${t('osinstall_username')}</label>
-                      <input class="input" placeholder="admin" value=${username} style="${fz}"
-                        onInput=${function (e) { setUsername(e.target.value); }} />
                     </div>
-                    <div>
-                      <label class="text-xs font-medium" style="${lblStyle}">${t('osinstall_password')}</label>
-                      <input type="password" class="input" placeholder="" value=${password} style="${fz}"
-                        onInput=${function (e) { setPassword(e.target.value); }} />
-                    </div>
-                  </div>
-                  <div>
-                    <label class="text-xs font-medium" style="${lblStyle}">${t('osinstall_ssh_key')}</label>
-                    <textarea class="input" rows="3" placeholder="ssh-rsa AAA..." style="${fz};resize:vertical"
-                      onInput=${function (e) { setSshKey(e.target.value); }}>${sshKey}</textarea>
-                  </div>
-                </div>
-              </div>` : null}
 
-            ${activeTab === 'disk' ? html`
-              <div class="osi-tab-panel" style="display:block">
-                <div class="grid gap-4">
-                  <div class="grid grid-cols-2 gap-3">
                     <div>
-                      <label class="text-xs font-medium" style="${lblStyle}">${t('osinstall_disk')}</label>
-                      <input class="input" placeholder="/dev/sda" value=${disk} style="${fz}"
-                        onInput=${function (e) { setDisk(e.target.value); }} />
+                      <label class="text-xs font-medium" style="${lblStyle}">${t('osinstall_packages')}</label>
+                      <textarea class="input" rows="4" placeholder="openssh-server, curl, wget" style="${fz};resize:vertical"
+                        onInput=${function (e) { setPackages(e.target.value); }}>${packages}</textarea>
                     </div>
+
                     <div>
-                      <label class="text-xs font-medium" style="${lblStyle}">${t('osinstall_partition')}</label>
-                      <select class="input select" style="${fz}" value=${partition}
-                        onChange=${function (e) { setPartition(e.target.value); }}>
-                        <option value="whole_disk">${t('osinstall_whole_disk')}</option>
-                        <option value="manual">${t('osinstall_manual')}</option>
-                      </select>
+                      <label class="text-xs font-medium" style="${lblStyle}">${t('osinstall_additional')}</label>
+                      <textarea class="input" rows="3" placeholder="${t('osinstall_additional')}" style="${fz};resize:vertical"
+                        onInput=${function (e) { setAdditional(e.target.value); }}>${additional}</textarea>
                     </div>
-                  </div>
-                </div>
-              </div>` : null}
-
-            ${activeTab === 'packages' ? html`
-              <div class="osi-tab-panel" style="display:block">
-                <div class="grid gap-4">
-                  <textarea class="input" rows="6" placeholder="openssh-server, curl, wget" style="${fz};resize:vertical"
-                    onInput=${function (e) { setPackages(e.target.value); }}>${packages}</textarea>
-                </div>
-              </div>` : null}
-
-            ${activeTab === 'additional' ? html`
-              <div class="osi-tab-panel" style="display:block">
-                <div class="grid gap-4">
-                  <textarea class="input" rows="4" placeholder="${t('osinstall_additional')}" style="${fz};resize:vertical"
-                    onInput=${function (e) { setAdditional(e.target.value); }}>${additional}</textarea>
-                </div>
-              </div>` : null}
+                  </div>` : null}
+              </div>
+            </div>
           </div>
 
           <div class="flex justify-end gap-3 mt-6">

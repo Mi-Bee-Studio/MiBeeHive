@@ -59,7 +59,10 @@ globalThis.Auth = {
 globalThis.Helpers = {
   formatBytes: vi.fn((b) => b + ' B'),
   formatTime: vi.fn((iso) => iso || 'never'),
-  escapeHtml: vi.fn((s) => s || ''),
+  escapeHtml: vi.fn((s) => {
+    if (!s) return '';
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }),
   renderBreadcrumb: vi.fn(() => ''),
   sourceTypeBadge: vi.fn(() => ''),
   statusBadge: vi.fn(() => ''),
@@ -71,9 +74,9 @@ globalThis.Helpers = {
   validateIP: vi.fn(() => true),
   validateNetmask: vi.fn(() => true),
   validateURL: vi.fn(() => true),
-  ICONS: {},
+  ICONS: { inbox: '<svg class="icon-inbox"></svg>' },
+  slugify: vi.fn((s) => (s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''))
 };
-
 // Cache — in-memory cache singleton (cache.js)
 globalThis.Cache = {
   get: vi.fn(() => null),
@@ -90,6 +93,31 @@ globalThis.Components = {
   table: vi.fn(),
   tabs: vi.fn(),
   skeletonCard: vi.fn(),
+  skeletonTable: vi.fn(() => '<div class="skeleton-table"></div>'),
+  emptyState: vi.fn((cfg) => '<div class="empty-state"><p>' + (cfg.message || '') + '</p>' + (cfg.description ? '<p>' + cfg.description + '</p>' : '') + (cfg.actionLabel ? '<button data-action="empty-state-action">' + cfg.actionLabel + '</button>' : '') + '</div>'),
+  FilterBar: {
+    _instances: {},
+    init: vi.fn(function (container, config) { return config.id; }),
+    destroy: vi.fn(),
+    setActive: vi.fn(),
+    getActive: vi.fn(() => null),
+  },
+  Accordion: {
+    _state: {},
+    init: vi.fn(),
+    destroy: vi.fn(),
+    update: vi.fn(),
+    getOpenSection: vi.fn(() => null),
+  },
+  ActionMenu: function ActionMenu(props) {
+    return PreactBridge.html`<div style="position:relative"><button aria-haspopup="menu" aria-expanded="false"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="3" r="1.5" /><circle cx="8" cy="8" r="1.5" /><circle cx="8" cy="13" r="1.5" /></svg></button></div>`;
+  },
+  renderPagination: vi.fn(),
+  removePagination: vi.fn(),
+  renderRetryError: vi.fn(),
+  createModal: vi.fn(),
+  downloadProgress: vi.fn(),
+  updateProgress: vi.fn(),
 };
 
 // showToast / showConfirmModal — global UI helpers

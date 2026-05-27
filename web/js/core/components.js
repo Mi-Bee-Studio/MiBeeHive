@@ -884,6 +884,91 @@
     }
   };
 
+  // ── ActionMenu ─────────────────────────────────────────────────────────
+
+  function ActionMenu(props) {
+    var items = props.items || [];
+    var align = props.align || 'right';
+
+    var openState = useState(false);
+    var isOpen = openState[0];
+    var setOpen = openState[1];
+
+    var containerRef = useRef(null);
+    var menuRef = useRef(null);
+
+    function toggle() {
+      setOpen(!isOpen);
+    }
+
+    function close() {
+      setOpen(false);
+    }
+
+    function handleItemClick(item) {
+      close();
+      if (typeof item.onClick === 'function') item.onClick();
+    }
+
+    useEffect(function () {
+      if (!isOpen) return;
+
+      function onClickOutside(e) {
+        if (containerRef.current && !containerRef.current.contains(e.target)) {
+          close();
+        }
+      }
+
+      function onEscape(e) {
+        if (e.key === 'Escape') close();
+      }
+
+      document.addEventListener('click', onClickOutside);
+      document.addEventListener('keydown', onEscape);
+
+      // Focus first menu item for accessibility
+      if (menuRef.current) {
+        var firstItem = menuRef.current.querySelector('.action-menu-item');
+        if (firstItem) firstItem.focus();
+      }
+
+      return function () {
+        document.removeEventListener('click', onClickOutside);
+        document.removeEventListener('keydown', onEscape);
+      };
+    }, [isOpen]);
+
+    return html`
+      <div ref=${containerRef} style="position:relative">
+        <button class="action-menu-trigger"
+                aria-haspopup="menu"
+                aria-expanded=${isOpen ? 'true' : 'false'}
+                onClick=${toggle}>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <circle cx="8" cy="3" r="1.5" />
+            <circle cx="8" cy="8" r="1.5" />
+            <circle cx="8" cy="13" r="1.5" />
+          </svg>
+        </button>
+        ${isOpen ? html`
+          <div ref=${menuRef} class="action-menu" role="menu"
+               style=${align === 'left' ? 'left:0' : 'right:0'}>
+            ${items.map(function (item, i) {
+              return html`
+                <button key=${i}
+                        class=${'action-menu-item' + (item.danger ? ' danger' : '')}
+                        role="menuitem"
+                        onClick=${function () { handleItemClick(item); }}>
+                  ${item.label}
+                </button>
+              `;
+            })}
+          </div>
+        ` : null}
+      </div>
+    `;
+  }
+
   // ── Global API ──────────────────────────────────────────────────────────
 
   window.Components = {
@@ -904,6 +989,7 @@
     Accordion: Accordion,
     emptyState: emptyState,
     downloadProgress: downloadProgress,
-    updateProgress: updateProgress
+    updateProgress: updateProgress,
+    ActionMenu: ActionMenu
   };
 })();

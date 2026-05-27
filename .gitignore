@@ -29,6 +29,7 @@ configs/server.key
 # Playwright
 tests/
 node_modules/
+package-lock.json
 
 # Generated
 AGENTS.md

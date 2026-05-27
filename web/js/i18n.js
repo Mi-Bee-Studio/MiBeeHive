@@ -593,6 +593,24 @@ const I18N = {
   aria_copy_url: "复制链接",
   aria_toggle_visibility: "切换可见性",
   aria_close: "关闭"
+
+  // Deploy UX overhaul keys
+  osinstall_url_identifier: "URL 标识符",
+  osinstall_url_identifier_hint: "仅限英文字母和数字",
+  osinstall_auto_generated: "自动生成",
+  osinstall_advanced_settings: "高级设置",
+  iso_download_summary: "下载摘要",
+  iso_downloading_count: "正在下载 {count}",
+  iso_speed: "速度",
+  osinstall_manual_download: "手动下载",
+  action_more: "更多",
+  action_edit: "编辑",
+  action_delete: "删除",
+  action_check_version: "检查版本",
+  search_configs: "搜索配置...",
+  osinstall_iso_status: "ISO 状态",
+  osinstall_iso_available: "ISO 可用",
+  osinstall_iso_none: "无 ISO"
 },
   en: {
   app_name: "MiBeeHive",
@@ -1188,6 +1206,24 @@ const I18N = {
   aria_copy_url: "Copy URL",
   aria_toggle_visibility: "Toggle visibility",
   aria_close: "Close"
+
+  // Deploy UX overhaul keys
+  osinstall_url_identifier: "URL Identifier",
+  osinstall_url_identifier_hint: "English letters and numbers only",
+  osinstall_auto_generated: "Auto-generated",
+  osinstall_advanced_settings: "Advanced Settings",
+  iso_download_summary: "Download Summary",
+  iso_downloading_count: "Downloading {count}",
+  iso_speed: "Speed",
+  osinstall_manual_download: "Manual Download",
+  action_more: "More",
+  action_edit: "Edit",
+  action_delete: "Delete",
+  action_check_version: "Check Version",
+  search_configs: "Search configs...",
+  osinstall_iso_status: "ISO Status",
+  osinstall_iso_available: "ISO Available",
+  osinstall_iso_none: "No ISO"
 }
 };
 let currentLang = localStorage.getItem('mibeehive_lang') || 'zh';

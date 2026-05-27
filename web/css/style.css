@@ -2949,3 +2949,152 @@ a:focus-visible,
   padding: 0.5rem 0.75rem;
   border-bottom: 1px solid var(--color-border);
 }
+
+/* ── Action Menu ─────────────────────────────────────────────────── */
+.action-menu {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: var(--z-dropdown);
+  min-width: 10rem;
+  background: var(--color-bg-primary, var(--color-bg));
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: 0.25rem 0;
+  animation: slideDown var(--transition-fast) ease-out;
+}
+
+.action-menu-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  background: transparent;
+  color: var(--color-text-tertiary);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.action-menu-trigger:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+}
+
+.action-menu-trigger:focus-visible {
+  box-shadow: var(--ring-focus);
+  outline: none;
+}
+
+.action-menu-item {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  transition: background var(--transition-fast);
+}
+
+.action-menu-item:hover {
+  background: var(--color-bg-secondary);
+}
+
+.action-menu-item.danger {
+  color: var(--color-error);
+}
+
+/* ── Advanced Settings Section ───────────────────────────────────── */
+.osi-advanced-section {
+  border-top: 1px solid var(--color-border);
+  margin-top: 1rem;
+  padding-top: 0.5rem;
+}
+
+.osi-advanced-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-sm) 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  transition: color var(--transition-fast);
+}
+
+.osi-advanced-toggle:hover {
+  color: var(--color-text);
+}
+
+.osi-advanced-toggle-chevron {
+  transition: transform var(--transition-base);
+  flex-shrink: 0;
+}
+
+.osi-advanced-toggle.open .osi-advanced-toggle-chevron {
+  transform: rotate(90deg);
+}
+
+/* ── Download Summary Bar ───────────────────────────────────────── */
+.download-summary-bar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem 1rem;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  margin-bottom: 1rem;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.download-summary-bar .summary-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2xs);
+}
+
+/* ── Search Input ───────────────────────────────────────────────── */
+.search-input {
+  width: 100%;
+  padding: 0.5rem 0.75rem 0.5rem 2.25rem;
+  border: 1px solid var(--color-input-border);
+  border-radius: var(--radius-md);
+  background: var(--color-input-bg);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.search-input::placeholder {
+  color: var(--color-text-tertiary);
+}
+
+.search-input:focus {
+  border-color: var(--color-input-focus);
+  box-shadow: var(--ring-focus);
+  outline: none;
+}
+
+/* ── Config ISO Badge ────────────────────────────────────────────── */
+.config-iso-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.125rem 0.5rem;
+  font-size: var(--font-size-xs);
+  border-radius: var(--radius-full);
+}
+
+.config-iso-badge.badge-success { background: var(--color-success-light); color: var(--color-success); }
+.config-iso-badge.badge-default { background: var(--color-badge-default-bg); color: var(--color-text-tertiary); }

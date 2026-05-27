@@ -592,7 +592,7 @@ const I18N = {
   connection_lost: "连接中断，正在重试...",
   aria_copy_url: "复制链接",
   aria_toggle_visibility: "切换可见性",
-  aria_close: "关闭"
+  aria_close: "关闭",
 
   // Deploy UX overhaul keys
   osinstall_url_identifier: "URL 标识符",
@@ -610,7 +610,7 @@ const I18N = {
   search_configs: "搜索配置...",
   osinstall_iso_status: "ISO 状态",
   osinstall_iso_available: "ISO 可用",
-  osinstall_iso_none: "无 ISO"
+  osinstall_iso_none: "无 ISO",
   catalog_file_badge: "独立文件",
   disk_full_error: "磁盘空间不足 ({count}% 已使用)",
   disk_space_warning: "磁盘空间不足: {count}% 已使用",
@@ -1208,7 +1208,7 @@ const I18N = {
   deploy_empty_help: "No OS install configs yet. Create a new config to start deploying.",
   aria_copy_url: "Copy URL",
   aria_toggle_visibility: "Toggle visibility",
-  aria_close: "Close"
+  aria_close: "Close",
 
   // Deploy UX overhaul keys
   osinstall_url_identifier: "URL Identifier",
@@ -1226,7 +1226,7 @@ const I18N = {
   search_configs: "Search configs...",
   osinstall_iso_status: "ISO Status",
   osinstall_iso_available: "ISO Available",
-  osinstall_iso_none: "No ISO"
+  osinstall_iso_none: "No ISO",
   catalog_file_badge: "Standalone File",
   disk_full_error: "Insufficient disk space ({count}% used)",
   disk_space_warning: "Low disk space: {count}% used",

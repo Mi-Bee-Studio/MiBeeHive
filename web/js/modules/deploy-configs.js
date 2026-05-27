@@ -13,6 +13,15 @@ const DeployConfigs = (function () {
   var OS_LABELS = { debian: 'Debian', ubuntu: 'Ubuntu', centos: 'CentOS', rocky: 'Rocky Linux', alma: 'AlmaLinux', fedora: 'Fedora', opensuse: 'openSUSE' };
   var OS_BADGES = { debian: 'badge-blue', ubuntu: 'badge-orange', centos: 'badge-purple', rocky: 'badge-blue', alma: 'badge-cyan', fedora: 'badge-purple', opensuse: 'badge-default' };
   var PXE_FMT = { debian: 'preseed', centos: 'kickstart', ubuntu: 'autoinstall', rocky: 'kickstart', alma: 'kickstart', fedora: 'kickstart', opensuse: 'autoinstall' };
+  var OS_TYPE_TO_DISTROS = {
+    debian: ['debian'],
+    ubuntu: ['ubuntu'],
+    centos: ['centos', 'almalinux', 'rocky'],
+    rocky: ['rocky'],
+    alma: ['almalinux'],
+    fedora: ['fedora'],
+    opensuse: ['opensuse', 'opensuse-leap']
+  };
 
   var ACCORDION_ID = 'configs-list-accordion';
 
@@ -29,6 +38,7 @@ const DeployConfigs = (function () {
     var fmt = PXE_FMT[c.os_type] || 'preseed';
     var url = location.protocol + '//' + location.host + '/pxe/' + fmt + '/' + encodeURIComponent(c.config_name);
     var E = Helpers.escapeHtml;
+    var hasISO = props.hasISO;
 
     function handleCopyUrl() {
       Helpers.copyToClipboard(url).then(function () { showToast(t('osinstall_url_copied'), 'success'); });
@@ -40,9 +50,9 @@ const DeployConfigs = (function () {
     return html`
       <tr>
         <td><div class="font-medium" style="color:var(--color-text)">${E(c.name)}</div></td>
-        <td><span class="text-xs" style="color:var(--color-text-tertiary)">${E(c.config_name)}</span></td>
+        <td data-hide-mobile><span class="text-xs" style="color:var(--color-text-tertiary)">${E(c.config_name)}</span></td>
         <td><span class="badge ${c.enabled ? 'badge-success' : 'badge-default'}" style="font-size:0.6875rem">${c.enabled ? t('osinstall_enabled') : t('osinstall_disabled')}</span></td>
-        <td>
+        <td data-hide-mobile>
           <div class="flex items-center gap-1">
             <span class="text-xs truncate" style="color:var(--color-text-tertiary);max-width:12rem" title="${E(url)}">${E(url)}</span>
             <button class="btn btn-ghost btn-sm" style="padding:0.125rem 0.375rem"
@@ -50,6 +60,11 @@ const DeployConfigs = (function () {
               <svg aria-hidden="true" class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
             </button>
           </div>
+        </td>
+        <td data-hide-mobile>
+          ${hasISO ?
+            html`<span class="badge badge-success" style="font-size:0.6875rem">${t('osinstall_iso_available')}</span>`
+            : html`<span class="badge badge-default" style="font-size:0.6875rem">${t('osinstall_iso_none')}</span>`}
         </td>
         <td style="text-align:right">
           <div class="flex justify-end gap-2">
@@ -84,12 +99,12 @@ const DeployConfigs = (function () {
           <div class="table-wrap overflow-x-auto">
             <table>
               <thead><tr>
-                <th>${t('osinstall_name')}</th><th>${t('osinstall_config_name')}</th>
-                <th>${t('proj_enabled')}</th><th>${t('osinstall_pxe_url')}</th><th style="text-align:right">${t('actions')}</th>
+                <th>${t('osinstall_name')}</th><th data-hide-mobile>${t('osinstall_url_identifier')}</th>
+                <th>${t('proj_enabled')}</th><th data-hide-mobile>${t('osinstall_pxe_url')}</th><th data-hide-mobile>${t('osinstall_iso_status')}</th><th style="text-align:right">${t('actions')}</th>
               </tr></thead>
               <tbody>
                 ${configs.map(function (c) {
-                  return html`<${ConfigRow} key=${c.id} config=${c}
+                  return html`<${ConfigRow} key=${c.id} config=${c} hasISO=${props.hasDownloadedISO(c.os_type)}
                     onEdit=${props.onEdit} onView=${props.onView} onDelete=${props.onDelete} />`;
                 })}
               </tbody>
@@ -111,7 +126,7 @@ const DeployConfigs = (function () {
 
     return html`
       <div ref=${props.overlayRef} class="modal-overlay" onClick=${props.handleOverlayClick} onKeyDown=${props.handleKeyDown}>
-        <div class="modal-content" role="dialog" aria-modal="true" style="max-width:40rem">
+        <div class="modal-content deploy-modal-lg" role="dialog" aria-modal="true">
           <div class="flex items-center justify-between mb-4">
             <h3 class="text-base font-semibold" style="color:var(--color-text)">${Helpers.escapeHtml(config.name)}</h3>
             <button class="btn btn-ghost btn-sm" onClick=${handleCopy}>${t('osinstall_copy_config')}</button>
@@ -130,7 +145,7 @@ const DeployConfigs = (function () {
 
     return html`
       <div ref=${props.overlayRef} class="modal-overlay" onClick=${props.handleOverlayClick} onKeyDown=${props.handleKeyDown}>
-        <div class="modal-content" role="dialog" aria-modal="true" style="max-width:40rem">
+        <div class="modal-content deploy-modal-lg" role="dialog" aria-modal="true">
           <h3 class="text-base font-semibold mb-4" style="color:var(--color-text)">${t('osinstall_preview_title')}</h3>
           <pre style="max-height:60vh;overflow:auto;font-size:0.8125rem;padding:1rem;background:var(--color-bg-secondary);border-radius:var(--radius-md)">${content}</pre>
           <div class="flex justify-end mt-4">
@@ -277,12 +292,12 @@ const DeployConfigs = (function () {
 
     return html`
       <div ref=${props.overlayRef} class="modal-overlay" onClick=${props.handleOverlayClick} onKeyDown=${props.handleKeyDown}>
-        <div class="modal-content" role="dialog" aria-modal="true" style="max-width:40rem">
+        <div class="modal-content deploy-modal-lg" role="dialog" aria-modal="true">
           <h3 class="text-base font-semibold mb-4" style="color:var(--color-text)">${isEdit ? t('osinstall_edit') : t('osinstall_new')}</h3>
 
           <div class="osi-tab-panels" style="max-height:60vh">
             <div class="grid gap-4">
-              <div class="grid grid-cols-2 gap-3">
+              <div class="grid grid-cols-2 osi-form-grid-2 gap-3">
                 <div>
                   <label class="text-xs font-medium" style="${lblStyle}">${t('osinstall_name')}</label>
                   <input class="input" placeholder="e.g. my-server" value=${name} style="${fz}"
@@ -309,7 +324,7 @@ const DeployConfigs = (function () {
                 ${errors.osType ? html`<span class="text-xs" style="color:var(--color-error)">${errors.osType}</span>` : null}
               </div>
 
-              <div class="grid grid-cols-3 gap-3">
+              <div class="grid grid-cols-3 osi-form-grid-3 gap-3">
                 <div>
                   <label class="text-xs font-medium" style="${lblStyle}">${t('osinstall_hostname')}</label>
                   <input class="input" placeholder="server01" value=${hostname} style="${fz}"
@@ -328,7 +343,7 @@ const DeployConfigs = (function () {
                 </div>
               </div>
 
-              <div class="grid grid-cols-2 gap-3">
+              <div class="grid grid-cols-2 osi-form-grid-2 gap-3">
                 <div>
                   <label class="text-xs font-medium" style="${lblStyle}">${t('osinstall_keyboard')}</label>
                   <input class="input" placeholder="us" value=${keyboard} style="${fz}"
@@ -336,7 +351,7 @@ const DeployConfigs = (function () {
                 </div>
               </div>
 
-              <div class="grid grid-cols-2 gap-3">
+              <div class="grid grid-cols-2 osi-form-grid-2 gap-3">
                 <div>
                   <label class="text-xs font-medium" style="${lblStyle}">${t('osinstall_username')}</label>
                   <input class="input" placeholder="admin" value=${username} style="${fz}"
@@ -374,7 +389,7 @@ const DeployConfigs = (function () {
                     <span class="text-xs" style="color:var(--color-text-tertiary)">${t('help_osi_dhcp')}</span>
                     ${!dhcp ? html`
                       <div class="grid gap-3">
-                        <div class="grid grid-cols-2 gap-3">
+                        <div class="grid grid-cols-2 osi-form-grid-2 gap-3">
                           <div>
                             <label class="text-xs font-medium" style="${lblStyle}">${t('osinstall_ip_address')}</label>
                             <input class="input" placeholder="192.168.1.100" value=${ip} style="${fz}"
@@ -388,7 +403,7 @@ const DeployConfigs = (function () {
                             ${errors.netmask ? html`<span class="text-xs" style="color:var(--color-error)">${errors.netmask}</span>` : null}
                           </div>
                         </div>
-                        <div class="grid grid-cols-2 gap-3">
+                        <div class="grid grid-cols-2 osi-form-grid-2 gap-3">
                           <div>
                             <label class="text-xs font-medium" style="${lblStyle}">${t('osinstall_gateway')}</label>
                             <input class="input" placeholder="192.168.1.1" value=${gateway} style="${fz}"
@@ -405,7 +420,7 @@ const DeployConfigs = (function () {
                         <span class="text-xs" style="color:var(--color-text-tertiary)">${t('help_osi_network')}</span>
                       </div>` : null}
 
-                    <div class="grid grid-cols-2 gap-3">
+                    <div class="grid grid-cols-2 osi-form-grid-2 gap-3">
                       <div>
                         <label class="text-xs font-medium" style="${lblStyle}">${t('osinstall_disk')}</label>
                         <input class="input" placeholder="/dev/sda" value=${disk} style="${fz}"
@@ -473,6 +488,12 @@ const DeployConfigs = (function () {
     var editConfig = _editConfig[0], setEditConfig = _editConfig[1];
     var _viewConfig = useState(null);
     var viewConfig = _viewConfig[0], setViewConfig = _viewConfig[1];
+    var _catalog = useState([]);
+    var catalog = _catalog[0], setCatalog = _catalog[1];
+    var _searchQuery = useState('');
+    var searchQuery = _searchQuery[0], setSearchQuery = _searchQuery[1];
+    var _activeFilter = useState('all');
+    var activeFilter = _activeFilter[0], setActiveFilter = _activeFilter[1];
     var mountedRef = useRef(true);
     var overlayRef = useRef(null);
     var previousFocusRef = useRef(null);
@@ -491,16 +512,53 @@ const DeployConfigs = (function () {
       });
     }
 
+    function loadCatalog() {
+      Api.get('/admin/os-install/catalog').then(function (r) {
+        if (!mountedRef.current) return;
+        if (r && r.success) setCatalog(r.data || []);
+      });
+    }
+
+    function hasDownloadedISO(osType) {
+      var distros = OS_TYPE_TO_DISTROS[osType] || [];
+      for (var i = 0; i < catalog.length; i++) {
+        var entry = catalog[i];
+        if (entry.status !== 'downloaded') continue;
+        for (var j = 0; j < distros.length; j++) {
+          if (entry.distro === distros[j]) return true;
+        }
+      }
+      return false;
+    }
+
     useEffect(function () {
       mountedRef.current = true;
       loadConfigs();
+      loadCatalog();
       return function () { mountedRef.current = false; };
     }, []);
 
-    // Group configs by os_type
+    // Filter configs by search query and OS type filter
+    var filteredConfigs = useMemo(function () {
+      var q = searchQuery.toLowerCase();
+      var result = configs;
+      if (q) {
+        result = result.filter(function (c) {
+          return (c.name && c.name.toLowerCase().indexOf(q) !== -1) ||
+                 (c.hostname && c.hostname.toLowerCase().indexOf(q) !== -1) ||
+                 (c.config_name && c.config_name.toLowerCase().indexOf(q) !== -1);
+        });
+      }
+      if (activeFilter !== 'all') {
+        result = result.filter(function (c) { return c.os_type === activeFilter; });
+      }
+      return result;
+    }, [configs, searchQuery, activeFilter]);
+
+    // Group filtered configs by os_type
     var groups = useMemo(function () {
       var g = {};
-      configs.forEach(function (c) {
+      filteredConfigs.forEach(function (c) {
         var type = c.os_type || 'other';
         if (!g[type]) g[type] = [];
         g[type].push(c);
@@ -518,7 +576,12 @@ const DeployConfigs = (function () {
         sections.push({ type: type, title: type.charAt(0).toUpperCase() + type.slice(1), configs: g[type] });
       });
       return sections;
-    }, [configs]);
+    }, [filteredConfigs]);
+
+    var filterButtons = [{ key: 'all', label: t('filter_all') }].concat(
+      TYPE_ORDER.filter(function (type) { return configs.some(function (c) { return c.os_type === type; }); })
+        .map(function (type) { return { key: type, label: OS_LABELS[type] }; })
+    );
 
     function handleEdit(c) {
       previousFocusRef.current = document.activeElement;
@@ -621,12 +684,30 @@ const DeployConfigs = (function () {
           <button class="btn btn-primary btn-sm"
             onClick=${handleAdd}>${t('osinstall_new')}</button>
         </div>
-        <div>
-          ${groups.map(function (g) {
-            return html`<${ConfigSection} key=${g.type} type=${g.type} title=${g.title} configs=${g.configs}
-              onEdit=${handleEdit} onView=${handleView} onDelete=${handleDelete} />`;
+        <div class="mb-4">
+          <input class="search-input" type="text" placeholder=${t('search_configs')}
+            value=${searchQuery} onInput=${function (e) { setSearchQuery(e.target.value); }} />
+        </div>
+        <div class="filter-bar mb-4">
+          ${filterButtons.map(function (f) {
+            return html`<button key=${f.key}
+              class=${'filter-btn' + (f.key === activeFilter ? ' active' : '')}
+              onClick=${function () { setActiveFilter(f.key); }}>${f.label}</button>`;
           })}
         </div>
+        ${filteredConfigs.length === 0 ?
+          html`<div class="anim-fade-in empty-state">
+            <div style="color:var(--color-text-quaternary);margin-bottom:0.75rem"
+              dangerouslySetInnerHTML=${{ __html: Helpers.ICONS.inbox }} />
+            <p class="text-sm font-medium" style="color:var(--color-text-tertiary)">${t('no_results')}</p>
+          </div>`
+        : html`<div>
+          ${groups.map(function (g) {
+            return html`<${ConfigSection} key=${g.type} type=${g.type} title=${g.title} configs=${g.configs}
+              hasDownloadedISO=${hasDownloadedISO}
+              onEdit=${handleEdit} onView=${handleView} onDelete=${handleDelete} />`;
+          })}
+        </div>`}
 
         ${showModal ? html`
           <${ConfigEditorModal}

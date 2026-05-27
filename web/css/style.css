@@ -2520,6 +2520,23 @@ a:focus-visible,
   .welcome-actions-grid {
     grid-template-columns: 1fr;
   }
+
+  /* Deploy modals: full width on mobile */
+  .deploy-modal-sm,
+  .deploy-modal-md,
+  .deploy-modal-lg {
+    max-width: calc(100% - 1rem);
+  }
+
+  /* Deploy form grids: stack columns */
+  .osi-form-grid-2 { grid-template-columns: 1fr; }
+  .osi-form-grid-3 { grid-template-columns: 1fr; }
+
+  /* Download summary bar: stack on mobile */
+  .download-summary-bar { flex-wrap: wrap; }
+
+  /* Search input: full width */
+  .search-input { width: 100%; }
 }
 
 @media (max-width: 1024px) {
@@ -2566,6 +2583,25 @@ a:focus-visible,
   }
 }
 
+
+@media (max-width: 480px) {
+  /* Hide less-important table columns on small phones */
+  [data-hide-mobile] { display: none; }
+
+  /* Compact modal padding */
+  .modal-content,
+  .deploy-modal-sm,
+  .deploy-modal-md,
+  .deploy-modal-lg {
+    padding: var(--space-md);
+  }
+
+  /* Compact button text in deploy header actions */
+  .deploy-header-actions .btn {
+    font-size: var(--font-size-sm);
+    padding: 0.375rem 0.625rem;
+  }
+}
 @media (max-width: 375px) {
   .btn {
     padding: 0.375rem 0.75rem;
@@ -3098,3 +3134,8 @@ a:focus-visible,
 
 .config-iso-badge.badge-success { background: var(--color-success-light); color: var(--color-success); }
 .config-iso-badge.badge-default { background: var(--color-badge-default-bg); color: var(--color-text-tertiary); }
+
+/* ── Deploy Modal Sizes ─────────────────────────────────────────────── */
+.deploy-modal-sm  { max-width: 28rem; }
+.deploy-modal-md  { max-width: 32rem; }
+.deploy-modal-lg  { max-width: 40rem; }

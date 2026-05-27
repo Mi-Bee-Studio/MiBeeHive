@@ -105,8 +105,8 @@ const DeployISO = (function () {
             </div>` : null}
         </td>
         <td>${statusBadge}</td>
-        <td><span class="text-xs" style="color:var(--color-text-tertiary)">${lc}</span></td>
-        <td>
+        <td data-hide-mobile><span class="text-xs" style="color:var(--color-text-tertiary)">${lc}</span></td>
+        <td data-hide-mobile>
           <label class="toggle-switch di-auto">
             <input type="checkbox" role="switch" checked=${e.auto_update}
               aria-checked="${e.auto_update ? 'true' : 'false'}"
@@ -134,8 +134,8 @@ const DeployISO = (function () {
       <tr data-standalone=${iso.name}>
         <td><div class="font-medium" style="color:var(--color-text)">${E(iso.name)}<${ArchBadge} arch=${parsed.arch} /></div><span class="badge badge-default" style="font-size:0.625rem;margin-top:0.125rem">${t('catalog_file_badge')}</span></td>
         <td><span class="badge badge-blue" style="font-size:0.6875rem">${t('catalog_downloaded')}</span><span class="text-xs" style="color:var(--color-text-tertiary);margin-left:0.375rem">${sz}</span></td>
-        <td><span class="text-xs" style="color:var(--color-text-tertiary)">${mt}</span></td>
-        <td></td>
+        <td data-hide-mobile><span class="text-xs" style="color:var(--color-text-tertiary)">${mt}</span></td>
+        <td data-hide-mobile></td>
         <td style="text-align:right">
           <div class="flex justify-end">
             <${Components.ActionMenu} items=${[{ label: t('action_delete'), onClick: function() { props.onDelete(iso.name); }, danger: true }]} />
@@ -197,8 +197,8 @@ const DeployISO = (function () {
                 <tr>
                   <th>${t('catalog_name')}</th>
                   <th>${t('catalog_status')}</th>
-                  <th>${t('catalog_last_checked')}</th>
-                  <th>${t('catalog_auto_update')}</th>
+                  <th data-hide-mobile>${t('catalog_last_checked')}</th>
+                  <th data-hide-mobile>${t('catalog_auto_update')}</th>
                   <th style="text-align:right">${t('actions')}</th>
                 </tr>
               </thead>
@@ -237,7 +237,7 @@ const DeployISO = (function () {
     var fz='font-size:0.8125rem';
     return html`
       <div ref=${props.overlayRef} class="modal-overlay" onClick=${function(e){if(e.target===e.currentTarget)props.onClose();}} onKeyDown=${function(e){if(e.key==='Escape')props.onClose();}}>
-        <div class="modal-content" role="dialog" aria-modal="true" style="max-width:28rem">
+        <div class="modal-content deploy-modal-sm" role="dialog" aria-modal="true">
           <h3 class="text-base font-semibold mb-4" style="color:var(--color-text)">${t('osinstall_iso_trigger')}</h3>
           <div class="grid gap-3">
             <div><label class="text-xs font-medium" style="color:var(--color-text-secondary)">${t('osinstall_iso_url')}</label><input class="input" placeholder="https://example.com/path/to/file.iso" style=${fz} value=${u} onInput=${function(e){setU(e.target.value);}} /></div>
@@ -312,7 +312,7 @@ const DeployISO = (function () {
 
     return html`
       <div ref=${props.overlayRef} class="modal-overlay" onClick=${props.handleOverlayClick} onKeyDown=${props.handleKeyDown}>
-        <div class="modal-content" role="dialog" aria-modal="true" style="max-width:32rem">
+        <div class="modal-content deploy-modal-md" role="dialog" aria-modal="true">
           <h3 class="text-base font-semibold mb-4" style="color:var(--color-text)">${isEdit ? t('catalog_edit') : t('catalog_add_entry')}</h3>
           <div class="grid gap-3">
             <div>
@@ -335,7 +335,7 @@ const DeployISO = (function () {
               <input class="input" value=${name} placeholder="Ubuntu Server 24.04 LTS (amd64)" style="${fz}"
                 onInput=${function (e) { setName(e.target.value); }} />
             </div>
-            <div class="grid grid-cols-3 gap-3">
+            <div class="grid grid-cols-3 osi-form-grid-3 gap-3">
               <div>
                 <label class="text-xs font-medium" style="${lbl}">${t('catalog_distro')}</label>
                 <input class="input" value=${distro} placeholder="ubuntu" style="${fz}"
@@ -370,7 +370,7 @@ const DeployISO = (function () {
               <input class="input" value=${baseUrl} placeholder="https://releases.ubuntu.com/" style="${fz}"
                 onInput=${function (e) { setBaseUrl(e.target.value); }} />
             </div>
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-2 osi-form-grid-2 gap-3">
               <div>
                 <label class="text-xs font-medium" style="${lbl}">${t('catalog_version_dir_pattern')}</label>
                 <input class="input" value=${versionDirPattern} placeholder="\\d+\\.\\d+(\\.\\d+)?" style="${fz}"
@@ -382,7 +382,7 @@ const DeployISO = (function () {
                   onInput=${function (e) { setIsoPathTemplate(e.target.value); }} />
               </div>
             </div>
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-2 osi-form-grid-2 gap-3">
               <div class="flex items-center gap-3">
                 <label class="toggle-switch">
                   <input type="checkbox" role="switch" checked=${autoUpdate}
@@ -763,7 +763,7 @@ const DeployISO = (function () {
 
         <div class="flex items-center justify-between mb-5">
           <h2 class="text-base font-semibold" style="color:var(--color-text)">${t('catalog_title')}</h2>
-          <div class="flex gap-2">
+          <div class="flex gap-2 deploy-header-actions">
             <button class="btn btn-secondary btn-sm"
               onClick=${handleCheckAll} disabled=${checkAllBtn}>
               ${checkAllBtn ? '...' : t('catalog_check_all')}

@@ -45,6 +45,7 @@ const DeployISO = (function () {
   // ── Catalog Entry Row (flat, with arch badge + ActionMenu) ───────────
   function CatalogEntryRow(props) {
     var e = props.entry;
+    var onDownloadLocal = props.onDownloadLocal;
     var lb = _getLabels();
     var E = Helpers.escapeHtml;
     var progress = props.progress;
@@ -79,6 +80,14 @@ const DeployISO = (function () {
         onClick=${function () { props.onDownload(e.id); }}>${t('catalog_download')}</button>`;
     }
 
+    // Download-to-local button for downloaded entries
+    if (ds === 'downloaded' && e.current_url) {
+      var fn = e.current_url.split('/').pop();
+      secondaryBtn = html`<button class="btn btn-ghost btn-sm" title=${t('iso_download_local')}
+        onClick=${function() { onDownloadLocal(fn); }}>
+        <span dangerouslySetInnerHTML=${{ __html: Helpers.ICONS.download }}></span>
+      </button>`;
+    }
     // Status badge: combine catalog status with download status badge
     var statusBadge;
     if (props.queueStatus && props.queueStatus !== 'downloaded') {
@@ -126,7 +135,7 @@ const DeployISO = (function () {
 
   // ── Standalone File Row (with arch badge + ActionMenu) ───────────────
   function StandaloneFileRow(props) {
-    var iso = props.iso, E = Helpers.escapeHtml;
+    var iso = props.iso, onDownloadLocal = props.onDownloadLocal, E = Helpers.escapeHtml;
     var sz = iso.size_bytes > 0 ? Helpers.formatBytes(iso.size_bytes) : '';
     var mt = iso.mod_time ? new Date(iso.mod_time).toLocaleString() : '';
     var parsed = parseISOFilename(iso.name);
@@ -137,7 +146,11 @@ const DeployISO = (function () {
         <td data-hide-mobile><span class="text-xs" style="color:var(--color-text-tertiary)">${mt}</span></td>
         <td data-hide-mobile></td>
         <td style="text-align:right">
-          <div class="flex justify-end">
+          <div class="flex justify-end gap-1">
+            <button class="btn btn-ghost btn-sm" title=${t('iso_download_local')}
+              onClick=${function() { onDownloadLocal(iso.name); }}>
+              <span dangerouslySetInnerHTML=${{ __html: Helpers.ICONS.download }}></span>
+            </button>
             <${Components.ActionMenu} items=${[{ label: t('action_delete'), onClick: function() { props.onDelete(iso.name); }, danger: true }]} />
           </div>
         </td>
@@ -205,7 +218,7 @@ const DeployISO = (function () {
               <tbody>
                 ${entries.map(function (e) {
                   if (e._isStandalone) {
-                    return html`<${StandaloneFileRow} key=${e.id} iso=${e} onDelete=${props.onDeleteStandalone} />`;
+                    return html`<${StandaloneFileRow} key=${e.id} iso=${e} onDelete=${props.onDeleteStandalone} onDownloadLocal=${props.onDownloadLocal} />`;
                   }
                   var fn = e.current_url ? e.current_url.split('/').pop() : '';
                   var queueEntry = queueLookup[e.id];
@@ -213,7 +226,7 @@ const DeployISO = (function () {
                   return html`<${CatalogEntryRow} key=${e.id} entry=${e} progress=${progressMap[fn]} queueStatus=${queueStatus}
                     onCheck=${props.onCheck} onDownload=${props.onDownload} onRetry=${props.onRetry}
                     onCancel=${props.onCancel} onEdit=${props.onEdit} onDelete=${props.onDelete}
-                    onToggleAuto=${props.onToggleAuto} />`;
+                    onToggleAuto=${props.onToggleAuto} onDownloadLocal=${props.onDownloadLocal} />`;
                 })}
               </tbody>
             </table>
@@ -749,6 +762,13 @@ const DeployISO = (function () {
       });
     }
 
+    function handleDownloadLocal(name) {
+      var token = Auth.getToken();
+      if (!token) { Router.push('/login'); return; }
+      showToast(t('download_starting') + ': ' + name, 'success');
+      window.location.href = '/api/v1/isos/' + encodeURIComponent(name) + '/download?token=' + encodeURIComponent(token);
+    }
+
     function handleOverlayClick(e) {
       if (e.target === e.currentTarget) closeCatModal();
     }
@@ -804,7 +824,7 @@ const DeployISO = (function () {
                 onCheck=${handleCheckEntry} onDownload=${handleDownloadEntry}
                 onRetry=${handleRetry} onCancel=${handleCancel}
                 onEdit=${handleEditEntry} onDelete=${handleDeleteEntry}
-                onDeleteStandalone=${handleIsoDelete}
+                onDeleteStandalone=${handleIsoDelete} onDownloadLocal=${handleDownloadLocal}
                 onToggleAuto=${handleToggleAuto} />`;
             })}
           </div>` : null}

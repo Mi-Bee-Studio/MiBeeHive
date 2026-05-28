@@ -765,7 +765,7 @@ const DeployISO = (function () {
     function handleDownloadLocal(name) {
       var token = Auth.getToken();
       if (!token) { Router.push('/login'); return; }
-      showToast(t('download_starting') + ': ' + name, 'success');
+      Components.showToast(t('download_starting') + ': ' + name, 'success');
       window.location.href = '/api/v1/isos/' + encodeURIComponent(name) + '/download?token=' + encodeURIComponent(token);
     }
 

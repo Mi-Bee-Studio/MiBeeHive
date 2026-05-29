@@ -270,8 +270,9 @@
     }
 
     function handleConfirm() {
+      var confirmBtn = ref.current && ref.current.querySelector('#modal-confirm');
+      if (typeof props.onConfirm === 'function') props.onConfirm(confirmBtn);
       close();
-      if (typeof props.onConfirm === 'function') props.onConfirm();
     }
 
     function handleOverlayClick(e) {

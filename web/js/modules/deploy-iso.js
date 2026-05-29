@@ -240,16 +240,16 @@ const DeployISO = (function () {
     var _s=useState(false),s=_s[0],setS=_s[1];
     function submit(){
       var fname=fn.trim(),url=u.trim();
-      if(!fname){showToast(t('validation_required'),'error');return;}
-      if(!/\.iso$/i.test(fname)){showToast(t('validation_iso_filename'),'error');return;}
-      if(!url){showToast(t('validation_required'),'error');return;}
-      if(!Helpers.validateURL(url)){showToast(t('validation_iso_url'),'error');return;}
+      if(!fname){Components.showToast(t('validation_required'),'error');return;}
+      if(!/\.iso$/i.test(fname)){Components.showToast(t('validation_iso_filename'),'error');return;}
+      if(!url){Components.showToast(t('validation_required'),'error');return;}
+      if(!Helpers.validateURL(url)){Components.showToast(t('validation_iso_url'),'error');return;}
       setS(true);
       props.onSubmit(fname,url,function(){setS(false);setFn('');setU('');props.onClose();});
     }
     var fz='font-size:0.8125rem';
     return html`
-      <div ref=${props.overlayRef} class="modal-overlay" onClick=${function(e){if(e.target===e.currentTarget)props.onClose();}} onKeyDown=${function(e){if(e.key==='Escape')props.onClose();}}>
+      <div ref=${props.overlayRef} class="modal-overlay" tabIndex="-1" onClick=${function(e){if(e.target===e.currentTarget)props.onClose();}} onKeyDown=${function(e){if(e.key==='Escape')props.onClose();}}>
         <div class="modal-content deploy-modal-sm" role="dialog" aria-modal="true">
           <h3 class="text-base font-semibold mb-4" style="color:var(--color-text)">${t('osinstall_iso_trigger')}</h3>
           <div class="grid gap-3">
@@ -288,6 +288,7 @@ const DeployISO = (function () {
     var interval = _interval[0], setInterval2 = _interval[1];
     var _submitting = useState(false);
     var submitting = _submitting[0], setSubmitting = _submitting[1];
+    var submitRef = useRef(false);
     var _profiles = useState([]);
     var profiles = _profiles[0], setProfiles = _profiles[1];
     var _baseUrl = useState(isEdit ? (entry.base_url || '') : '');
@@ -296,10 +297,12 @@ const DeployISO = (function () {
     var versionDirPattern = _versionDirPattern[0], setVersionDirPattern = _versionDirPattern[1];
     var _isoPathTemplate = useState(isEdit ? (entry.iso_path_template || '') : '');
     var isoPathTemplate = _isoPathTemplate[0], setIsoPathTemplate = _isoPathTemplate[1];
+    var modalRef = useRef(null);
     useEffect(function() {
       Api.get('/admin/os-install/catalog/profiles').then(function(r) {
         if (r && r.success) setProfiles(r.data || []);
       });
+      if (modalRef.current) modalRef.current.focus();
     }, []);
 
     var lbl = 'color:var(--color-text-secondary)';
@@ -307,24 +310,29 @@ const DeployISO = (function () {
 
     function handleSubmit() {
       var nm = name.trim(), di = distro.trim(), cu = checkUrl.trim(), pt = pattern.trim();
-      if (!nm) { showToast(t('catalog_name') + ': ' + t('validation_required'), 'error'); return; }
-      if (!di) { showToast(t('catalog_distro') + ': ' + t('validation_required'), 'error'); return; }
-      if (!cu && !baseUrl.trim()) { showToast(t('catalog_check_url') + ': ' + t('validation_required'), 'error'); return; }
-      if (!pt) { showToast(t('catalog_filename_pattern') + ': ' + t('validation_required'), 'error'); return; }
+      if (!nm) { Components.showToast(t('catalog_name') + ': ' + t('validation_required'), 'error'); return; }
+      if (!di) { Components.showToast(t('catalog_distro') + ': ' + t('validation_required'), 'error'); return; }
+      if (!cu && !baseUrl.trim()) { Components.showToast(t('catalog_check_url') + ': ' + t('validation_required'), 'error'); return; }
+      if (!pt) { Components.showToast(t('catalog_filename_pattern') + ': ' + t('validation_required'), 'error'); return; }
+      if (submitRef.current) return;
+      submitRef.current = true;
       setSubmitting(true);
       var body = { name: nm, distro: di, variant: variant.trim(), arch: arch, check_url: cu, filename_pattern: pt, base_url: baseUrl.trim(), version_dir_pattern: versionDirPattern.trim(), iso_path_template: isoPathTemplate.trim(), auto_update: autoUpdate, check_interval_hours: parseInt(interval) || 24 };
       var req = isEdit ? Api.put('/admin/os-install/catalog/' + entry.id, body) : Api.post('/admin/os-install/catalog', body);
       req.then(function (r) {
+        submitRef.current = false;
         setSubmitting(false);
-        if (!r || !r.success) { showToast((r && r.message) || t('error'), 'error'); return; }
-        showToast(isEdit ? t('catalog_updated') : t('catalog_created'), 'success');
+        if (!r || !r.success) { try { Components.showToast((r && r.message) || t('error'), 'error'); } catch(e) { Components.Components.showToast((r && r.message) || t('error'), 'error'); } return; }
+        try { Components.showToast(isEdit ? t('catalog_updated') : t('catalog_created'), 'success'); } catch(e) { Components.Components.showToast(isEdit ? t('catalog_updated') : t('catalog_created'), 'success'); }
         props.onClose();
         props.onSaved();
-      });
+      }).catch(function(e) { submitRef.current = false; setSubmitting(false); console.error('catalog save error:', e); });
     }
 
     return html`
-      <div ref=${props.overlayRef} class="modal-overlay" onClick=${props.handleOverlayClick} onKeyDown=${props.handleKeyDown}>
+      <div ref=${modalRef} class="modal-overlay" tabIndex="-1"
+        onClick=${function(e){if(e.target===e.currentTarget)props.onClose();}}
+        onKeyDown=${function(e){if(e.key==='Escape')props.onClose();}}>
         <div class="modal-content deploy-modal-md" role="dialog" aria-modal="true">
           <h3 class="text-base font-semibold mb-4" style="color:var(--color-text)">${isEdit ? t('catalog_edit') : t('catalog_add_entry')}</h3>
           <div class="grid gap-3">
@@ -609,45 +617,45 @@ const DeployISO = (function () {
       setCheckAllBtn(true);
       Api.post('/admin/os-install/catalog/check-all', {}).then(function (r) {
         setCheckAllBtn(false);
-        if (!r || !r.success) { showToast((r && r.message) || t('error'), 'error'); return; }
+        if (!r || !r.success) { Components.showToast((r && r.message) || t('error'), 'error'); return; }
         if (r.data) {
           var d = r.data;
           if (d.status === 'new_version') {
             var fnUrl = d.found_url ? d.found_url.split('/').pop() : '';
-            showToast(fnUrl ? t('catalog_new_version') + ': ' + Helpers.escapeHtml(fnUrl) : t('catalog_new_version'), 'success');
+            Components.showToast(fnUrl ? t('catalog_new_version') + ': ' + Helpers.escapeHtml(fnUrl) : t('catalog_new_version'), 'success');
           } else if (d.status === 'up_to_date') {
-            showToast(t('catalog_up_to_date'), 'success');
+            Components.showToast(t('catalog_up_to_date'), 'success');
           } else if (d.status === 'no_match') {
-            showToast(t('catalog_no_match'), 'success');
+            Components.showToast(t('catalog_no_match'), 'success');
           } else {
-            showToast(t('catalog_no_match'), 'success');
+            Components.showToast(t('catalog_no_match'), 'success');
           }
-        } else showToast(r.message || 'OK', 'success');
+        } else Components.showToast(r.message || 'OK', 'success');
         fetchData();
       });
     }
 
     function handleCheckEntry(id) {
       Api.post('/admin/os-install/catalog/' + id + '/check', {}).then(function (r) {
-        if (!r || !r.success) { showToast((r && r.message) || t('error'), 'error'); return; }
+        if (!r || !r.success) { Components.showToast((r && r.message) || t('error'), 'error'); return; }
         if (r.data) {
           var d = r.data;
           if (d.status === 'new_version') {
             var fnUrl = d.found_url ? d.found_url.split('/').pop() : '';
-            showToast(fnUrl ? t('catalog_new_version') + ': ' + Helpers.escapeHtml(fnUrl) : t('catalog_new_version'), 'success');
+            Components.showToast(fnUrl ? t('catalog_new_version') + ': ' + Helpers.escapeHtml(fnUrl) : t('catalog_new_version'), 'success');
           } else if (d.status === 'up_to_date') {
-            showToast(t('catalog_up_to_date'), 'success');
+            Components.showToast(t('catalog_up_to_date'), 'success');
           } else if (d.status === 'no_match') {
             var entry = catalog.find(function (e) { return e.id === id; });
             if (entry && entry.check_url) {
-              showToast(t('catalog_no_match') + ': ' + Helpers.escapeHtml(entry.check_url), 'success');
+              Components.showToast(t('catalog_no_match') + ': ' + Helpers.escapeHtml(entry.check_url), 'success');
             } else {
-              showToast(t('catalog_no_match'), 'success');
+              Components.showToast(t('catalog_no_match'), 'success');
             }
           } else {
-            showToast(t('catalog_no_match'), 'success');
+            Components.showToast(t('catalog_no_match'), 'success');
           }
-        } else showToast(r.message || 'OK', 'success');
+        } else Components.showToast(r.message || 'OK', 'success');
         fetchData();
       });
     }
@@ -656,15 +664,15 @@ const DeployISO = (function () {
       Api.get('/admin/dashboard/summary', { silent: true }).then(function (r) {
         var diskPct = (r && r.success && r.data && r.data.system) ? r.data.system.disk_usage_percent : 0;
         if (diskPct > 95) {
-          showToast((t('disk_full_error') || 'Insufficient disk space (' + Math.round(diskPct) + '% used)'), 'error');
+          Components.showToast((t('disk_full_error') || 'Insufficient disk space (' + Math.round(diskPct) + '% used)'), 'error');
           return;
         }
         if (diskPct > 85) {
-          showToast((t('disk_space_warning') || 'Low disk space: ' + Math.round(diskPct) + '% used'), 'warning');
+          Components.showToast((t('disk_space_warning') || 'Low disk space: ' + Math.round(diskPct) + '% used'), 'warning');
         }
         Api.post('/admin/os-install/catalog/' + id + '/download', {}).then(function (r) {
-          if (!r || !r.success) { showToast((r && r.message) || t('error'), 'error'); return; }
-          showToast(r.message || 'OK', 'success');
+          if (!r || !r.success) { Components.showToast((r && r.message) || t('error'), 'error'); return; }
+          Components.showToast(r.message || 'OK', 'success');
           fetchData();
         });
       });
@@ -672,19 +680,19 @@ const DeployISO = (function () {
 
     function handleRetry(id) {
       Api.post('/admin/os-install/catalog/' + id + '/retry', {}).then(function (r) {
-        if (!r || !r.success) { showToast((r && r.message) || t('error'), 'error'); return; }
-        showToast(r.message || t('catalog_retry_queued'), 'success');
+        if (!r || !r.success) { Components.showToast((r && r.message) || t('error'), 'error'); return; }
+        Components.showToast(r.message || t('catalog_retry_queued'), 'success');
         fetchData();
       });
     }
 
     function handleCancel(id) {
-      showConfirmModal(t('catalog_cancel_download_confirm'), function (mb) {
+      Components.showConfirmModal(t('catalog_cancel_download_confirm'), function (mb) {
         var o = mb.textContent; mb.disabled = true; mb.textContent = '...';
         Api.post('/admin/os-install/catalog/' + id + '/cancel', {}).then(function (r) {
           mb.disabled = false; mb.textContent = o;
-          if (!r || !r.success) { showToast((r && r.message) || t('error'), 'error'); return; }
-          showToast(t('catalog_download_cancelled'), 'success');
+          if (!r || !r.success) { Components.showToast((r && r.message) || t('error'), 'error'); return; }
+          Components.showToast(t('catalog_download_cancelled'), 'success');
           fetchData();
         });
       });
@@ -696,11 +704,11 @@ const DeployISO = (function () {
     }
 
     function handleDeleteEntry(e) {
-      showConfirmModal(t('catalog_delete_confirm', { name: e.name }), function (mb) {
+      Components.showConfirmModal(t('catalog_delete_confirm', { name: e.name }), function (mb) {
         var o = mb.textContent; mb.disabled = true; mb.textContent = '...';
         Api.delete('/admin/os-install/catalog/' + e.id).then(function (r) {
-          if (!r || !r.success) { mb.disabled = false; mb.textContent = o; showToast((r && r.message) || t('error'), 'error'); return; }
-          showToast(t('catalog_deleted'), 'success');
+          if (!r || !r.success) { mb.disabled = false; mb.textContent = o; Components.showToast((r && r.message) || t('error'), 'error'); return; }
+          Components.showToast(t('catalog_deleted'), 'success');
           fetchData();
         });
       });
@@ -710,15 +718,15 @@ const DeployISO = (function () {
       var cb = ev.target;
       cb.setAttribute('aria-checked', val);
       Api.put('/admin/os-install/catalog/' + id, { auto_update: val }).then(function (r) {
-        if (!r || !r.success) { cb.checked = !val; cb.setAttribute('aria-checked', !val); showToast((r && r.message) || t('error'), 'error'); return; }
-        showToast(t('catalog_updated'), 'success');
+        if (!r || !r.success) { cb.checked = !val; cb.setAttribute('aria-checked', !val); Components.showToast((r && r.message) || t('error'), 'error'); return; }
+        Components.showToast(t('catalog_updated'), 'success');
       });
     }
 
     function handleDownloadAll() {
       Api.post('/admin/os-install/catalog/download-all', {}).then(function (r) {
-        if (!r || !r.success) { showToast((r && r.message) || t('error'), 'error'); return; }
-        showToast(r.message || 'OK', 'success');
+        if (!r || !r.success) { Components.showToast((r && r.message) || t('error'), 'error'); return; }
+        Components.showToast(r.message || 'OK', 'success');
         fetchData();
       });
     }
@@ -740,23 +748,23 @@ const DeployISO = (function () {
     function handleTriggerISO(fn, u, done) {
       Api.get('/admin/dashboard/summary', { silent: true }).then(function (r) {
         var diskPct = (r && r.success && r.data && r.data.system) ? r.data.system.disk_usage_percent : 0;
-        if(diskPct>95){showToast((t('disk_full_error')||'Insufficient disk space ('+Math.round(diskPct)+'% used)'),'error');done();return;}
-        if(diskPct>85)showToast((t('disk_space_warning')||'Low disk space: '+Math.round(diskPct)+'% used'),'warning');
+        if(diskPct>95){Components.showToast((t('disk_full_error')||'Insufficient disk space ('+Math.round(diskPct)+'% used)'),'error');done();return;}
+        if(diskPct>85)Components.showToast((t('disk_space_warning')||'Low disk space: '+Math.round(diskPct)+'% used'),'warning');
         Api.post('/admin/os-install/iso/download', { filename: fn, url: u }).then(function (r) {
           done();
-          if (!r || !r.success) { showToast((r && r.message) || t('error'), 'error'); return; }
-          showToast(r.message || 'OK', 'success');
+          if (!r || !r.success) { Components.showToast((r && r.message) || t('error'), 'error'); return; }
+          Components.showToast(r.message || 'OK', 'success');
           fetchData();
         });
       });
     }
 
     function handleIsoDelete(name) {
-      showConfirmModal(t('osinstall_iso_delete_confirm', { name: name }), function (mb) {
+      Components.showConfirmModal(t('osinstall_iso_delete_confirm', { name: name }), function (mb) {
         var o = mb.textContent; mb.disabled = true; mb.textContent = t('osinstall_iso_deleting');
         Api.delete('/admin/os-install/isos/' + encodeURIComponent(name)).then(function (r) {
-          if (!r || !r.success) { mb.disabled = false; mb.textContent = o; showToast((r && r.message) || t('error'), 'error'); return; }
-          showToast(t('osinstall_iso_deleted'), 'success');
+          if (!r || !r.success) { mb.disabled = false; mb.textContent = o; Components.showToast((r && r.message) || t('error'), 'error'); return; }
+          Components.showToast(t('osinstall_iso_deleted'), 'success');
           fetchData();
         });
       });
@@ -765,15 +773,8 @@ const DeployISO = (function () {
     function handleDownloadLocal(name) {
       var token = Auth.getToken();
       if (!token) { Router.push('/login'); return; }
-      Components.showToast(t('download_starting') + ': ' + name, 'success');
+      Components.Components.showToast(t('download_starting') + ': ' + name, 'success');
       window.location.href = '/api/v1/isos/' + encodeURIComponent(name) + '/download?token=' + encodeURIComponent(token);
-    }
-
-    function handleOverlayClick(e) {
-      if (e.target === e.currentTarget) closeCatModal();
-    }
-    function handleKeyDown(e) {
-      if (e.key === 'Escape') closeCatModal();
     }
 
     // ── Render ──────────────────────────────────────────────────────────
@@ -836,8 +837,6 @@ const DeployISO = (function () {
             overlayRef=${overlayRef}
             onClose=${closeCatModal}
             onSaved=${fetchData}
-            handleOverlayClick=${handleOverlayClick}
-            handleKeyDown=${handleKeyDown}
           />` : null}
         ${showDlModal ? html`
           <${DownloadISOModal}

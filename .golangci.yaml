@@ -63,7 +63,6 @@ linters:
     gocritic:
       enabled-tags: [diagnostic, style]
       disabled-checks:
-        - hugeParam         # too noisy for this codebase's struct-heavy style
         - exitAfterDefer    # main() patterns use defer intentionally
         - paramTypeCombine  # cosmetic; merges adjacent same-type params
 

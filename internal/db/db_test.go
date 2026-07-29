@@ -181,10 +181,12 @@ func TestProjectRepoCRUD(t *testing.T) {
 		t.Error("expected error on duplicate project name")
 	}
 
-	// Invalid source_type should fail (CHECK constraint).
-	_, err = repo.Create(ctx, "bad", "Bad", "invalid_type", "https://example.com")
-	if err == nil {
-		t.Error("expected error on invalid source_type")
+	// source_type is now a free-form registry key (migration 021 dropped the
+	// closed CHECK). Any string is accepted at the schema layer; validity is
+	// enforced at runtime by the source.Registry (does a Fetcher handle it?).
+	_, err = repo.Create(ctx, "rulesrc-proj", "Rulesrc", "rulesrc", "https://example.com")
+	if err != nil {
+		t.Errorf("expected free-form source_type to be accepted after migration 021: %v", err)
 	}
 }
 

@@ -38,6 +38,7 @@ func Migrate(db *sql.DB) error {
 		{"018", "migrations/018_iso_catalog_v2.sql"},
 		{"019", "migrations/019_storage_paths.sql"},
 		{"020", "migrations/020_fix_iso_catalog.sql"},
+		{"021", "migrations/021_source_type_any.sql"},
 	}
 	tx, err := db.Begin()
 	if err != nil {

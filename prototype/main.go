@@ -47,8 +47,11 @@ func main() {
 	must(db.Migrate(database), "migrate")
 
 	// 2. A placeholder project row so files have a project_id.
+	// source_type is CHECK-constrained to github/go/hashicorp/grafana in the
+	// schema today; use "github" as a placeholder (the rule engine itself is
+	// source-type-agnostic — see REPORT.md on the schema constraint).
 	projRepo := db.NewProjectRepo(database)
-	proj, err := projRepo.Create(context.Background(), "prototype", "Prototype", "rulesrc", "")
+	proj, err := projRepo.Create(context.Background(), "prototype", "Prototype", "github", "")
 	must(err, "create project")
 	projID := proj.ID
 

@@ -30,7 +30,11 @@ func supplyTestDB(t *testing.T) (*db.FileRepo, *db.ProjectRepo) {
 func TestServeIndex_ListsCompleteFiles(t *testing.T) {
 	fRepo, pRepo := supplyTestDB(t)
 	ctx := context.Background()
-	p, err := pRepo.Create(ctx, "t", "T", "rulesrc", "")
+	// NOTE: source_type is constrained to github/go/hashicorp/grafana by a DB
+	// CHECK constraint. The test only needs a placeholder project; the value is
+	// irrelevant here. (This constraint is itself evidence for REPORT.md: the
+	// schema is source-type-specific and cannot yet hold a "rulesrc" source.)
+	p, err := pRepo.Create(ctx, "t", "T", "github", "")
 	if err != nil {
 		t.Fatal(err)
 	}

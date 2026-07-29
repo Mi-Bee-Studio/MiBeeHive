@@ -2,7 +2,7 @@
 
 Welcome! We're glad you're interested in contributing to MiBeeHive. This document provides guidelines for contributing to the project.
 
-> MiBeeHive is an **operations tooling supply platform for external servers**: it collects and keeps ops tools up to date and serves them to external servers over standard protocols. It is *not* a local-machine app store like 1Panel — keep this scope in mind when proposing features.
+> MiBeeHive is an **operations tooling supply platform for external servers**: it collects and keeps ops tools up to date and serves them to external servers over standard protocols. It is *not* a local-machine app store like typical ops panels — keep this scope in mind when proposing features.
 
 ## Development Setup
 

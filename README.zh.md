@@ -1,13 +1,15 @@
 # MiBeeHive
 
+[English](README.md)
+
 **面向外部服务器的运维工具供应链平台**。MiBeeHive 运行在资源受限的 ARM64 设备（NAS 或存储服务器）上，充当供应中枢：它**自动采集并持续更新**外部服务器集群所需的运维工具，并**按标准协议对外供应**（软件仓库、ISO 仓库、镜像仓库、包代理源）。
 
-> **与 1Panel 的区别：** 1Panel 管理**本机**（应用商店、快速建站、消费级应用）。MiBeeHive 面向**外部**那些服务器——它是一条供应链，负责抓取、更新并把工具递交给外部机器。*1Panel 管这台盒子；MiBeeHive 喂饱整个集群。*
+> **与一般运维面板的区别：** 那些面板管理**本机**（应用商店、快速建站、消费级应用）。MiBeeHive 面向**外部**那些服务器——它是一条供应链，负责抓取、更新并把工具递交给外部机器。*它们管这台盒子；MiBeeHive 喂饱整个集群。*
 
 蜂巢隐喻与此完全对应：蜂巢不产花蜜，它**采集、酿造、分发**花蜜。MiBeeHive 不发明协议——它实现已有的标准协议，让现成的运维工具能从它这里取原料。核心模块是两项任何其他运维面板都不做的、自给自足的 provisioning 能力：
 
 ![许可证](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)
-![Go 版本](https://img.shields.io/badge/go-1.22+-00ADD8.svg?style=flat-square)
+![Go 版本](https://img.shields.io/badge/go-1.26+-00ADD8.svg?style=flat-square)
 ![构建状态](https://img.shields.io/badge/build-passing-brightgreen.svg)
 
 ## 功能特性
@@ -46,7 +48,7 @@
 
 ## 技术栈
 
-- **后端**: Go 1.22+，仅使用标准库 HTTP
+- **后端**: Go 1.26+（最新版），仅使用标准库 HTTP
 - **数据库**: SQLite，使用 modernc.org/sqlite 驱动
 - **前端**: **Preact + HTM**，TailwindCSS CDN，Chart.js CDN
 - **无外部框架**: 不使用 chi/gin/echo，无 npm，无 cron 库
@@ -59,7 +61,7 @@
 ## 快速开始
 
 ### 前置要求
-- 已安装 Go 1.22+
+- 已安装 Go 1.26+（最新版）
 - ARM64 目标设备，≥1GB 内存，≥32GB 存储（可选，用于部署）
 
 ### 构建
@@ -166,7 +168,7 @@ GOARCH=arm64 CGO_ENABLED=0 go build -o mibeehive-arm64 ./cmd/mibeehive
 ```
 
 ### 代码结构
-- **处理器**: HTTP 请求处理（Go 1.22+ 方法+路径路由）
+- **处理器**: HTTP 请求处理（Go 1.26+ 方法+路径路由）
 - **服务层**: 业务逻辑层
 - **存储库**: 数据访问层，使用 SQLite
 - **前端**: Preact + HTM，使用哈希路由
@@ -176,7 +178,7 @@ GOARCH=arm64 CGO_ENABLED=0 go build -o mibeehive-arm64 ./cmd/mibeehive
 **是：** 一条运维工具**供应链**——采集、更新并把运维工具按标准协议供应给外部服务器。它实现**已有**协议（让现成工具能从它取料），不发明新协议。
 
 **不是：**
-- 不是本机应用商店 / 快速建站（那是 1Panel 的职责）。
+- 不是本机应用商店 / 快速建站（那是一般运维面板的职责）。
 - 不是 TSDB / 指标聚合器——`/metrics` 仅用于 MiBeeHive 自身健康；它把 `node_exporter`/`prometheus` **供应给**外部服务器，而不是与它们竞争。
 
 ## 贡献

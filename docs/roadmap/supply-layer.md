@@ -8,7 +8,7 @@
 
 Turn MiBeeHive from a "download-and-store" tool into an **ops-tooling supply platform for external servers**: automatically collect and keep ops tools up to date, and expose them to external servers over **existing standard protocols**. The guiding principle: MiBeeHive is the supply chain (collect → store → serve); it implements existing protocols so off-the-shelf tools can pull from it without knowing MiBeeHive exists.
 
-> **Boundary:** This is *not* an app store / site builder (that is 1Panel's domain, local machine). This direction is about **supplying ops tools to the fleet of external servers**, not running consumer apps on the box.
+> **Boundary:** This is *not* an app store / site builder (that is the domain of typical local-machine ops panels). This direction is about **supplying ops tools to the fleet of external servers**, not running consumer apps on the box.
 
 ## Two Sub-Problems
 

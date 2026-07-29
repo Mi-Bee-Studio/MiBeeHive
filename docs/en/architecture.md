@@ -11,7 +11,7 @@ MiBeeHive is an **operations tooling supply platform for external servers**. The
 - **Provisioning** (哺育): Bring new external servers online — provide unattended OS installation via PXE so bare-metal machines can be enrolled and stocked from scratch
 - **Sharing** (分享): Serve collected files out — basic WebDAV capabilities, configurable via web UI
 
-> **vs 1Panel:** 1Panel manages the *local* machine (app store, site building). MiBeeHive targets the *other* servers — it is the supply chain that stocks the fleet.
+> **vs typical ops panels:** those manage the *local* machine (app store, site building). MiBeeHive targets the *other* servers — it is the supply chain that stocks the fleet.
 
 Each module has isolated storage paths under a configurable parent: `{base_path}/{oss,os-install,webdav}`
 
@@ -27,7 +27,7 @@ MiBeeHive is a monolithic Go binary that runs on a resource-constrained ARM64 NA
 ### Scope Boundary
 
 - **Is**: An operations-tooling **supply chain** that collects, updates, and serves ops tools to external servers over *existing* standard protocols. It implements protocols; it does not invent them.
-- **Is Not** a local-machine app store / quick site builder (that is 1Panel's job).
+- **Is Not** a local-machine app store / quick site builder (that is what typical ops panels do).
 - **Is Not** a TSDB / metrics aggregator. `/metrics` is only for MiBeeHive's own health — MiBeeHive supplies `node_exporter`/`prometheus` *to* external servers rather than competing with them.
 - **Operations model**: supply-first (serve artifacts passively over protocols). Active remote control of external servers (SSH/agent) is a long-term direction, layered on top of a stable supply layer.
 

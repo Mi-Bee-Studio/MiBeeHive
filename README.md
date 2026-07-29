@@ -4,7 +4,7 @@
 
 An **operations tooling supply platform for external servers**. MiBeeHive runs on resource-constrained ARM64 devices (a NAS or storage server) and acts as a supply hub: it **automatically collects and keeps up-to-date** the ops tools your fleet needs, and **serves them to external servers over standard protocols** (software repositories, ISO repositories, image registries, package-proxy sources).
 
-> **Where it differs from 1Panel:** 1Panel manages the *local* machine (app store, quick site building, consumer apps). MiBeeHive targets the *other* servers — it is a supply chain that fetches, updates, and hands tools to external machines. *1Panel runs the box; MiBeeHive keeps the fleet stocked.*
+> **Where it differs from typical ops panels:** those manage the *local* machine (app store, quick site building, consumer apps). MiBeeHive targets the *other* servers — it is a supply chain that fetches, updates, and hands tools to external machines. *They run the box; MiBeeHive keeps the fleet stocked.*
 
 The bee-hive metaphor maps directly onto this: the hive does not make honey, it **collects, ages, and distributes** it. MiBeeHive does not invent protocols — it implements existing standard protocols so off-the-shelf tools can pull their materials from it. The core modules are the two self-sufficient provisioning capabilities that no other ops panel does:
 
@@ -178,7 +178,7 @@ GOARCH=arm64 CGO_ENABLED=0 go build -o mibeehive-arm64 ./cmd/mibeehive
 **Is:** An operations-tooling **supply chain** that collects, updates, and serves ops tools to external servers over standard protocols. It implements *existing* protocols (so off-the-shelf tools can pull from it) — it does not invent new ones.
 
 **Is Not:**
-- Not a local-machine app store / quick site builder (that is 1Panel's job).
+- Not a local-machine app store / quick site builder (that is what typical ops panels do).
 - Not a TSDB / metrics aggregator — `/metrics` is only for MiBeeHive's own health; it supplies `node_exporter`/`prometheus` *to* external servers rather than competing with them.
 
 ## Contributing

@@ -63,6 +63,19 @@ func (r *Registry) Get(sourceType string) (Fetcher, bool) {
 	return f, ok
 }
 
+// Fetch resolves a source type to its Fetcher and calls Fetch. It matches the
+// crawler.FetchFunc signature so init.go can wire it into
+// CrawlManager.SetFetchFunc without an import cycle. Returns an error if no
+// Fetcher is registered for the type (runtime validation, replacing the old
+// DB CHECK constraint).
+func (r *Registry) Fetch(ctx context.Context, name, sourceType string, params map[string]string) ([]model.ReleaseAsset, error) {
+	f, ok := r.Get(sourceType)
+	if !ok {
+		return nil, ErrNoFetcherFor(sourceType)
+	}
+	return f.Fetch(ctx, Source{Name: name, Type: sourceType, Params: params})
+}
+
 // Types returns all registered source-type keys.
 func (r *Registry) Types() []string {
 	types := make([]string, 0, len(r.fetchers))

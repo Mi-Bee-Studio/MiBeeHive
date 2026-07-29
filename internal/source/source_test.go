@@ -129,13 +129,27 @@ func TestRuleFetcherLoadsBuiltins(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewRuleFetcher: %v", err)
 	}
-	if rf.Sources()[0] != "rulesrc" {
-		t.Errorf("expected sources [rulesrc], got %v", rf.Sources())
+	sources := rf.Sources()
+	// Sources = builtin fingerprint names + "rulesrc".
+	if !contains(sources, "github") {
+		t.Errorf("expected sources to include 'github', got %v", sources)
+	}
+	if !contains(sources, "rulesrc") {
+		t.Errorf("expected sources to include 'rulesrc', got %v", sources)
 	}
 	// The github fingerprint must be registered by name.
 	if _, ok := rf.builtins["github"]; !ok {
 		t.Error("expected builtin fingerprint named 'github'")
 	}
+}
+
+func contains(s []string, v string) bool {
+	for _, x := range s {
+		if x == v {
+			return true
+		}
+	}
+	return false
 }
 
 // TestRuleFetcherGitHubEquivalent is the migration validation: a github Source

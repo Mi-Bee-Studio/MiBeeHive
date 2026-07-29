@@ -65,14 +65,30 @@ func (r *RuleFetcher) RegisterFingerprint(spec *rulesrc.Spec) {
 	r.builtins[spec.Name] = spec
 }
 
-// Sources reports this Fetcher handles the "rulesrc" type.
-func (r *RuleFetcher) Sources() []string { return []string{"rulesrc"} }
+// Sources reports the names of the built-in fingerprints this Fetcher serves.
+// A source_type matching a fingerprint name (e.g. "github") routes here, so a
+// project with source_type "github" is served by the github fingerprint.
+// Additionally the literal "rulesrc" type is always handled, with the specific
+// fingerprint chosen by Source.Params["fingerprint"] (for user-defined sources).
+func (r *RuleFetcher) Sources() []string {
+	out := make([]string, 0, len(r.builtins)+1)
+	for name := range r.builtins {
+		out = append(out, name)
+	}
+	out = append(out, "rulesrc")
+	return out
+}
 
-// Fetch resolves the fingerprint named in Source.Params["fingerprint"], runs it
-// through the rulesrc engine (with URL template substitution from the rest of
-// Params), applies the spec's filters, and returns assets.
+// Fetch resolves the fingerprint for the source and runs it through the rulesrc
+// engine (with URL template substitution from Params), then applies filters.
+// For a builtin type (e.g. source_type "github") the fingerprint named by the
+// type is used. For the generic "rulesrc" type, the fingerprint is named by
+// Source.Params["fingerprint"].
 func (r *RuleFetcher) Fetch(ctx context.Context, src Source) ([]model.ReleaseAsset, error) {
 	name := src.Params["fingerprint"]
+	if name == "" {
+		name = src.Type // builtin type name == fingerprint name
+	}
 	spec, ok := r.builtins[name]
 	if !ok {
 		return nil, fmt.Errorf("rule source %q: no fingerprint named %q registered", src.Name, name)

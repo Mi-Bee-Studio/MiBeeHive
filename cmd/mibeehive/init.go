@@ -27,6 +27,8 @@ import (
 	"github.com/Mi-Bee-Studio/mibeehive/internal/model"
 	"github.com/Mi-Bee-Studio/mibeehive/internal/monitor"
 	"github.com/Mi-Bee-Studio/mibeehive/internal/service"
+	"github.com/Mi-Bee-Studio/mibeehive/internal/source"
+	"github.com/Mi-Bee-Studio/mibeehive/internal/supply"
 	webdavpkg "github.com/Mi-Bee-Studio/mibeehive/internal/webdav"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
@@ -101,6 +103,7 @@ type appHandlers struct {
 	container     *handler.ContainerHandler
 	registry      *handler.RegistryHandler // nil if remote registry disabled
 	storageConfig *handler.StorageConfigHandler
+	supply        *supply.Handler // public ops-tool supply endpoints (#3)
 }
 
 // loadConfig initializes the logger, loads or generates the config file,
@@ -300,6 +303,32 @@ func initServices(cfg *config.Config, database *sql.DB) *appServices {
 	s.crawlManager.Scheduler().Register(crawler.NewPyPICrawler(pypiToken, logger))
 	s.crawlManager.Scheduler().Register(crawler.NewCratesCrawler("", logger))
 
+	// Wire the two-track source.Registry (design Step 3). GitHub is served by a
+	// YAML fingerprint (RuleFetcher); the rest are wrapped as LegacyAdapters so
+	// their behavior is unchanged. The Registry.Fetch matches CrawlManager's
+	// FetchFunc signature. When set, the manager prefers the Registry and falls
+	// back to the Scheduler crawlers above only if fetchFunc were nil.
+	reg := source.NewRegistry()
+	ruleFetcher, err := source.NewRuleFetcher()
+	if err != nil {
+		slog.Warn("failed to load rule fingerprints; github will use legacy crawler", "error", err)
+		// Fallback: serve github via its legacy crawler.
+		reg.Register(source.NewLegacyAdapter(crawler.NewGitHubCrawler(githubToken, logger)))
+	} else {
+		// github is now served by its fingerprint ("github" type -> github.yaml).
+		reg.Register(ruleFetcher)
+	}
+	// Wrap the remaining crawlers as LegacyAdapters so the Registry routes them
+	// (owner/repo semantics preserved by CrawlManager.getParams -> Source.Params).
+	reg.Register(source.NewLegacyAdapter(crawler.NewGoCrawler(logger)))
+	reg.Register(source.NewLegacyAdapter(crawler.NewHashiCorpCrawler(hashicorpToken, logger)))
+	reg.Register(source.NewLegacyAdapter(crawler.NewGrafanaCrawler(logger)))
+	reg.Register(source.NewLegacyAdapter(crawler.NewNPMCrawler(npmToken, logger)))
+	reg.Register(source.NewLegacyAdapter(crawler.NewPyPICrawler(pypiToken, logger)))
+	reg.Register(source.NewLegacyAdapter(crawler.NewCratesCrawler("", logger)))
+	s.crawlManager.SetFetchFunc(reg.Fetch)
+	slog.Info("source registry wired", "types", reg.Types())
+
 	// Start background download retry worker with periodic zombie cleanup.
 	const maxDownloadRetries = 3
 	retryCtx, retryCancel := context.WithCancel(context.Background())
@@ -338,7 +367,6 @@ func initServices(cfg *config.Config, database *sql.DB) *appServices {
 	if err := s.migrationSvc.ResetStaleMigrations(context.Background()); err != nil {
 		slog.Warn("resetting stale migrations", "error", err)
 	}
-
 
 	// Initialize Docker client for container management (optional).
 	if cfg.Container.Local.Enabled {
@@ -405,6 +433,9 @@ func initHandlers(cfg *config.Config, svcs *appServices, database *sql.DB, confi
 	h.auth = handler.NewAuthHandler(cfg.Auth.PasswordHash, jwtSecret, cfg.Auth.GetPasswordChangedAt)
 	h.project = handler.NewProjectHandler(database)
 	h.file = handler.NewFileHandler(database, svcs.fileService, jwtSecret)
+	// Supply layer (Issue #3): public ops-tool repo index + download. Reuses
+	// FileService.StreamFile; built from the same FileRepo/FileService as admin.
+	h.supply = supply.NewHandler(db.NewFileRepo(database), svcs.fileService)
 	h.crawl = handler.NewCrawlHandler(svcs.crawlManager, db.NewCrawlLogRepo(database), db.NewProjectRepo(database))
 	h.system = handler.NewSystemHandler(database, svcs.fileService, cfg.Storage.BasePath, version, cfg.Monitor.NodeExporterURL)
 	h.osInstall = handler.NewOSInstallHandler(db.NewOsInstallConfigRepo(database), service.NewOsTemplateService(), cfg.Storage.BasePath)
@@ -457,6 +488,13 @@ func buildRouter(cfg *config.Config, h *appHandlers, svcs *appServices, database
 	mux.HandleFunc("GET "+model.RouteISOsList, h.iso.PublicListISOs)
 	mux.HandleFunc("GET "+model.RouteISODownload, h.iso.DownloadISO)
 
+	// Supply layer (Issue #3): public ops-tool repository index + download.
+	// External servers discover and pull collected tools from here without auth.
+	if h.supply != nil {
+		mux.HandleFunc("GET /repo/index", h.supply.ServeIndex)
+		mux.HandleFunc("GET /repo/files/{id}", h.supply.ServeFile)
+	}
+
 	// API routes (protected by auth middleware).
 	apiMux := http.NewServeMux()
 	apiMux.HandleFunc("GET "+model.RoutePasswordStatus, h.auth.PasswordStatus)
@@ -507,7 +545,6 @@ func buildRouter(cfg *config.Config, h *appHandlers, svcs *appServices, database
 	apiMux.HandleFunc("GET "+model.RouteStorageMigrations, h.storageConfig.ListMigrations)
 	apiMux.HandleFunc("GET "+model.RouteStorageMigrationByID+"{id}", h.storageConfig.GetMigration)
 	apiMux.HandleFunc("POST "+model.RouteStorageMigrationByID+"{id}/cancel", h.storageConfig.CancelMigration)
-
 
 	// ISO management routes (admin).
 	apiMux.HandleFunc("POST "+model.RouteAdminISODownload, h.iso.TriggerDownload)
@@ -734,12 +771,12 @@ func runServers(cfg *config.Config, httpHandler, httpsHandler http.Handler, svcs
 	var backupCancel context.CancelFunc
 	if cfg.Backup.Enabled {
 		backupSvc := backup.NewBackupService(database, cfg.Database.Path, configPath, backup.Config{
-			LocalPath:       cfg.Backup.LocalPath,
-			Retention:       cfg.Backup.Retention,
-			Schedule:        cfg.Backup.Schedule,
-			RemoteURL:       cfg.Backup.RemoteURL,
-			RemoteUsername:  cfg.Backup.RemoteUsername,
-			RemotePassword:  cfg.Backup.RemotePassword,
+			LocalPath:      cfg.Backup.LocalPath,
+			Retention:      cfg.Backup.Retention,
+			Schedule:       cfg.Backup.Schedule,
+			RemoteURL:      cfg.Backup.RemoteURL,
+			RemoteUsername: cfg.Backup.RemoteUsername,
+			RemotePassword: cfg.Backup.RemotePassword,
 		})
 		backupCtx, bc := context.WithCancel(context.Background())
 		backupCancel = bc

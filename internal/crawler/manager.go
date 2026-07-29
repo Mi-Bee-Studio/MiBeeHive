@@ -20,16 +20,26 @@ import (
 
 // CrawlStatusInfo summarizes a project's crawl state for status queries.
 type CrawlStatusInfo struct {
-	ProjectName    string        `json:"project_name"`
-	SourceType     model.SourceType `json:"source_type"`
-	Running        bool          `json:"running"`
-	Interval       time.Duration `json:"interval"`
-	LatestVersion  string        `json:"latest_version"`
-	LastCrawledAt  *string       `json:"last_crawled_at"`
+	ProjectName   string           `json:"project_name"`
+	SourceType    model.SourceType `json:"source_type"`
+	Running       bool             `json:"running"`
+	Interval      time.Duration    `json:"interval"`
+	LatestVersion string           `json:"latest_version"`
+	LastCrawledAt *string          `json:"last_crawled_at"`
 }
 
 // ErrCrawlInProgress is returned when a crawl is already running for a project.
 var ErrCrawlInProgress = errors.New("crawl already in progress")
+
+// FetchFunc is the new two-track fetch entry point. Given a project's name,
+// source type, and params, it returns release assets. It is satisfied by
+// internal/source.Registry.Fetch (wired in init.go) and lets CrawlManager route
+// through the new abstraction WITHOUT importing internal/source (which imports
+// this package via LegacyAdapter — avoiding an import cycle).
+//
+// When set (SetFetchFunc), the manager prefers it; otherwise it falls back to
+// the legacy Scheduler.GetCrawler path. This enables incremental migration.
+type FetchFunc func(ctx context.Context, name, sourceType string, params map[string]string) ([]model.ReleaseAsset, error)
 
 // CrawlManager orchestrates fetching releases, filtering new ones, and
 // triggering downloads.
@@ -44,9 +54,16 @@ type CrawlManager struct {
 	logger      *slog.Logger
 	metrics     *metrics.Metrics
 
+	// fetchFunc is the new two-track fetch entry point (optional). When nil, the
+	// manager uses the legacy Scheduler.GetCrawler path.
+	fetchFunc FetchFunc
+
 	// Per-project crawl locks to prevent concurrent crawls of the same project.
 	crawlMu sync.Map // string -> *sync.Mutex
 }
+
+// SetFetchFunc wires the new two-track fetch path. Optional; call before Start.
+func (m *CrawlManager) SetFetchFunc(f FetchFunc) { m.fetchFunc = f }
 
 // NewCrawlManager creates a new CrawlManager. Call Start() to begin crawling.
 func NewCrawlManager(db *sql.DB, fileService *service.FileService, cfg *config.Config, logger *slog.Logger, m *metrics.Metrics) *CrawlManager {
@@ -150,6 +167,8 @@ func (m *CrawlManager) TriggerCrawl(ctx context.Context, projectName string) (*m
 }
 
 // resolveCrawlSetup looks up the project, resolves its crawler, and creates a crawl log entry.
+// When the new fetchFunc is set, a legacy crawler is not required (the Registry
+// handles routing); otherwise the legacy Scheduler crawler must be registered.
 func (m *CrawlManager) resolveCrawlSetup(ctx context.Context, projectName string) (*dbrepo.Project, Crawler, int64, error) {
 	proj, err := m.projectRepo.GetByName(ctx, projectName)
 	if err != nil {
@@ -159,9 +178,14 @@ func (m *CrawlManager) resolveCrawlSetup(ctx context.Context, projectName string
 		return nil, nil, 0, fmt.Errorf("project %q not found", projectName)
 	}
 
-	crawler, ok := m.scheduler.GetCrawler(model.SourceType(proj.SourceType))
-	if !ok {
-		return nil, nil, 0, fmt.Errorf("no crawler registered for source type %q", proj.SourceType)
+	var crawler Crawler
+	if m.fetchFunc == nil {
+		// Legacy path requires a registered crawler.
+		var ok bool
+		crawler, ok = m.scheduler.GetCrawler(model.SourceType(proj.SourceType))
+		if !ok {
+			return nil, nil, 0, fmt.Errorf("no crawler registered for source type %q", proj.SourceType)
+		}
 	}
 
 	crawlLog := &dbrepo.CrawlLog{
@@ -179,9 +203,27 @@ func (m *CrawlManager) resolveCrawlSetup(ctx context.Context, projectName string
 
 // fetchReleases fetches releases from the upstream source.
 // On failure it returns a CrawlResult with error details for the caller to return.
+//
+// Routing: when the new two-track fetchFunc is set (SetFetchFunc), it is used;
+// otherwise the legacy Scheduler crawler (crwl) is used. This is the incremental
+// migration seam (design Step 3).
 func (m *CrawlManager) fetchReleases(ctx context.Context, proj *dbrepo.Project, crwl Crawler, logID int64, projectName string) ([]model.ReleaseAsset, *model.CrawlResult, error) {
-	owner, repo := m.getOwnerRepo(proj)
-	releases, err := crwl.FetchReleases(ctx, owner, repo)
+	var releases []model.ReleaseAsset
+	var err error
+	crawlerName := ""
+	if crwl != nil {
+		crawlerName = crwl.Name()
+	}
+
+	if m.fetchFunc != nil {
+		// New two-track path: hand off name/type/params to the Registry.
+		releases, err = m.fetchFunc(ctx, projectName, proj.SourceType, m.getParams(proj))
+		crawlerName = "registry:" + proj.SourceType
+	} else {
+		// Legacy path.
+		owner, repo := m.getOwnerRepo(proj)
+		releases, err = crwl.FetchReleases(ctx, owner, repo)
+	}
 	if err != nil {
 		status := model.CrawlStatusError
 		errMsg := err.Error()
@@ -191,7 +233,7 @@ func (m *CrawlManager) fetchReleases(ctx context.Context, proj *dbrepo.Project, 
 		m.logger.Error("crawl failed",
 			"project", projectName,
 			"source_type", proj.SourceType,
-			"crawler", crwl.Name(),
+			"crawler", crawlerName,
 			"status", string(status),
 			"error", errMsg,
 		)
@@ -331,12 +373,12 @@ func (m *CrawlManager) GetCrawlStatus() map[string]CrawlStatusInfo {
 		}
 
 		statuses[proj.Name] = CrawlStatusInfo{
-			ProjectName:    proj.Name,
-			SourceType:     model.SourceType(proj.SourceType),
-			Running:        m.scheduler.Running(proj.Name),
-			Interval:       interval,
-			LatestVersion:  proj.LatestVersion,
-			LastCrawledAt:  lastCrawled,
+			ProjectName:   proj.Name,
+			SourceType:    model.SourceType(proj.SourceType),
+			Running:       m.scheduler.Running(proj.Name),
+			Interval:      interval,
+			LatestVersion: proj.LatestVersion,
+			LastCrawledAt: lastCrawled,
 		}
 	}
 	return statuses
@@ -356,6 +398,21 @@ func (m *CrawlManager) getOwnerRepo(proj *dbrepo.Project) (string, string) {
 		return "", ""
 	}
 	return settings.GitHubOwner, settings.GitHubRepo
+}
+
+// getParams builds the source.Params map for the new two-track path from a
+// project's DB settings. It generalizes getOwnerRepo: today it carries
+// owner/repo (matching the legacy overloading), and can grow new keys as
+// sources are migrated to fingerprints (e.g. {"fingerprint":"github"}).
+func (m *CrawlManager) getParams(proj *dbrepo.Project) map[string]string {
+	settings, err := m.projectRepo.GetSettings(context.Background(), proj.ID)
+	if err != nil || settings == nil {
+		return map[string]string{}
+	}
+	return map[string]string{
+		"owner": settings.GitHubOwner,
+		"repo":  settings.GitHubRepo,
+	}
 }
 
 // isRateLimitError checks if an error indicates rate limiting.

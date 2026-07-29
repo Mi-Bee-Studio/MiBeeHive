@@ -4,25 +4,35 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Mi-Bee-Studio/mibeehive/internal/crawler"
 	"github.com/Mi-Bee-Studio/mibeehive/internal/model"
 )
 
-// LegacyAdapter wraps an existing internal/crawler.Crawler so it satisfies the
-// new Fetcher interface WITHOUT changing the crawler itself. This is the
-// transitional bridge (design Step 2): CrawlManager can route through Fetcher
-// while the crawlers are migrated to fingerprints one at a time.
+// Crawler is the local view of the legacy per-source fetcher. It is defined
+// here (not imported from internal/crawler) so this package has no dependency
+// on crawler — breaking the former LegacyAdapter → crawler.Crawler coupling.
+// Every concrete crawler (GitHubCrawler, GoCrawler, …) satisfies this
+// duck-typed interface without modification.
+type Crawler interface {
+	Name() string
+	SourceType() model.SourceType
+	FetchReleases(ctx context.Context, owner, repo string) ([]model.ReleaseAsset, error)
+}
+
+// LegacyAdapter wraps a legacy per-source Crawler so it satisfies the new
+// Fetcher interface WITHOUT changing the crawler itself. This is the
+// transitional bridge (design Step 2): CrawlManager routes through Fetcher
+// while crawlers are migrated to fingerprints one at a time.
 //
 // It translates a Source.Params map into the (owner, repo) positional strings
 // the old FetchReleases API expects. The semantics mirror the historical
 // overloading documented in the design (owner/repo mean different things per
 // source type); this adapter preserves that meaning exactly.
 type LegacyAdapter struct {
-	c crawler.Crawler
+	c Crawler
 }
 
 // NewLegacyAdapter wraps an existing Crawler as a Fetcher.
-func NewLegacyAdapter(c crawler.Crawler) *LegacyAdapter { return &LegacyAdapter{c: c} }
+func NewLegacyAdapter(c Crawler) *LegacyAdapter { return &LegacyAdapter{c: c} }
 
 // Sources reports the single source type the wrapped crawler handles.
 func (a *LegacyAdapter) Sources() []string { return []string{string(a.c.SourceType())} }

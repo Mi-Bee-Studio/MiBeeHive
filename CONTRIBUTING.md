@@ -7,7 +7,7 @@ Welcome! We're glad you're interested in contributing to MiBeeHive. This documen
 ## Development Setup
 
 ### Prerequisites
-- Go 1.22+ installed
+- Go 1.26+ (latest) installed
 - Git for version control
 
 ### Getting Started

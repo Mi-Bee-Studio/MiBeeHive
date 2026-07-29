@@ -1,5 +1,7 @@
 # MiBeeHive
 
+[中文](README.zh.md)
+
 An **operations tooling supply platform for external servers**. MiBeeHive runs on resource-constrained ARM64 devices (a NAS or storage server) and acts as a supply hub: it **automatically collects and keeps up-to-date** the ops tools your fleet needs, and **serves them to external servers over standard protocols** (software repositories, ISO repositories, image registries, package-proxy sources).
 
 > **Where it differs from 1Panel:** 1Panel manages the *local* machine (app store, quick site building, consumer apps). MiBeeHive targets the *other* servers — it is a supply chain that fetches, updates, and hands tools to external machines. *1Panel runs the box; MiBeeHive keeps the fleet stocked.*
@@ -7,7 +9,7 @@ An **operations tooling supply platform for external servers**. MiBeeHive runs o
 The bee-hive metaphor maps directly onto this: the hive does not make honey, it **collects, ages, and distributes** it. MiBeeHive does not invent protocols — it implements existing standard protocols so off-the-shelf tools can pull their materials from it. The core modules are the two self-sufficient provisioning capabilities that no other ops panel does:
 
 ![License](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)
-![Go Version](https://img.shields.io/badge/go-1.22+-00ADD8.svg?style=flat-square)
+![Go Version](https://img.shields.io/badge/go-1.26+-00ADD8.svg?style=flat-square)
 ![Build](https://img.shields.io/badge/build-passing-brightgreen.svg)
 
 ## Features
@@ -46,7 +48,7 @@ The bee-hive metaphor maps directly onto this: the hive does not make honey, it 
 
 ## Tech Stack
 
-- **Backend**: Go 1.22+ with stdlib HTTP only
+- **Backend**: Go 1.26+ (latest) with stdlib HTTP only
 - **Database**: SQLite with modernc.org/sqlite driver
 - **Frontend**: **Preact + HTM**, TailwindCSS CDN, Chart.js CDN
 - **No external frameworks**: No chi/gin/echo, no npm, no cron libraries
@@ -59,7 +61,7 @@ The bee-hive metaphor maps directly onto this: the hive does not make honey, it 
 ## Quick Start
 
 ### Prerequisites
-- Go 1.22+ installed
+- Go 1.26+ (latest) installed
 - ARM64 target device with ≥1GB RAM, ≥32GB storage (optional, for deployment)
 
 ### Build
@@ -166,7 +168,7 @@ GOARCH=arm64 CGO_ENABLED=0 go build -o mibeehive-arm64 ./cmd/mibeehive
 ```
 
 ### Code Structure
-- **Handlers**: HTTP request handling (Go 1.22+ method+path routing)
+- **Handlers**: HTTP request handling (Go 1.26+ method+path routing)
 - **Services**: Business logic layer
 - **Repositories**: Data access layer with SQLite
 - **Frontend**: Preact + HTM with hash-based routing

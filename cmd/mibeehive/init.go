@@ -318,6 +318,16 @@ func initServices(cfg *config.Config, database *sql.DB) *appServices {
 	} else {
 		// github + grafana served by fingerprints. RuleFetcher.Sources() reports
 		// the builtin fingerprint names, so these types route to it.
+		// Wire token resolution so fingerprint requests carry API tokens (read
+		// from source_credentials at fetch time) — keeps secrets out of YAML and
+		// avoids GitHub's 60/hr unauthenticated rate limit.
+		ruleFetcher.SetTokenResolver(func(sourceType string) string {
+			cred, err := s.credRepo.GetBySourceType(initCtx, sourceType)
+			if err != nil || cred == nil {
+				return ""
+			}
+			return cred.Token
+		})
 		reg.Register(ruleFetcher)
 	}
 	// Wrap the remaining crawlers as LegacyAdapters. These sources (go/npm/pypi/

@@ -197,3 +197,69 @@ func TestRuleFetcherGitHubEquivalent(t *testing.T) {
 		t.Errorf("classify linux/amd64, got %s/%s", a.OS, a.Arch)
 	}
 }
+
+// TestRuleFetcherTokenInjection verifies that a token resolved by
+// SetTokenResolver is sent as an Authorization header on the fingerprint
+// request — without mutating the shared builtin spec (concurrency-safe).
+func TestRuleFetcherTokenInjection(t *testing.T) {
+	var gotAuth string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotAuth = r.Header.Get("Authorization")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`[{"tag_name":"v1.0.0","prerelease":false,"draft":false,"assets":[]}]`))
+	}))
+	defer srv.Close()
+
+	spec := &rulesrc.Spec{
+		APIVersion: "rulesrc/v1", Kind: "Source", Name: "github",
+		Request: rulesrc.Request{URL: srv.URL + "/repos/{owner}/{repo}/releases", Format: rulesrc.FormatJSON},
+		List:    rulesrc.List{Path: "[]", Skip: []string{".prerelease", ".draft"}},
+		Extract: rulesrc.Extract{Version: ".tag_name", VersionStrip: "v"},
+	}
+	rf := &RuleFetcher{rulesrc: rulesrc.NewFetcher(), builtins: map[string]*rulesrc.Spec{"github": spec}}
+	rf.SetTokenResolver(func(sourceType string) string {
+		if sourceType == "github" {
+			return "secret-pat-123"
+		}
+		return ""
+	})
+
+	if _, err := rf.Fetch(context.Background(), Source{
+		Name: "p", Type: "github", Params: AsParams("owner", "o", "repo", "r"),
+	}); err != nil {
+		t.Fatalf("Fetch: %v", err)
+	}
+	if gotAuth != "token secret-pat-123" {
+		t.Errorf("Authorization header: want %q, got %q", "token secret-pat-123", gotAuth)
+	}
+	// The builtin spec must NOT be mutated (no header persisted on the shared spec).
+	if len(spec.Request.Header) != 0 {
+		t.Errorf("shared builtin spec was mutated, header=%v", spec.Request.Header)
+	}
+}
+
+// TestRuleFetcherNoTokenWhenResolverNil verifies that without a resolver (or an
+// empty token), no Authorization header is added (the default/anonymous case).
+func TestRuleFetcherNoTokenWhenResolverNil(t *testing.T) {
+	var gotAuth string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotAuth = r.Header.Get("Authorization")
+		_, _ = w.Write([]byte(`[]`))
+	}))
+	defer srv.Close()
+
+	spec := &rulesrc.Spec{
+		APIVersion: "rulesrc/v1", Kind: "Source", Name: "github",
+		Request: rulesrc.Request{URL: srv.URL, Format: rulesrc.FormatJSON},
+		List:    rulesrc.List{Path: "[]"},
+		Extract: rulesrc.Extract{Version: ".tag_name"},
+	}
+	rf := &RuleFetcher{rulesrc: rulesrc.NewFetcher(), builtins: map[string]*rulesrc.Spec{"github": spec}}
+	// No SetTokenResolver.
+	if _, err := rf.Fetch(context.Background(), Source{Name: "p", Type: "github"}); err != nil {
+		t.Fatalf("Fetch: %v", err)
+	}
+	if gotAuth != "" {
+		t.Errorf("expected no Authorization header, got %q", gotAuth)
+	}
+}

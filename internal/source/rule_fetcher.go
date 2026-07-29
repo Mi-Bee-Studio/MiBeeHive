@@ -27,6 +27,11 @@ var builtinFingerprints embed.FS
 type RuleFetcher struct {
 	rulesrc  *rulesrc.Fetcher
 	builtins map[string]*rulesrc.Spec // name -> fingerprint
+	// tokens resolves an optional auth token for a source type (e.g. a GitHub
+	// PAT read from source_credentials). When non-nil and non-empty for a type,
+	// the token is injected as an Authorization header at fetch time so secrets
+	// never live in the fingerprint YAML. Set via SetTokenResolver.
+	tokens func(sourceType string) string
 }
 
 // NewRuleFetcher builds a RuleFetcher over the rulesrc engine and loads all
@@ -38,6 +43,11 @@ func NewRuleFetcher() (*RuleFetcher, error) {
 	}
 	return rf, nil
 }
+
+// SetTokenResolver wires per-source-type auth token resolution. Optional; call
+// before serving requests. Used to inject API tokens (GitHub/HashiCorp PATs)
+// into fingerprint requests without storing secrets in YAML.
+func (r *RuleFetcher) SetTokenResolver(f func(sourceType string) string) { r.tokens = f }
 
 // loadBuiltins parses every embedded fingerprints/*.yaml and registers it.
 func (r *RuleFetcher) loadBuiltins() error {
@@ -93,6 +103,16 @@ func (r *RuleFetcher) Fetch(ctx context.Context, src Source) ([]model.ReleaseAss
 	if !ok {
 		return nil, fmt.Errorf("rule source %q: no fingerprint named %q registered", src.Name, name)
 	}
+
+	// Inject an auth token if a resolver is wired and yields one for this type.
+	// Clone the spec's request so the shared builtin is never mutated across
+	// concurrent fetches; secrets stay out of the YAML.
+	if r.tokens != nil {
+		if tok := r.tokens(name); tok != "" {
+			spec = withAuthHeader(spec, "token "+tok)
+		}
+	}
+
 	// Params other than "fingerprint" are forwarded as URL template values.
 	params := make(map[string]string, len(src.Params))
 	for k, v := range src.Params {
@@ -105,4 +125,14 @@ func (r *RuleFetcher) Fetch(ctx context.Context, src Source) ([]model.ReleaseAss
 		return nil, err
 	}
 	return rulesrc.ApplyFilter(assets, spec), nil
+}
+
+// withAuthHeader returns a shallow copy of spec whose request carries an extra
+// Authorization header, leaving the original builtin untouched (concurrency-safe).
+func withAuthHeader(spec *rulesrc.Spec, value string) *rulesrc.Spec {
+	cp := *spec
+	cp.Request = spec.Request
+	cp.Request.Header = append([]rulesrc.Field{}, spec.Request.Header...)
+	cp.Request.Header = append(cp.Request.Header, rulesrc.Field{Name: "Authorization", Value: value})
+	return &cp
 }

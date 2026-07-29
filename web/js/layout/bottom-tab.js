@@ -36,6 +36,13 @@ var BottomTab = (function () {
       label: function () { return t('nav_share'); },
     },
     {
+      id: 'supply',
+      path: '#/supply',
+      match: function (hash) { return hash.startsWith('#/supply'); },
+      icon: '<svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 13.33V6.67a1.67 1.67 0 00-.83-1.44l-5.84-3.34a1.67 1.67 0 00-1.66 0L3.33 5.23A1.67 1.67 0 002.5 6.67v6.66a1.67 1.67 0 00.83 1.44l5.84 3.34a1.67 1.67 0 001.66 0l5.84-3.34a1.67 1.67 0 00.83-1.44z"/><path d="M2.72 5.8 10 10l7.28-4.2M10 17.57V10"/></svg>',
+      label: function () { return t('nav_supply'); },
+    },
+    {
       id: 'containers',
       path: '#/containers',
       match: function (hash) { return hash.startsWith('#/containers'); },

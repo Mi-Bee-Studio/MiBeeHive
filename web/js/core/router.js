@@ -57,6 +57,7 @@
     { pattern: '/share',                          handler: function() { Share.render(); }                                           },
     { pattern: '/share/files',                    handler: function() { ShareFiles.render(); }                                      },
     { pattern: '/share/settings',                 handler: function() { Share.renderSettings(); }                                   },
+    { pattern: '/supply',                         handler: function() { Supply.render(); }                                          },
     { pattern: '/containers/images',              handler: function() { ContainersImages.render(); }                                },
     { pattern: '/containers/templates',           handler: function() { ContainersTemplates.render(); }                              },
     { pattern: '/containers/registries',          handler: function() { Registries.render(); }                                      },

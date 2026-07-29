@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"io"
 	"strings"
+
+	"github.com/ulikunitz/xz"
 )
 
 // DebInfo holds the control metadata of a .deb package — what APT's Packages
@@ -37,9 +39,8 @@ type DebInfo struct {
 // control.tar.{gz,xz,zst}, extracts the ./control file, and parses its
 // RFC822-style fields. Returns an error if the control member is missing.
 //
-// Supported control archive compressions: gzip. xz/zstd are detected and
-// reported with a clear error if unsupported (dpkg-deb defaults vary by distro;
-// gzip is the safe, universally-supported choice for our served packages).
+// Supported control archive compressions: gzip and xz (xz is the modern default
+// for Debian/Ubuntu .deb packages). zstd is detected and reported as unsupported.
 func ParseDeb(r io.Reader) (*DebInfo, error) {
 	entries, err := ReadAr(r)
 	if err != nil {
@@ -73,7 +74,12 @@ func decompressControl(entry *ArEntry) ([]byte, error) {
 		defer zr.Close()
 		return io.ReadAll(zr)
 	case strings.HasSuffix(entry.Name, ".xz"):
-		return nil, fmt.Errorf("xz-compressed control.tar not supported yet (rebuild the deb or repackage as gzip)")
+		// xz is the default compression for modern .deb packages (Debian/Ubuntu).
+		xr, err := xz.NewReader(bytes.NewReader(entry.Data))
+		if err != nil {
+			return nil, fmt.Errorf("xz control.tar: %w", err)
+		}
+		return io.ReadAll(xr)
 	case strings.HasSuffix(entry.Name, ".zst"):
 		return nil, fmt.Errorf("zstd-compressed control.tar not supported yet")
 	default:

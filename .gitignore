@@ -37,8 +37,11 @@ AGENTS.md
 # QA Reports
 docs/qa-report/
 
-# Migrations (legacy duplicate of internal/db/migrations/)
-migrations/
+# Migrations (legacy duplicate of internal/db/migrations/).
+# NOTE: the leading slash anchors this to the repo root ONLY. Without it, the
+# unanchored `migrations/` pattern also matched internal/db/migrations/ and
+# silently ignored newly added migration files (e.g. 021 was not committable).
+/migrations/
 
 # TLS/SSL certificate files
 *.crt

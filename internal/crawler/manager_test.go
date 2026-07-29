@@ -74,7 +74,7 @@ func setupTestDB(t *testing.T) *sql.DB {
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		name TEXT NOT NULL UNIQUE,
 		display_name TEXT NOT NULL,
-		source_type TEXT NOT NULL CHECK(source_type IN ('github','go','hashicorp','grafana')),
+		source_type TEXT NOT NULL,
 		source_url TEXT NOT NULL,
 		config JSON NOT NULL DEFAULT '{}',
 		enabled BOOLEAN NOT NULL DEFAULT 1,

@@ -54,9 +54,23 @@ func NewFetcher() *Fetcher { return &Fetcher{client: defaultGetter{hc: http.Defa
 // newFetcherWith allows tests to inject a stub getter.
 func newFetcherWith(g httpGetter) *Fetcher { return &Fetcher{client: g} }
 
-// Fetch resolves a Spec into ReleaseAssets.
+// Fetch resolves a Spec into ReleaseAssets. The request URL is used as-is
+// (no template substitution). For parametric sources use FetchWithParams.
 func (f *Fetcher) Fetch(ctx context.Context, spec *Spec) ([]model.ReleaseAsset, error) {
-	body, finalURL, err := f.client.Get(ctx, spec.Request)
+	return f.FetchWithParams(ctx, spec, nil)
+}
+
+// FetchWithParams resolves a Spec into ReleaseAssets, substituting {key}
+// placeholders in the request URL with values from params. E.g. a spec URL of
+// "https://api.github.com/repos/{owner}/{repo}/releases" with params
+// {"owner":"x","repo":"y"} fetches ".../repos/x/y/releases". Unknown
+// placeholders are left intact. This lets one fingerprint serve many sources.
+func (f *Fetcher) FetchWithParams(ctx context.Context, spec *Spec, params map[string]string) ([]model.ReleaseAsset, error) {
+	req := spec.Request
+	if len(params) > 0 {
+		req.URL = interpolate(req.URL, params)
+	}
+	body, finalURL, err := f.client.Get(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -69,6 +83,21 @@ func (f *Fetcher) Fetch(ctx context.Context, spec *Spec) ([]model.ReleaseAsset, 
 		return parseHTMLSource(body, spec, finalURL)
 	}
 	return nil, fmt.Errorf("unsupported format %q", spec.Request.Format)
+}
+
+// interpolate replaces {key} tokens in s with params[key], if present.
+func interpolate(s string, params map[string]string) string {
+	r := strings.NewReplacer(tokenize(params)...)
+	return r.Replace(s)
+}
+
+// tokenize flattens params into {"{k1}", v1, "{k2}", v2, ...} for strings.Replacer.
+func tokenize(params map[string]string) []string {
+	out := make([]string, 0, len(params)*2)
+	for k, v := range params {
+		out = append(out, "{"+k+"}", v)
+	}
+	return out
 }
 
 // parseJSONSource handles GitHub-style and structured-JSON sources.

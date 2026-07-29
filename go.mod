@@ -8,6 +8,7 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/prometheus/client_golang v1.23.2
+	github.com/ulikunitz/xz v0.5.12
 	golang.org/x/crypto v0.51.0
 	golang.org/x/net v0.54.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1

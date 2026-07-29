@@ -311,18 +311,21 @@ func initServices(cfg *config.Config, database *sql.DB) *appServices {
 	reg := source.NewRegistry()
 	ruleFetcher, err := source.NewRuleFetcher()
 	if err != nil {
-		slog.Warn("failed to load rule fingerprints; github will use legacy crawler", "error", err)
-		// Fallback: serve github via its legacy crawler.
+		slog.Warn("failed to load rule fingerprints; github/grafana will use legacy crawlers", "error", err)
+		// Fallback: serve github + grafana via legacy crawlers.
 		reg.Register(source.NewLegacyAdapter(crawler.NewGitHubCrawler(githubToken, logger)))
+		reg.Register(source.NewLegacyAdapter(crawler.NewGrafanaCrawler(logger)))
 	} else {
-		// github is now served by its fingerprint ("github" type -> github.yaml).
+		// github + grafana served by fingerprints. RuleFetcher.Sources() reports
+		// the builtin fingerprint names, so these types route to it.
 		reg.Register(ruleFetcher)
 	}
-	// Wrap the remaining crawlers as LegacyAdapters so the Registry routes them
-	// (owner/repo semantics preserved by CrawlManager.getParams -> Source.Params).
+	// Wrap the remaining crawlers as LegacyAdapters. These sources (go/npm/pypi/
+	// crates/hashicorp) have logic too complex for a declarative fingerprint
+	// (scoped packages, version filtering/sorting, per-file OS/Arch from the
+	// response, multi-step) — they stay code adapters per the #1 boundary.
 	reg.Register(source.NewLegacyAdapter(crawler.NewGoCrawler(logger)))
 	reg.Register(source.NewLegacyAdapter(crawler.NewHashiCorpCrawler(hashicorpToken, logger)))
-	reg.Register(source.NewLegacyAdapter(crawler.NewGrafanaCrawler(logger)))
 	reg.Register(source.NewLegacyAdapter(crawler.NewNPMCrawler(npmToken, logger)))
 	reg.Register(source.NewLegacyAdapter(crawler.NewPyPICrawler(pypiToken, logger)))
 	reg.Register(source.NewLegacyAdapter(crawler.NewCratesCrawler("", logger)))

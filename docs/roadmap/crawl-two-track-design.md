@@ -86,12 +86,19 @@ This unblocks existing crawlers AND the new `rulesrc` type. **Never modify 001_i
 - **`Scheduler` orchestration (timers, goroutines, per-project locks) is untouched** — it was validated as sound in #1.
 
 ### Step 4 — Migrate single-page crawlers to rule fingerprints
-- Move GitHub/Grafana/Crates/NPM/PyPI/Go to YAML fingerprints in `internal/source/fingerprints/*.yaml` (embedded via `go:embed`).
-- Each migration deletes one Go crawler file + its tests and adds one YAML. The adapter from Step 2 is removed for these.
-- HashiCorp stays as a **ProtocolAdapter** (multi-step) — this is the #1-validated boundary.
+- Migrated to fingerprints (simple array/single-object JSON, GitHub-style assets):
+  - **github** → `fingerprints/github.yaml` (array `releases?per_page=10`)
+  - **grafana** → `fingerprints/grafana.yaml` (single-object `releases/latest`; required an engine extension for `list.path: "."` to treat the root object as one unit)
+- **Kept as LegacyAdapters** (NOT migrated — their logic is too complex for a declarative fingerprint, confirming the #1 boundary):
+  - **go** — reads per-file OS/Arch from the response (not from filename), filters by `kind`, builds templated URLs, carries SHA256
+  - **npm** — scoped packages (`@scope/name`), skips pre-release (`-`), sorts/limits versions, extracts filename from tarball URL
+  - **pypi** — complex wheel/tarball + platform filtering
+  - **crates** — multi-step (tries GitHub binaries, falls back to `.crate` source)
+  - **hashicorp** — multi-step (version dir → file dir)
+  - Forcing any of these into a fingerprint would mutate the DSL into a scripting language — the exact failure mode #1 warned against.
 
 ### Step 5 — Retire `Crawler` interface
-- Once no production code references `Crawler`, delete `crawler.go`'s interface. The 7 crawler files are gone (Step 4) or converted to adapters (HashiCorp).
+- **Deferred (cannot complete yet):** the LegacyAdapters in Step 4 still wrap `crawler.Crawler`, so the interface is still referenced. It can only be deleted once those adapters are either (a) rewritten as standalone `ProtocolAdapter` Go packages that don't implement `Crawler`, or (b) the sources are dropped. This is a later cleanup, not blocking.
 
 ## What does NOT change
 - `model.ReleaseAsset` — sole output type, unchanged.

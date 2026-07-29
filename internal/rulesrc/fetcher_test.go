@@ -120,6 +120,29 @@ func TestFetchApacheDirHTML(t *testing.T) {
 	}
 }
 
+// Source A': single-object JSON (GitHub /releases/latest, used by Grafana).
+// Validates that list.path "." treats the root object as the one unit (not an
+// array). This is the engine extension enabling the grafana fingerprint.
+func TestFetchSingleObjectJSON(t *testing.T) {
+	spec := mustLoadSpec(t, "grafana_latest")
+	f := newFetcherWith(stubGetter{fixture: "grafana_latest.json", baseURL: "https://api.github.com/repos/grafana/grafana/releases/latest"})
+
+	assets, err := f.Fetch(context.Background(), spec)
+	if err != nil {
+		t.Fatalf("Fetch: %v", err)
+	}
+	if len(assets) != 2 {
+		t.Fatalf("want 2 assets from the single release object, got %d", len(assets))
+	}
+	a := assets[0]
+	if a.Version != "11.2.0" { // "v" stripped
+		t.Errorf("version: want 11.2.0, got %q", a.Version)
+	}
+	if a.OS != "linux" || a.Arch != "amd64" || a.Ext != "tar.gz" {
+		t.Errorf("classify linux/amd64/tar.gz, got %s/%s/%s", a.OS, a.Arch, a.Ext)
+	}
+}
+
 // Source D (stress test): HashiCorp two-level structure (version dir -> file dir).
 // This test deliberately documents the LIMITATION: a single-request fingerprint
 // can only fetch the version LIST, not the files inside each version. That

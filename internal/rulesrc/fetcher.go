@@ -107,8 +107,10 @@ func parseJSONSource(r io.Reader, spec *Spec) ([]model.ReleaseAsset, error) {
 		return nil, fmt.Errorf("decode json: %w", err)
 	}
 	var out []model.ReleaseAsset
-	// Iterate the top-level list units (e.g. each release).
-	if err := iterArray(root, spec.List.Path, func(unit jsonNode) error {
+
+	// processUnit extracts version + assets from one list element (or the single
+	// root object for single-object sources like GitHub /releases/latest).
+	processUnit := func(unit jsonNode) error {
 		for _, skip := range spec.List.Skip {
 			if truthy(unit, skip) {
 				return nil // skip prerelease/draft
@@ -128,7 +130,27 @@ func parseJSONSource(r io.Reader, spec *Spec) ([]model.ReleaseAsset, error) {
 		a := buildAsset(unit, spec.Extract.Filename, spec.Extract.DownloadURL, spec.Extract.Size, spec.Extract.Checksum, version)
 		out = append(out, finalizeAsset(a, spec))
 		return nil
-	}); err != nil {
+	}
+
+	// Single-object source: list.path is not an array path (no "[]"), so treat
+	// the root object as the one unit (e.g. GitHub /releases/latest → {}).
+	if _, iterate := parseArrayPath(spec.List.Path); !iterate {
+		// Resolve the (optional) field path to the single object.
+		unit := root
+		if spec.List.Path != "" && spec.List.Path != "." {
+			unit, _ = getPath(root, spec.List.Path)
+		}
+		if unit == nil {
+			return nil, fmt.Errorf("list.path %q did not resolve to an object", spec.List.Path)
+		}
+		if err := processUnit(unit); err != nil {
+			return nil, err
+		}
+		return out, nil
+	}
+
+	// Array source: iterate the top-level list units (e.g. each release).
+	if err := iterArray(root, spec.List.Path, processUnit); err != nil {
 		return nil, err
 	}
 	return out, nil

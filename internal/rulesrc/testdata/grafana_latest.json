@@ -1,0 +1,9 @@
+{
+  "tag_name": "v11.2.0",
+  "prerelease": false,
+  "draft": false,
+  "assets": [
+    {"name": "grafana-11.2.0.linux-amd64.tar.gz", "browser_download_url": "https://github.com/grafana/grafana/releases/download/v11.2.0/grafana-11.2.0.linux-amd64.tar.gz", "size": 100000000},
+    {"name": "grafana-11.2.0.linux-arm64.tar.gz", "browser_download_url": "https://github.com/grafana/grafana/releases/download/v11.2.0/grafana-11.2.0.linux-arm64.tar.gz", "size": 95000000}
+  ]
+}

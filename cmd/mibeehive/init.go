@@ -103,7 +103,8 @@ type appHandlers struct {
 	container     *handler.ContainerHandler
 	registry      *handler.RegistryHandler // nil if remote registry disabled
 	storageConfig *handler.StorageConfigHandler
-	supply        *supply.Handler // public ops-tool supply endpoints (#3)
+	supply        *supply.Handler    // public ops-tool supply endpoints (#3)
+	aptRepo       *supply.AptHandler // public APT repository over /apt/ (deb supply)
 }
 
 // loadConfig initializes the logger, loads or generates the config file,
@@ -449,6 +450,9 @@ func initHandlers(cfg *config.Config, svcs *appServices, database *sql.DB, confi
 	// Supply layer (Issue #3): public ops-tool repo index + download. Reuses
 	// FileService.StreamFile; built from the same FileRepo/FileService as admin.
 	h.supply = supply.NewHandler(db.NewFileRepo(database), svcs.fileService)
+	// APT repository: serve collected .deb files as a Debian repo under /apt/.
+	// basePath is where .deb files live on disk (for control-metadata parsing).
+	h.aptRepo = supply.NewAptHandler(db.NewFileRepo(database), svcs.fileService, cfg.Storage.BasePath, "stable")
 	h.crawl = handler.NewCrawlHandler(svcs.crawlManager, db.NewCrawlLogRepo(database), db.NewProjectRepo(database))
 	h.system = handler.NewSystemHandler(database, svcs.fileService, cfg.Storage.BasePath, version, cfg.Monitor.NodeExporterURL)
 	h.osInstall = handler.NewOSInstallHandler(db.NewOsInstallConfigRepo(database), service.NewOsTemplateService(), cfg.Storage.BasePath)
@@ -506,6 +510,11 @@ func buildRouter(cfg *config.Config, h *appHandlers, svcs *appServices, database
 	if h.supply != nil {
 		mux.HandleFunc("GET /repo/index", h.supply.ServeIndex)
 		mux.HandleFunc("GET /repo/files/{id}", h.supply.ServeFile)
+	}
+	// APT repository (deb supply): metadata + pool download. Public (no auth) so
+	// external Debian/Ubuntu hosts can `apt update` / `apt install` from it.
+	if h.aptRepo != nil {
+		mux.HandleFunc("GET /apt/{rest...}", h.aptRepo.Serve)
 	}
 
 	// API routes (protected by auth middleware).

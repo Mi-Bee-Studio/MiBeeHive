@@ -1,6 +1,10 @@
 # MiBeeHive
 
-A small team file utility platform for resource-constrained ARM64 devices. MiBeeHive provides three functional modules through a web interface: Foraging (binary release management), Provisioning (OS installation), and Sharing (WebDAV file sharing).
+An **operations tooling supply platform for external servers**. MiBeeHive runs on resource-constrained ARM64 devices (a NAS or storage server) and acts as a supply hub: it **automatically collects and keeps up-to-date** the ops tools your fleet needs, and **serves them to external servers over standard protocols** (software repositories, ISO repositories, image registries, package-proxy sources).
+
+> **Where it differs from 1Panel:** 1Panel manages the *local* machine (app store, quick site building, consumer apps). MiBeeHive targets the *other* servers — it is a supply chain that fetches, updates, and hands tools to external machines. *1Panel runs the box; MiBeeHive keeps the fleet stocked.*
+
+The bee-hive metaphor maps directly onto this: the hive does not make honey, it **collects, ages, and distributes** it. MiBeeHive does not invent protocols — it implements existing standard protocols so off-the-shelf tools can pull their materials from it. The core modules are the two self-sufficient provisioning capabilities that no other ops panel does:
 
 ![License](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)
 ![Go Version](https://img.shields.io/badge/go-1.22+-00ADD8.svg?style=flat-square)
@@ -8,20 +12,21 @@ A small team file utility platform for resource-constrained ARM64 devices. MiBee
 
 ## Features
 
-### Foraging (采蜜)
-- Crawl and download binary releases from GitHub, Go, HashiCorp, Grafana, NPM, and PyPI
+### Foraging (采蜜) — the supply engine
+- Crawl and download binary releases from GitHub, Go, HashiCorp, Grafana, NPM, and PyPI — the ops tools your external servers will consume
 - Web management for crawl sources, API tokens, and scheduling
 - Automatic retry with integrity verification
 - Web admin panel for source configuration
+- *(Roadmap) Expose collected artifacts to external servers over standard protocols: software repositories, Go module proxy, PyPI `/simple`, Helm repo, APT/YUM layout*
 
-### Provisioning (哺育)
-- Provide unattended OS installation configuration via PXE
+### Provisioning (哺育) — bring new external servers online
+- Provide unattended OS installation configuration via PXE, so bare-metal external servers can be enrolled and stocked from scratch
 - OS template generation (preseed/kickstart/autoinstall)
 - ISO download management with streaming and auto-discovery
 - Public PXE endpoints for network boot installations
 
-### Sharing (分享)
-- WebDAV file sharing with Basic Authentication
+### Sharing (分享) — serve files out
+- WebDAV file sharing with Basic Authentication — expose the collected tooling/files to external servers
 - Anonymous read-only + admin read-write access
 - HTTPS support with self-signed certificates
 - Configurable via web UI
@@ -122,9 +127,10 @@ mibeehive/
 
 ## Documentation
 
-#WT|- [Architecture](docs/en/architecture.md) - Comprehensive architecture documentation
-#WQ|- [Deployment](docs/en/deployment.md) - Deployment guide for ARM64 devices
-#JJ|- [API Reference](docs/en/api-reference.md) - Complete API documentation
+- [Architecture](docs/en/architecture.md) - Comprehensive architecture documentation
+- [Deployment](docs/en/deployment.md) - Deployment guide for ARM64 devices
+- [API Reference](docs/en/api-reference.md) - Complete API documentation
+- [Supply Layer Roadmap](docs/roadmap/supply-layer.md) - Plans for the ops-tool supply layer
 
 ## Admin Interface
 
@@ -164,6 +170,14 @@ GOARCH=arm64 CGO_ENABLED=0 go build -o mibeehive-arm64 ./cmd/mibeehive
 - **Services**: Business logic layer
 - **Repositories**: Data access layer with SQLite
 - **Frontend**: Preact + HTM with hash-based routing
+
+## Scope Boundary (What MiBeeHive Is / Is Not)
+
+**Is:** An operations-tooling **supply chain** that collects, updates, and serves ops tools to external servers over standard protocols. It implements *existing* protocols (so off-the-shelf tools can pull from it) — it does not invent new ones.
+
+**Is Not:**
+- Not a local-machine app store / quick site builder (that is 1Panel's job).
+- Not a TSDB / metrics aggregator — `/metrics` is only for MiBeeHive's own health; it supplies `node_exporter`/`prometheus` *to* external servers rather than competing with them.
 
 ## Contributing
 

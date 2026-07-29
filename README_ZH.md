@@ -1,6 +1,10 @@
 # MiBeeHive
 
-面向资源受限ARM64设备的小型团队文件工具平台。MiBeeHive 通过 Web 界面提供三个功能模块：Foraging（二进制发布包管理）、Provisioning（操作系统安装）和 Sharing（WebDAV 文件共享）。
+**面向外部服务器的运维工具供应链平台**。MiBeeHive 运行在资源受限的 ARM64 设备（NAS 或存储服务器）上，充当供应中枢：它**自动采集并持续更新**外部服务器集群所需的运维工具，并**按标准协议对外供应**（软件仓库、ISO 仓库、镜像仓库、包代理源）。
+
+> **与 1Panel 的区别：** 1Panel 管理**本机**（应用商店、快速建站、消费级应用）。MiBeeHive 面向**外部**那些服务器——它是一条供应链，负责抓取、更新并把工具递交给外部机器。*1Panel 管这台盒子；MiBeeHive 喂饱整个集群。*
+
+蜂巢隐喻与此完全对应：蜂巢不产花蜜，它**采集、酿造、分发**花蜜。MiBeeHive 不发明协议——它实现已有的标准协议，让现成的运维工具能从它这里取原料。核心模块是两项任何其他运维面板都不做的、自给自足的 provisioning 能力：
 
 ![许可证](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)
 ![Go 版本](https://img.shields.io/badge/go-1.22+-00ADD8.svg?style=flat-square)
@@ -8,20 +12,21 @@
 
 ## 功能特性
 
-### Foraging (采蜜)
-- 从 GitHub、Go、HashiCorp、Grafana、NPM 和 PyPI 爬取并下载二进制发布包
+### Foraging (采蜜) — 供应引擎
+- 从 GitHub、Go、HashiCorp、Grafana、NPM 和 PyPI 爬取并下载二进制发布包——也就是外部服务器将要消费的运维工具
 - Web 界面管理爬取源、API 令牌和调度
 - 自动重试和完整性验证
 - Web 管理面板用于源配置
+- *（路线图）将采集到的制品按标准协议对外供应：软件仓库、Go module proxy、PyPI `/simple`、Helm 仓库、APT/YUM 布局*
 
-### Provisioning (哺育)
-- 通过 PXE 提供无人值守的操作系统安装配置
+### Provisioning (哺育) — 纳入新的外部服务器
+- 通过 PXE 提供无人值守的操作系统安装配置，让裸机外部服务器能从零装机并被纳入供应
 - 操作系统模板生成（preseed/kickstart/autoinstall）
 - ISO 下载管理，支持流式传输和自动发现
 - 公共 PXE 端点用于网络启动安装
 
-### Sharing (分享)
-- WebDAV 文件共享，支持基本认证
+### Sharing (分享) — 对外提供文件
+- WebDAV 文件共享，支持基本认证——把采集到的工具/文件暴露给外部服务器
 - 匿名只读 + 管理员读写访问
 - HTTPS 支持，使用自签名证书
 - 可通过 Web 界面配置
@@ -122,9 +127,10 @@ mibeehive/
 
 ## 文档
 
-#BS|- [架构文档](docs/zh/architecture.md) - 详细的架构文档
-#BW|- [部署指南](docs/zh/deployment.md) - ARM64 设备部署指南
-#ZV|- [API 参考](docs/zh/api-reference.md) - 完整的 API 文档
+- [架构文档](docs/zh/architecture.md) - 详细的架构文档
+- [部署指南](docs/zh/deployment.md) - ARM64 设备部署指南
+- [API 参考](docs/zh/api-reference.md) - 完整的 API 文档
+- [供应层路线图](docs/roadmap/supply-layer_zh.md) - 运维工具供应层规划
 
 ## 管理界面
 
@@ -164,6 +170,14 @@ GOARCH=arm64 CGO_ENABLED=0 go build -o mibeehive-arm64 ./cmd/mibeehive
 - **服务层**: 业务逻辑层
 - **存储库**: 数据访问层，使用 SQLite
 - **前端**: Preact + HTM，使用哈希路由
+
+## 定位边界（MiBeeHive 是什么 / 不是什么）
+
+**是：** 一条运维工具**供应链**——采集、更新并把运维工具按标准协议供应给外部服务器。它实现**已有**协议（让现成工具能从它取料），不发明新协议。
+
+**不是：**
+- 不是本机应用商店 / 快速建站（那是 1Panel 的职责）。
+- 不是 TSDB / 指标聚合器——`/metrics` 仅用于 MiBeeHive 自身健康；它把 `node_exporter`/`prometheus` **供应给**外部服务器，而不是与它们竞争。
 
 ## 贡献
 

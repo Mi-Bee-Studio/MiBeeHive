@@ -5,11 +5,13 @@
 
 ## BeeHive Philosophy
 
-MiBeeHive abstracts file operations as a BeeHive — a small team file utility platform with three functional modules:
+MiBeeHive is an **operations tooling supply platform for external servers**. The bee-hive is the right metaphor: the hive does not produce honey, it **collects, ages, and distributes** it. MiBeeHive does not invent protocols — it collects ops tools from public sources, keeps them up to date, and serves them to external servers over existing standard protocols. The product is a supply chain, and the two self-sufficient provisioning capabilities below are the core differentiators that no other ops panel offers:
 
-- **Foraging** (采蜜): Crawl and download binary releases from public sources for intranet use
-- **Provisioning** (哺育): Provide unattended OS installation configuration via web UI with specific URLs
-- **Sharing** (分享): Basic WebDAV capabilities for file sharing, configurable via web UI
+- **Foraging** (采蜜): The supply engine — crawl and download ops tools (binary releases) from public sources, then serve them to external servers over standard protocols
+- **Provisioning** (哺育): Bring new external servers online — provide unattended OS installation via PXE so bare-metal machines can be enrolled and stocked from scratch
+- **Sharing** (分享): Serve collected files out — basic WebDAV capabilities, configurable via web UI
+
+> **vs 1Panel:** 1Panel manages the *local* machine (app store, site building). MiBeeHive targets the *other* servers — it is the supply chain that stocks the fleet.
 
 Each module has isolated storage paths under a configurable parent: `{base_path}/{oss,os-install,webdav}`
 
@@ -20,7 +22,14 @@ Each module has isolated storage paths under a configurable parent: `{base_path}
 
 ## System Architecture
 
-MiBeeHive is a monolithic Go binary that crawls, downloads, and serves binary releases (GitHub, Go, HashiCorp, Grafana, NPM, PyPI) for a resource-constrained ARM64 NAS device (469MB RAM). It embeds a **Preact + HTM** SPA frontend via `go:embed` and includes a web admin panel with dashboard overview and tabbed navigation for managing all three modules plus containers, search, logs, tasks, and backup.
+MiBeeHive is a monolithic Go binary that runs on a resource-constrained ARM64 NAS/storage device (469MB RAM) and acts as a **supply hub for external servers**: it crawls, downloads, and serves ops tools (GitHub, Go, HashiCorp, Grafana, NPM, PyPI) so external servers can pull their materials from it. It embeds a **Preact + HTM** SPA frontend via `go:embed` and includes a web admin panel with dashboard overview and tabbed navigation for managing all three modules plus containers, search, logs, tasks, and backup. The forward direction is the **supply layer** (see [Supply Layer Roadmap](../roadmap/supply-layer.md)): expose collected artifacts to external servers over standard protocols.
+
+### Scope Boundary
+
+- **Is**: An operations-tooling **supply chain** that collects, updates, and serves ops tools to external servers over *existing* standard protocols. It implements protocols; it does not invent them.
+- **Is Not** a local-machine app store / quick site builder (that is 1Panel's job).
+- **Is Not** a TSDB / metrics aggregator. `/metrics` is only for MiBeeHive's own health — MiBeeHive supplies `node_exporter`/`prometheus` *to* external servers rather than competing with them.
+- **Operations model**: supply-first (serve artifacts passively over protocols). Active remote control of external servers (SSH/agent) is a long-term direction, layered on top of a stable supply layer.
 
 ### Architecture Overview
 ```

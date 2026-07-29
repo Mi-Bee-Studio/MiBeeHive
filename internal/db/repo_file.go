@@ -69,6 +69,36 @@ func (r *FileRepo) ListByProject(ctx context.Context, projectID int64) ([]*File,
 	return files, rows.Err()
 }
 
+// ListComplete returns all files whose status is "complete" (downloaded and
+// verified), i.e. the files that are actually servable to external clients.
+// Used by the supply layer to build a repository index. Results are ordered by
+// filename for a stable listing. Pass a projectID of 0 to list across all
+// projects.
+func (r *FileRepo) ListComplete(ctx context.Context, projectID int64) ([]*File, error) {
+	q := "SELECT " + fileColumns + " FROM files WHERE status = ?"
+	args := []any{"complete"}
+	if projectID > 0 {
+		q += " AND project_id = ?"
+		args = append(args, projectID)
+	}
+	q += " ORDER BY filename"
+	rows, err := r.db.QueryContext(ctx, q, args...)
+	if err != nil {
+		return nil, fmt.Errorf("listing complete files: %w", err)
+	}
+	defer rows.Close()
+
+	var files []*File
+	for rows.Next() {
+		f, err := scanFile(rows)
+		if err != nil {
+			return nil, err
+		}
+		files = append(files, f)
+	}
+	return files, rows.Err()
+}
+
 // ListByProjectPaginated returns files for a project with pagination.
 func (r *FileRepo) ListByProjectPaginated(ctx context.Context, projectID int64, limit, offset int) ([]*File, int, error) {
 	// Count total files for the project.

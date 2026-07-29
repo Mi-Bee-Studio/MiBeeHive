@@ -1,0 +1,20 @@
+apiVersion: rulesrc/v1
+kind: Source
+name: prometheus
+request:
+  url: "https://api.github.com/repos/prometheus/prometheus/releases?per_page=10"
+  format: json
+list:
+  path: "[]"
+  skip:
+    - ".prerelease"
+    - ".draft"
+extract:
+  version: ".tag_name"
+  version_strip: "v"
+  assets:
+    path: ".assets[]"
+    filename: ".name"
+    download_url: ".browser_download_url"
+    size: ".size"
+  classify: filename-parser

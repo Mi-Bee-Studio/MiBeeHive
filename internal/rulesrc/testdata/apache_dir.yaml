@@ -1,0 +1,18 @@
+apiVersion: rulesrc/v1
+kind: Source
+name: example-tools
+request:
+  url: "https://dl.example.org/tools/"
+  format: html
+list:
+  selector: "a"              # collect all <a> from the autoindex
+extract:
+  attr: href                 # read the href attribute
+  basename: true             # filename = basename of the href
+  resolve: url               # resolve relative href against the request URL
+  classify: filename-parser
+filter:
+  include:
+    - "*.tar.gz"             # drop README.txt, parent dir, query links
+  version:
+    regex: "([0-9]+\\.[0-9]+\\.[0-9]+)"

@@ -1,0 +1,11 @@
+{
+  "crate": {
+    "id": "ripgrep",
+    "name": "ripgrep"
+  },
+  "versions": [
+    {"num": "14.1.1", "dl_path": "/api/v1/crates/ripgrep/14.1.1/download", "crate_size": 2200000},
+    {"num": "14.1.0", "dl_path": "/api/v1/crates/ripgrep/14.1.0/download", "crate_size": 2190000},
+    {"num": "13.0.0", "dl_path": "/api/v1/crates/ripgrep/13.0.0/download", "crate_size": 2100000}
+  ]
+}

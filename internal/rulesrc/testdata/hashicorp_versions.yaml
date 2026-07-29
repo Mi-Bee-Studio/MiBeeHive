@@ -1,0 +1,15 @@
+apiVersion: rulesrc/v1
+kind: Source
+name: consul
+request:
+  url: "https://releases.hashicorp.com/consul/"
+  format: html
+list:
+  selector: "a"              # version directory links
+extract:
+  attr: href
+  basename: true
+  classify: filename-parser
+# NOTE: This single-request spec can only enumerate the version directories.
+# It CANNOT descend into each version's file listing (a second request per
+# version). This is the multi-step boundary documented in REPORT.md.

@@ -48,9 +48,9 @@ func TestBackfillEmptyVersions_FillsFromFilenames(t *testing.T) {
 		t.Fatalf("ListByProject: %v", err)
 	}
 	expectedVersions := map[string]string{
-		"consul_1.22.2_linux_amd64.zip":            "1.22.2",
-		"prometheus-3.11.3.linux-arm64.tar.gz":     "3.11.3",
-		"grafana-11.1.0.darwin-amd64.tar.gz":       "11.1.0",
+		"consul_1.22.2_linux_amd64.zip":        "1.22.2",
+		"prometheus-3.11.3.linux-arm64.tar.gz": "3.11.3",
+		"grafana-11.1.0.darwin-amd64.tar.gz":   "11.1.0",
 	}
 	for _, f := range files {
 		want, ok := expectedVersions[f.Filename]
@@ -156,10 +156,10 @@ func TestFileRepo_UpdateLocalPath(t *testing.T) {
 
 	initialPath := "/old/path/file.tar.gz"
 	id, err := fRepo.Create(ctx, &File{
-		ProjectID:   p.ID,
-		Filename:    "file.tar.gz",
-		Status:      "complete",
-		LocalPath:   initialPath,
+		ProjectID: p.ID,
+		Filename:  "file.tar.gz",
+		Status:    "complete",
+		LocalPath: initialPath,
 	})
 	if err != nil {
 		t.Fatalf("Create file: %v", err)

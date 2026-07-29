@@ -170,7 +170,7 @@ func TestParseSpecValidation(t *testing.T) {
 
 func TestClassifyMatches(t *testing.T) {
 	cases := []struct {
-		name            string
+		name          string
 		os, arch, ext string
 	}{
 		{"prometheus-3.11.3.linux-arm64.tar.gz", "linux", "arm64", "tar.gz"},

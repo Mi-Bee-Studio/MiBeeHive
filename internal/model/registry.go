@@ -19,43 +19,43 @@ const (
 
 // Registry represents a container image registry connection.
 type Registry struct {
-	ID               int64        `json:"id"`
-	Name             string       `json:"name"`
-	URL              string       `json:"url"`
-	Type             RegistryType `json:"type"`
-	Username         string       `json:"username"`
-	EncryptedPassword string      `json:"encrypted_password,omitempty"`
-	Enabled          bool         `json:"enabled"`
-	CreatedAt        time.Time    `json:"created_at"`
-	UpdatedAt        time.Time    `json:"updated_at"`
+	ID                int64        `json:"id"`
+	Name              string       `json:"name"`
+	URL               string       `json:"url"`
+	Type              RegistryType `json:"type"`
+	Username          string       `json:"username"`
+	EncryptedPassword string       `json:"encrypted_password,omitempty"`
+	Enabled           bool         `json:"enabled"`
+	CreatedAt         time.Time    `json:"created_at"`
+	UpdatedAt         time.Time    `json:"updated_at"`
 }
 
 // RegistryRepo represents a repository within a registry.
 type RegistryRepo struct {
-	ID          int64      `json:"id"`
-	RegistryID  int64      `json:"registry_id"`
-	Name        string     `json:"name"`
-	TagCount    int        `json:"tag_count"`
-	TotalSize   int64      `json:"total_size"`
-	LastSynced  *time.Time `json:"last_synced,omitempty"`
-	CreatedAt   time.Time  `json:"created_at"`
+	ID         int64      `json:"id"`
+	RegistryID int64      `json:"registry_id"`
+	Name       string     `json:"name"`
+	TagCount   int        `json:"tag_count"`
+	TotalSize  int64      `json:"total_size"`
+	LastSynced *time.Time `json:"last_synced,omitempty"`
+	CreatedAt  time.Time  `json:"created_at"`
 }
 
 // RegistryTag represents a single tag within a repository.
 type RegistryTag struct {
-	Name         string    `json:"name"`
-	Digest       string    `json:"digest"`
-	Size         int64     `json:"size"`
-	CreatedAt    time.Time `json:"created_at"`
-	MediaType    string    `json:"media_type"`
-	Platform     string    `json:"platform,omitempty"`
-	SchemaVersion int      `json:"schema_version"`
+	Name          string    `json:"name"`
+	Digest        string    `json:"digest"`
+	Size          int64     `json:"size"`
+	CreatedAt     time.Time `json:"created_at"`
+	MediaType     string    `json:"media_type"`
+	Platform      string    `json:"platform,omitempty"`
+	SchemaVersion int       `json:"schema_version"`
 }
 
 // ManifestDetail holds detailed manifest information for a tag.
 type ManifestDetail struct {
-	SchemaVersion int        `json:"schema_version"`
-	MediaType     string     `json:"media_type"`
+	SchemaVersion int         `json:"schema_version"`
+	MediaType     string      `json:"media_type"`
 	Layers        []LayerInfo `json:"layers"`
 	Config        struct {
 		Digest string `json:"digest"`
@@ -78,17 +78,17 @@ type LayerInfo struct {
 type SyncTaskStatus string
 
 const (
-	SyncTaskPending  SyncTaskStatus = "pending"
-	SyncTaskRunning  SyncTaskStatus = "running"
+	SyncTaskPending   SyncTaskStatus = "pending"
+	SyncTaskRunning   SyncTaskStatus = "running"
 	SyncTaskCompleted SyncTaskStatus = "completed"
-	SyncTaskFailed   SyncTaskStatus = "failed"
+	SyncTaskFailed    SyncTaskStatus = "failed"
 )
 
 // SyncTask represents a registry-to-registry image sync task.
 type SyncTask struct {
 	ID               int64          `json:"id"`
-	SourceRegistryID  int64          `json:"source_registry_id"`
-	TargetRegistryID  int64          `json:"target_registry_id"`
+	SourceRegistryID int64          `json:"source_registry_id"`
+	TargetRegistryID int64          `json:"target_registry_id"`
 	SourceRepo       string         `json:"source_repo"`
 	SourceTag        string         `json:"source_tag"`
 	TargetRepo       string         `json:"target_repo"`
@@ -103,15 +103,15 @@ type SyncTask struct {
 
 // RetentionPolicy defines rules for automatic cleanup of old tags.
 type RetentionPolicy struct {
-	ID              int64      `json:"id"`
-	RegistryID      int64      `json:"registry_id"`
-	RepoPattern     string     `json:"repo_pattern"`
-	KeepDays        int        `json:"keep_days"`
-	KeepCount       int        `json:"keep_count"`
-	KeepPattern     string     `json:"keep_pattern,omitempty"`
-	Enabled         bool       `json:"enabled"`
-	LastExecutedAt  *time.Time `json:"last_executed_at,omitempty"`
-	CreatedAt       time.Time  `json:"created_at"`
+	ID             int64      `json:"id"`
+	RegistryID     int64      `json:"registry_id"`
+	RepoPattern    string     `json:"repo_pattern"`
+	KeepDays       int        `json:"keep_days"`
+	KeepCount      int        `json:"keep_count"`
+	KeepPattern    string     `json:"keep_pattern,omitempty"`
+	Enabled        bool       `json:"enabled"`
+	LastExecutedAt *time.Time `json:"last_executed_at,omitempty"`
+	CreatedAt      time.Time  `json:"created_at"`
 }
 
 // CreateRegistryRequest is the request body for creating a new registry connection.

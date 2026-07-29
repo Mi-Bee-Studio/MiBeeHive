@@ -59,11 +59,11 @@ type List struct {
 // Extract describes how to pull fields out of each iteration unit.
 type Extract struct {
 	// For JSON: per-field dot-paths. For HTML: each maps to an attribute/text.
-	Version     string  `yaml:"version,omitempty"`
-	Filename    string  `yaml:"filename,omitempty"`
-	DownloadURL string  `yaml:"download_url,omitempty"`
-	Size        string  `yaml:"size,omitempty"`
-	Checksum    string  `yaml:"checksum,omitempty"`
+	Version     string `yaml:"version,omitempty"`
+	Filename    string `yaml:"filename,omitempty"`
+	DownloadURL string `yaml:"download_url,omitempty"`
+	Size        string `yaml:"size,omitempty"`
+	Checksum    string `yaml:"checksum,omitempty"`
 
 	// Assets is used when assets nest inside a release (GitHub Releases:
 	// each release has a version and an []assets). When set, the engine
@@ -91,10 +91,10 @@ type Extract struct {
 
 // AssetExtract describes a nested assets array (GitHub Releases style).
 type AssetExtract struct {
-	Path        string `yaml:"path"`              // JSON array path inside the unit, e.g. ".assets[]"
-	Filename    string `yaml:"filename"`          // dot-path within each asset
-	DownloadURL string `yaml:"download_url"`      // dot-path within each asset
-	Size        string `yaml:"size,omitempty"`    // dot-path within each asset
+	Path        string `yaml:"path"`           // JSON array path inside the unit, e.g. ".assets[]"
+	Filename    string `yaml:"filename"`       // dot-path within each asset
+	DownloadURL string `yaml:"download_url"`   // dot-path within each asset
+	Size        string `yaml:"size,omitempty"` // dot-path within each asset
 	Checksum    string `yaml:"checksum,omitempty"`
 }
 

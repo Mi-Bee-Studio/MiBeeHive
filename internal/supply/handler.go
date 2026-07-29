@@ -47,7 +47,7 @@ func NewHandler(fileRepo *db.FileRepo, svc *service.FileService) *Handler {
 
 // indexResponse is the JSON shape of GET /repo/index.
 type indexResponse struct {
-	Count int          `json:"count"`
+	Count int           `json:"count"`
 	Items []*ListedFile `json:"items"`
 }
 
@@ -93,17 +93,17 @@ func (h *Handler) ServeFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	mFile := &model.File{
-		ID:          f.ID,
-		ProjectID:   int(f.ProjectID),
-		Version:     f.Version,
-		Filename:    f.Filename,
-		OS:          f.OS,
-		Arch:        f.Arch,
-		Ext:         f.Ext,
-		SizeBytes:   f.SizeBytes,
-		LocalPath:   f.LocalPath,
-		Checksum:    f.Checksum,
-		Status:      model.FileStatus(f.Status),
+		ID:        f.ID,
+		ProjectID: int(f.ProjectID),
+		Version:   f.Version,
+		Filename:  f.Filename,
+		OS:        f.OS,
+		Arch:      f.Arch,
+		Ext:       f.Ext,
+		SizeBytes: f.SizeBytes,
+		LocalPath: f.LocalPath,
+		Checksum:  f.Checksum,
+		Status:    model.FileStatus(f.Status),
 	}
 	if err := h.svc.StreamFile(w, mFile); err != nil {
 		// Client may have disconnected; mirror the file handler's silent handling.

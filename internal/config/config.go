@@ -26,25 +26,25 @@ const (
 
 // Config is the top-level configuration for MiBeeHive.
 type Config struct {
-	Server  ServerConfig    `yaml:"server"`
-	Database DatabaseConfig  `yaml:"database"`
-	Storage StorageConfig    `yaml:"storage"`
-	Auth    AuthConfig       `yaml:"auth"`
-	Crawler CrawlerConfig    `yaml:"crawler"`
-	Monitor  MonitorConfig   `yaml:"monitor"`
-	Logging  LoggingConfig   `yaml:"logging"`
-	Backup   BackupConfig    `yaml:"backup"`
+	Server    ServerConfig    `yaml:"server"`
+	Database  DatabaseConfig  `yaml:"database"`
+	Storage   StorageConfig   `yaml:"storage"`
+	Auth      AuthConfig      `yaml:"auth"`
+	Crawler   CrawlerConfig   `yaml:"crawler"`
+	Monitor   MonitorConfig   `yaml:"monitor"`
+	Logging   LoggingConfig   `yaml:"logging"`
+	Backup    BackupConfig    `yaml:"backup"`
 	Container ContainerConfig `yaml:"container"`
-	Projects []ProjectConfig `yaml:"projects"`
+	Projects  []ProjectConfig `yaml:"projects"`
 }
 
 // ServerConfig holds HTTP server settings.
 type ServerConfig struct {
-	Port          int      `yaml:"port"`
-	BindAddr      string   `yaml:"bind_addr"`
-	HTTPSPort     int      `yaml:"https_port"` // 0 = disabled
-	CertPath      string   `yaml:"cert_path"`
-	KeyPath       string   `yaml:"key_path"`
+	Port           int      `yaml:"port"`
+	BindAddr       string   `yaml:"bind_addr"`
+	HTTPSPort      int      `yaml:"https_port"` // 0 = disabled
+	CertPath       string   `yaml:"cert_path"`
+	KeyPath        string   `yaml:"key_path"`
 	TLSIPAddresses []string `yaml:"tls_ip_addresses"`
 	TLSDNSNames    []string `yaml:"tls_dns_names"`
 }
@@ -97,37 +97,37 @@ func (a *AuthConfig) IsDefaultPassword() bool {
 
 // CrawlerConfig holds crawler concurrency and timing settings.
 type CrawlerConfig struct {
-	MaxConcurrent    int    `yaml:"max_concurrent"`
-	DefaultInterval  string `yaml:"default_interval"`
+	MaxConcurrent   int    `yaml:"max_concurrent"`
+	DefaultInterval string `yaml:"default_interval"`
 }
 
 // MonitorConfig holds system monitoring settings.
 type MonitorConfig struct {
-	SampleInterval      int    `yaml:"sample_interval"`      // seconds, default 30
-	RetentionDays       int    `yaml:"retention_days"`       // default 7, max 30
-	NodeExporterURL    string `yaml:"node_exporter_url"`   // node_exporter metrics URL
-	DiskWarningPercent  int    `yaml:"disk_warning_percent"` // default 90
+	SampleInterval      int    `yaml:"sample_interval"`       // seconds, default 30
+	RetentionDays       int    `yaml:"retention_days"`        // default 7, max 30
+	NodeExporterURL     string `yaml:"node_exporter_url"`     // node_exporter metrics URL
+	DiskWarningPercent  int    `yaml:"disk_warning_percent"`  // default 90
 	DiskCriticalPercent int    `yaml:"disk_critical_percent"` // default 95
-	DiskCheckEnabled    bool   `yaml:"disk_check_enabled"`   // default true
+	DiskCheckEnabled    bool   `yaml:"disk_check_enabled"`    // default true
 }
 
 // LoggingConfig holds log rotation settings.
 type LoggingConfig struct {
-	Filename   string `yaml:"filename"`     // log file path
-	MaxSize    int    `yaml:"max_size"`     // MB before rotation
-	MaxBackups int    `yaml:"max_backups"`  // number of old logs to keep
-	MaxAge     int    `yaml:"max_age"`      // days to keep old logs
-	Compress   bool   `yaml:"compress"`     // compress rotated logs
-	LocalTime  bool   `yaml:"local_time"`   // use local time in filenames
+	Filename   string `yaml:"filename"`    // log file path
+	MaxSize    int    `yaml:"max_size"`    // MB before rotation
+	MaxBackups int    `yaml:"max_backups"` // number of old logs to keep
+	MaxAge     int    `yaml:"max_age"`     // days to keep old logs
+	Compress   bool   `yaml:"compress"`    // compress rotated logs
+	LocalTime  bool   `yaml:"local_time"`  // use local time in filenames
 }
 
 // BackupConfig holds backup settings.
 type BackupConfig struct {
 	Enabled        bool   `yaml:"enabled"`
-	Schedule       string `yaml:"schedule"`         // HH:MM format
-	Retention      int    `yaml:"retention"`         // number of backups to keep
-	LocalPath      string `yaml:"local_path"`        // local backup directory
-	RemoteURL      string `yaml:"remote_url"`        // remote backup destination
+	Schedule       string `yaml:"schedule"`   // HH:MM format
+	Retention      int    `yaml:"retention"`  // number of backups to keep
+	LocalPath      string `yaml:"local_path"` // local backup directory
+	RemoteURL      string `yaml:"remote_url"` // remote backup destination
 	RemoteUsername string `yaml:"remote_username"`
 	RemotePassword string `yaml:"remote_password"`
 }
@@ -150,6 +150,7 @@ type RemoteContainerConfig struct {
 	SyncConcurrency        int    `yaml:"sync_concurrency"`
 	RetentionCheckInterval string `yaml:"retention_check_interval"`
 }
+
 // ProjectConfig defines a single project to crawl and serve.
 type ProjectConfig struct {
 	Name           string     `yaml:"name"`
@@ -166,8 +167,8 @@ type ProjectConfig struct {
 func DefaultConfig() *Config {
 	return &Config{
 		Server: ServerConfig{
-			Port:     9090,
-			BindAddr: "0.0.0.0",
+			Port:      9090,
+			BindAddr:  "0.0.0.0",
 			HTTPSPort: 9443,
 		},
 		Database: DatabaseConfig{
@@ -189,7 +190,7 @@ func DefaultConfig() *Config {
 		Monitor: MonitorConfig{
 			SampleInterval:      30,
 			RetentionDays:       7,
-			NodeExporterURL:    "http://localhost:9100/metrics",
+			NodeExporterURL:     "http://localhost:9100/metrics",
 			DiskWarningPercent:  90,
 			DiskCriticalPercent: 95,
 			DiskCheckEnabled:    true,
@@ -492,7 +493,6 @@ func validateModulePaths(mp ModulePaths) error {
 	}
 	return nil
 }
-
 
 // generateJWTSecret generates a random 32-byte hex string for JWT signing.
 func generateJWTSecret() string {

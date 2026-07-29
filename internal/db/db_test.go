@@ -22,7 +22,6 @@ func testDB(t *testing.T) *sql.DB {
 	return db
 }
 
-
 // TestDBInit verifies database opens with WAL mode and all tables are created.
 func TestDBInit(t *testing.T) {
 	db := testDB(t)

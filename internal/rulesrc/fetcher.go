@@ -29,7 +29,7 @@ type httpGetter interface {
 type defaultGetter struct{ hc *http.Client }
 
 func (d defaultGetter) Get(ctx context.Context, req Request) (io.ReadCloser, string, error) {
-	hr, err := http.NewRequestWithContext(ctx, http.MethodGet, req.URL, nil)
+	hr, err := http.NewRequestWithContext(ctx, http.MethodGet, req.URL, http.NoBody)
 	if err != nil {
 		return nil, req.URL, err
 	}

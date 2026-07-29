@@ -1,0 +1,116 @@
+# golangci-lint v2 configuration for MiBeeHive.
+#
+# Enforces the project's coding conventions (see CONTRIBUTING.md):
+#   - errors wrapped with context (`fmt.Errorf("...: %w", err)`)
+#   - structured logging via log/slog (no fmt.Println / log.Println in app code)
+#   - errors handled, not ignored
+#   - idiomatic Go formatting & naming
+#
+# Run locally:
+#   golangci-lint run
+# On Windows only a subset of packages type-check (internal/service et al. use
+# Unix-only syscall.Statfs). Lint the buildable subset with:
+#   golangci-lint run ./internal/rulesrc/... ./internal/db/... ./internal/model/... \
+#                  ./internal/config/... ./internal/middleware/... ./internal/health/... \
+#                  ./internal/metrics/...
+version: "2"
+
+run:
+  timeout: 5m
+  go: "1.26"
+
+linters:
+  default: none
+  enable:
+    - errcheck        # unchecked errors
+    - errorlint       # %w vs %v, sentinel-error comparison consistency
+    - govet           # go vet checks
+    - ineffassign     # ineffectual assignments
+    - staticcheck     # bug-finding + simplification
+    - unused          # unused code
+    - gocritic        # idiomatic checks (some)
+    - revive          # configurable, fast linter replacing golint
+    - misspell        # spelling
+    # Note: gofmt and goimports are formatters, configured below under `formatters`.
+
+  settings:
+    errorlint:
+      # Encourage wrapping errors with %w (CONTRIBUTING.md convention).
+      errorf: true
+      asserts: true
+      comparison: true
+    revive:
+      severity: warning
+      rules:
+        - name: error-naming
+        - name: error-return
+        - name: error-strings
+        - name: exported
+          disabled: true   # project uses many unexported-but-documented types; keep noise low
+        - name: increment-decrement
+        - name: range
+        - name: receiver-naming
+        - name: time-naming
+        - name: var-declaration
+        - name: unexported-return
+    staticcheck:
+      # "all" enables ST/SA/QF/S checks. Disabled:
+      #   ST1003 (naming: APIResponse, ErrXxx) — exported names are used across
+      #     the codebase and front-end contracts; renaming is a separate PR.
+      #   ST1000 (package comment) — many packages lack one; adding doc comments
+      #     is a separate documentation PR, not a lint fix.
+      checks: ["all", "-ST1003", "-ST1000"]
+    gocritic:
+      enabled-tags: [diagnostic, style]
+      disabled-checks:
+        - hugeParam         # too noisy for this codebase's struct-heavy style
+        - exitAfterDefer    # main() patterns use defer intentionally
+        - paramTypeCombine  # cosmetic; merges adjacent same-type params
+
+  exclusions:
+    presets:
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      # Test files: relax some checks that are noisy in tests.
+      - path: _test\.go
+        linters: [errcheck, gocritic, revive]
+      # Allow intentionally unused symbols flagged during prototyping.
+      - path: ^prototype/
+        linters: [unused, revive]
+      # Generated/embedded migration SQL helpers may trip formatting checks.
+      - path: internal/db/(migrations|migrate)\.go
+        linters: [gocritic]
+      # Intentionally ignored return values (standard patterns):
+      #   - defer tx.Rollback() — rollback result is irrelevant after the tx is used
+      #   - (*json.Encoder).Encode / w.Write in HTTP handlers — nothing to do on write failure
+      - linters: [errcheck]
+        text: "tx.Rollback"
+      - linters: [errcheck]
+        text: "Encoder\\)\\.Encode"
+      - linters: [errcheck]
+        source: "^\\s*w\\.Write\\("
+      # Exclude the rule-engine prototype's deliberately duplicated classify
+      # logic (documented as intentional in internal/rulesrc/classify.go).
+      - path: internal/rulesrc/classify\.go
+        text: "should be removed"
+    paths:
+      - vendor
+      - third_party
+      - web
+      - testdata
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  fix: false
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/Mi-Bee-Studio/mibeehive

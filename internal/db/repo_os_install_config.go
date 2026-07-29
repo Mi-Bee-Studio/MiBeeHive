@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/Mi-Bee-Studio/mibeehive/internal/model"
@@ -71,7 +72,7 @@ func (r *OsInstallConfigRepo) ListEnabled(ctx context.Context) ([]*model.OsInsta
 func (r *OsInstallConfigRepo) GetByID(ctx context.Context, id int64) (*model.OsInstallConfig, error) {
 	row := r.db.QueryRowContext(ctx, "SELECT "+osInstallConfigColumns+" FROM os_install_configs WHERE id = ?", id)
 	c, err := scanOsInstallConfigFromScanner(row)
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {
@@ -84,7 +85,7 @@ func (r *OsInstallConfigRepo) GetByID(ctx context.Context, id int64) (*model.OsI
 func (r *OsInstallConfigRepo) GetByName(ctx context.Context, name string) (*model.OsInstallConfig, error) {
 	row := r.db.QueryRowContext(ctx, "SELECT "+osInstallConfigColumns+" FROM os_install_configs WHERE name = ?", name)
 	c, err := scanOsInstallConfigFromScanner(row)
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {

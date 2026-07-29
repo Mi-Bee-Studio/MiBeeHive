@@ -210,7 +210,6 @@ func TestProjectRepoSoftDelete(t *testing.T) {
 	}
 }
 
-
 func TestProjectRepoListEnabled(t *testing.T) {
 	db := testDB(t)
 	repo := NewProjectRepo(db)

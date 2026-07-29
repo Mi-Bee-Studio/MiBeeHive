@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"strings"
 )
+
 const fileColumns = `id, project_id, version, filename, os, arch, ext, size_bytes, download_url, local_path, checksum, status, error_message, retry_count, last_attempt_at, created_at`
 
 // FileRepo provides CRUD operations for files.
@@ -52,7 +53,7 @@ func (r *FileRepo) GetByID(ctx context.Context, id int64) (*File, error) {
 // ListByProject returns all files for a project ordered by version desc.
 func (r *FileRepo) ListByProject(ctx context.Context, projectID int64) ([]*File, error) {
 	rows, err := r.db.QueryContext(ctx,
-		"SELECT " + fileColumns + " FROM files WHERE project_id = ? ORDER BY version DESC, filename", projectID)
+		"SELECT "+fileColumns+" FROM files WHERE project_id = ? ORDER BY version DESC, filename", projectID)
 	if err != nil {
 		return nil, fmt.Errorf("listing files for project %d: %w", projectID, err)
 	}
@@ -131,7 +132,7 @@ func (r *FileRepo) ListByProjectPaginated(ctx context.Context, projectID int64, 
 // FindExisting checks if a file already exists for a project+filename combination.
 func (r *FileRepo) FindExisting(ctx context.Context, projectID int64, filename string) (*File, error) {
 	row := r.db.QueryRowContext(ctx,
-		"SELECT " + fileColumns + " FROM files WHERE project_id = ? AND filename = ?", projectID, filename)
+		"SELECT "+fileColumns+" FROM files WHERE project_id = ? AND filename = ?", projectID, filename)
 	f, err := scanFileRow(row)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -186,7 +187,7 @@ func (r *FileRepo) CountByProjects(ctx context.Context) (map[int64]int, error) {
 // SearchByFilename returns files whose filename matches the given SQL LIKE pattern.
 func (r *FileRepo) SearchByFilename(ctx context.Context, pattern string) ([]*File, error) {
 	rows, err := r.db.QueryContext(ctx,
-		"SELECT " + fileColumns + " FROM files WHERE filename LIKE ? ORDER BY filename LIMIT 100", pattern)
+		"SELECT "+fileColumns+" FROM files WHERE filename LIKE ? ORDER BY filename LIMIT 100", pattern)
 	if err != nil {
 		return nil, fmt.Errorf("searching files by filename: %w", err)
 	}
@@ -237,7 +238,7 @@ func scanFileFromScanner(s interface{ Scan(dest ...any) error }) (*File, error) 
 // ListQueue returns files with status pending or downloading, ordered by created_at ASC.
 func (r *FileRepo) ListQueue(ctx context.Context) ([]*File, error) {
 	rows, err := r.db.QueryContext(ctx,
-		"SELECT " + fileColumns + " FROM files WHERE status IN ('pending', 'downloading') ORDER BY created_at ASC LIMIT 50")
+		"SELECT "+fileColumns+" FROM files WHERE status IN ('pending', 'downloading') ORDER BY created_at ASC LIMIT 50")
 	if err != nil {
 		return nil, fmt.Errorf("listing file queue: %w", err)
 	}
@@ -254,9 +255,9 @@ func (r *FileRepo) ListQueue(ctx context.Context) ([]*File, error) {
 	return files, rows.Err()
 }
 
-//	ResetZombieDownloads resets downloading→pending where file doesn't exist on disk.
-//	If the file already exists (download completed but status wasn't updated), it marks as complete.
-//	It also cleans up orphaned temp files (.download-*) from interrupted downloads.
+// ResetZombieDownloads resets downloading→pending where file doesn't exist on disk.
+// If the file already exists (download completed but status wasn't updated), it marks as complete.
+// It also cleans up orphaned temp files (.download-*) from interrupted downloads.
 func (r *FileRepo) ResetZombieDownloads(ctx context.Context) (int, error) {
 	rows, err := r.db.QueryContext(ctx,
 		`SELECT id, local_path FROM files WHERE status = 'downloading'`)
@@ -265,7 +266,10 @@ func (r *FileRepo) ResetZombieDownloads(ctx context.Context) (int, error) {
 	}
 
 	// Collect all zombie IDs first to avoid deadlock with MaxOpenConns(1).
-	type zombie struct { id int64; path string }
+	type zombie struct {
+		id   int64
+		path string
+	}
 	var zombies []zombie
 	for rows.Next() {
 		var z zombie
@@ -384,6 +388,7 @@ func (r *FileRepo) GetQueueStats(ctx context.Context) (*QueueStats, error) {
 	}
 	return stats, rows.Err()
 }
+
 // semverFromFilename extracts a semver-like version (X.Y.Z or X.Y) from a filename.
 var semverFromFilename = regexp.MustCompile(`(\d+\.\d+(?:\.\d+)?(?:(?:alpha|beta|rc|dev|pre|patch|build|post)\.?[a-zA-Z0-9.]*)?)`)
 
@@ -414,7 +419,10 @@ func (r *FileRepo) BackfillEmptyVersions(ctx context.Context) (int, error) {
 	}
 	defer rows.Close()
 
-	type idFile struct { id int64; filename string }
+	type idFile struct {
+		id       int64
+		filename string
+	}
 	var collected []idFile
 	for rows.Next() {
 		var item idFile

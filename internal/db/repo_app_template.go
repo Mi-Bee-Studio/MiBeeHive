@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/Mi-Bee-Studio/mibeehive/internal/model"
@@ -96,7 +97,7 @@ func (r *AppTemplateRepo) ListAll(ctx context.Context) ([]model.AppTemplate, err
 func (r *AppTemplateRepo) GetByID(ctx context.Context, id int64) (*model.AppTemplate, error) {
 	row := r.db.QueryRowContext(ctx, "SELECT "+appTemplateColumns+" FROM app_templates WHERE id = ?", id)
 	t, err := scanAppTemplate(row)
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {

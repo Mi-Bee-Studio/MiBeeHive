@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
@@ -12,17 +13,17 @@ type Metrics struct {
 	registry *prometheus.Registry
 
 	// Business metrics
-	CrawlTotal        *prometheus.CounterVec
-	DownloadTotal     *prometheus.CounterVec
-	DownloadBytes     prometheus.Counter
-	DownloadDuration  prometheus.Histogram
-	ActiveDownloads   prometheus.Gauge
-	QueueDepth        *prometheus.GaugeVec
-	ISODownloadsTotal *prometheus.CounterVec
-	ISOQueueDepth     *prometheus.GaugeVec
+	CrawlTotal          *prometheus.CounterVec
+	DownloadTotal       *prometheus.CounterVec
+	DownloadBytes       prometheus.Counter
+	DownloadDuration    prometheus.Histogram
+	ActiveDownloads     prometheus.Gauge
+	QueueDepth          *prometheus.GaugeVec
+	ISODownloadsTotal   *prometheus.CounterVec
+	ISOQueueDepth       *prometheus.GaugeVec
 	WebDAVRequestsTotal *prometheus.CounterVec
-	DiskUsageBytes    *prometheus.GaugeVec
-	BackupTotal       *prometheus.CounterVec
+	DiskUsageBytes      *prometheus.GaugeVec
+	BackupTotal         *prometheus.CounterVec
 }
 
 // NewMetrics creates a new Metrics instance with a custom Prometheus registry.
@@ -30,9 +31,9 @@ type Metrics struct {
 func NewMetrics() *Metrics {
 	reg := prometheus.NewRegistry()
 
-	// Register Go runtime and process collectors
-	reg.MustRegister(prometheus.NewGoCollector())
-	reg.MustRegister(prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))
+	// Register Go runtime and process collectors (non-deprecated API).
+	reg.MustRegister(collectors.NewGoCollector())
+	reg.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
 
 	m := &Metrics{
 		registry: reg,

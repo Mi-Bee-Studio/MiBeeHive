@@ -29,7 +29,7 @@ type rateLimiter struct {
 	maxAttempts int
 	window      time.Duration
 	lockout     time.Duration
-	reqCount   int
+	reqCount    int
 	matches     pathMatcher
 }
 

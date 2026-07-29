@@ -123,8 +123,8 @@ func TestAuthMiddleware_ClaimsExtracted(t *testing.T) {
 	secret := "test-secret"
 
 	claims := jwt.MapClaims{
-		"sub": "admin",
-		"exp": float64(9999999999),
+		"sub":  "admin",
+		"exp":  float64(9999999999),
 		"role": "superuser",
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -262,18 +262,18 @@ func TestAuthMiddleware_NoIatClaim_AllowedWhenPasswordChanged(t *testing.T) {
 }
 
 func TestAuthMiddleware_RefreshSkipped(t *testing.T) {
-  handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-    w.WriteHeader(http.StatusOK)
-    w.Write([]byte("ok"))
-  })
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("ok"))
+	})
 
-  mw := AuthMiddleware("any-secret")(handler)
+	mw := AuthMiddleware("any-secret")(handler)
 
-  req := httptest.NewRequest("POST", "/api/v1/auth/refresh", nil)
-  rec := httptest.NewRecorder()
-  mw.ServeHTTP(rec, req)
+	req := httptest.NewRequest("POST", "/api/v1/auth/refresh", nil)
+	rec := httptest.NewRecorder()
+	mw.ServeHTTP(rec, req)
 
-  if rec.Code != http.StatusOK {
-    t.Errorf("refresh should skip auth, expected 200, got %d", rec.Code)
-  }
+	if rec.Code != http.StatusOK {
+		t.Errorf("refresh should skip auth, expected 200, got %d", rec.Code)
+	}
 }

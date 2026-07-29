@@ -49,6 +49,7 @@ func (r *ProjectRepo) GetByID(ctx context.Context, id int64) (*Project, error) {
 func (r *ProjectRepo) GetByName(ctx context.Context, name string) (*Project, error) {
 	return r.getOne(ctx, "SELECT "+projectColumns+" FROM projects WHERE name = ?", name)
 }
+
 // List returns all projects ordered by name.
 func (r *ProjectRepo) List(ctx context.Context) ([]*Project, error) {
 	rows, err := r.db.QueryContext(ctx, "SELECT "+projectColumns+" FROM projects ORDER BY name")

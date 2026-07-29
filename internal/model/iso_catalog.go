@@ -18,8 +18,8 @@ type ISOCatalogEntry struct {
 	LastChecked        string `json:"last_checked"`
 	LastError          string `json:"last_error"`
 	Status             string `json:"status"`
-	DownloadStatus      string `json:"download_status"`
-SHA256             string `json:"sha256"`
+	DownloadStatus     string `json:"download_status"`
+	SHA256             string `json:"sha256"`
 	CreatedAt          string `json:"created_at"`
 	UpdatedAt          string `json:"updated_at"`
 }
@@ -37,7 +37,7 @@ type ISOCatalogCreateRequest struct {
 	ISOPathTemplate    string `json:"iso_path_template"`
 	AutoUpdate         bool   `json:"auto_update"`
 	CheckIntervalHours int    `json:"check_interval_hours"`
-SHA256             string `json:"sha256"`
+	SHA256             string `json:"sha256"`
 }
 
 // ISOCatalogUpdateRequest is the request body for updating a catalog entry.
@@ -54,7 +54,7 @@ type ISOCatalogUpdateRequest struct {
 	ISOPathTemplate    *string `json:"iso_path_template,omitempty"`
 	AutoUpdate         *bool   `json:"auto_update,omitempty"`
 	CheckIntervalHours *int    `json:"check_interval_hours,omitempty"`
-SHA256             *string `json:"sha256,omitempty"`
+	SHA256             *string `json:"sha256,omitempty"`
 }
 
 // ISOCatalogCheckResponse is the response for a version check.

@@ -16,7 +16,6 @@ import (
 
 const registryColumns = `id, name, url, type, username, encrypted_password, enabled, created_at, updated_at`
 
-
 // RegistryRepo provides CRUD operations for container registries.
 type RegistryRepo struct {
 	db            *sql.DB

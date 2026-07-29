@@ -16,13 +16,13 @@ func TestSeedProjectsFromConfig(t *testing.T) {
 
 	projects := []config.ProjectConfig{
 		{
-			Name:          "prometheus",
-			DisplayName:   "Prometheus",
-			SourceType:    config.SourceTypeGitHub,
-			SourceURL:     "https://github.com/prometheus/prometheus",
-			CrawlInterval: "6h",
-			GitHubOwner:   "prometheus",
-			GitHubRepo:    "prometheus",
+			Name:           "prometheus",
+			DisplayName:    "Prometheus",
+			SourceType:     config.SourceTypeGitHub,
+			SourceURL:      "https://github.com/prometheus/prometheus",
+			CrawlInterval:  "6h",
+			GitHubOwner:    "prometheus",
+			GitHubRepo:     "prometheus",
 			FilterPatterns: []string{"linux-arm64"},
 		},
 		{

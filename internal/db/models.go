@@ -4,34 +4,34 @@ import "time"
 
 // Project represents a crawled project.
 type Project struct {
-	ID             int64
-	Name           string
-	DisplayName    string
-	SourceType     string
-	SourceURL      string
-	Config         string // JSON
-	LatestVersion  string
-	LastCrawledAt  *time.Time
-	CreatedAt      time.Time
-	Enabled        bool
+	ID            int64
+	Name          string
+	DisplayName   string
+	SourceType    string
+	SourceURL     string
+	Config        string // JSON
+	LatestVersion string
+	LastCrawledAt *time.Time
+	CreatedAt     time.Time
+	Enabled       bool
 }
 
 // File represents a downloaded release file.
 type File struct {
-	ID           int64
-	ProjectID    int64
-	Version      string
-	Filename     string
-	OS           string
-	Arch         string
-	Ext          string
-	SizeBytes    int64
-	DownloadURL  string
-	LocalPath    string
-	Checksum     string
-	Status       string
-	ErrorMessage string
-	CreatedAt    time.Time
+	ID            int64
+	ProjectID     int64
+	Version       string
+	Filename      string
+	OS            string
+	Arch          string
+	Ext           string
+	SizeBytes     int64
+	DownloadURL   string
+	LocalPath     string
+	Checksum      string
+	Status        string
+	ErrorMessage  string
+	CreatedAt     time.Time
 	RetryCount    int
 	LastAttemptAt *time.Time
 }

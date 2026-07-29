@@ -48,9 +48,9 @@ func TestBackfillEmptyVersions_FillsFromFilenames(t *testing.T) {
 		t.Fatalf("ListByProject: %v", err)
 	}
 	expectedVersions := map[string]string{
-		"consul_1.22.2_linux_amd64.zip":            "1.22.2",
-		"prometheus-3.11.3.linux-arm64.tar.gz":     "3.11.3",
-		"grafana-11.1.0.darwin-amd64.tar.gz":       "11.1.0",
+		"consul_1.22.2_linux_amd64.zip":        "1.22.2",
+		"prometheus-3.11.3.linux-arm64.tar.gz": "3.11.3",
+		"grafana-11.1.0.darwin-amd64.tar.gz":   "11.1.0",
 	}
 	for _, f := range files {
 		want, ok := expectedVersions[f.Filename]
@@ -156,10 +156,10 @@ func TestFileRepo_UpdateLocalPath(t *testing.T) {
 
 	initialPath := "/old/path/file.tar.gz"
 	id, err := fRepo.Create(ctx, &File{
-		ProjectID:   p.ID,
-		Filename:    "file.tar.gz",
-		Status:      "complete",
-		LocalPath:   initialPath,
+		ProjectID: p.ID,
+		Filename:  "file.tar.gz",
+		Status:    "complete",
+		LocalPath: initialPath,
 	})
 	if err != nil {
 		t.Fatalf("Create file: %v", err)
@@ -177,5 +177,51 @@ func TestFileRepo_UpdateLocalPath(t *testing.T) {
 	}
 	if got.LocalPath != newPath {
 		t.Errorf("UpdateLocalPath: expected local_path=%q, got %q", newPath, got.LocalPath)
+	}
+}
+
+func TestFileRepo_ListComplete(t *testing.T) {
+	db := testDB(t)
+	pRepo := NewProjectRepo(db)
+	fRepo := NewFileRepo(db)
+	ctx := context.Background()
+
+	p, err := pRepo.Create(ctx, "test", "Test", "github", "https://example.com")
+	if err != nil {
+		t.Fatalf("Create project: %v", err)
+	}
+
+	// Three files: two complete (servable), one pending (not yet servable).
+	mk := func(name, status string) {
+		t.Helper()
+		if _, err := fRepo.Create(ctx, &File{ProjectID: p.ID, Filename: name, Status: status, LocalPath: "/p/" + name}); err != nil {
+			t.Fatalf("Create %s: %v", name, err)
+		}
+	}
+	mk("complete-a.tar.gz", "complete")
+	mk("complete-b.tar.gz", "complete")
+	mk("pending-c.tar.gz", "pending")
+
+	// ListComplete across all projects (projectID 0).
+	got, err := fRepo.ListComplete(ctx, 0)
+	if err != nil {
+		t.Fatalf("ListComplete: %v", err)
+	}
+	if len(got) != 2 {
+		t.Fatalf("want 2 complete files, got %d", len(got))
+	}
+	for _, f := range got {
+		if f.Status != "complete" {
+			t.Errorf("ListComplete returned non-complete file %q (status=%q)", f.Filename, f.Status)
+		}
+	}
+
+	// Scoped to the project: still 2.
+	got, err = fRepo.ListComplete(ctx, p.ID)
+	if err != nil {
+		t.Fatalf("ListComplete scoped: %v", err)
+	}
+	if len(got) != 2 {
+		t.Fatalf("scoped: want 2, got %d", len(got))
 	}
 }

@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 )
@@ -41,11 +42,11 @@ type ISOCatalogDBEntry struct {
 	CheckIntervalHours int
 	LastChecked        sql.NullString
 	LastError          string
-	Status          string
-	DownloadStatus  string
-	SHA256          string
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
+	Status             string
+	DownloadStatus     string
+	SHA256             string
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
 }
 
 func scanISOCatalog(scanner interface{ Scan(dest ...any) error }) (*ISOCatalogDBEntry, error) {
@@ -56,7 +57,7 @@ func scanISOCatalog(scanner interface{ Scan(dest ...any) error }) (*ISOCatalogDB
 		&e.CurrentURL,
 		&e.AutoUpdate, &e.CheckIntervalHours, &e.LastChecked,
 		&e.LastError, &e.Status, &e.DownloadStatus, &e.SHA256, &e.CreatedAt, &e.UpdatedAt,
-)
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +90,7 @@ func (r *ISOCatalogRepo) GetByID(ctx context.Context, id int64) (*ISOCatalogDBEn
 		"SELECT "+isoCatalogColumns+" FROM iso_catalog WHERE id = ?", id)
 	e, err := scanISOCatalog(row)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("getting iso_catalog entry %d: %w", id, err)

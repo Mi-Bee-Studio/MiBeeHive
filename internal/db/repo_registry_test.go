@@ -54,12 +54,12 @@ func TestRegistryRepoCRUD(t *testing.T) {
 	ctx := context.Background()
 
 	reg := &model.Registry{
-		Name:             "DockerHub",
-		URL:              "https://registry-1.docker.io",
-		Type:             model.DockerHub,
-		Username:         "admin",
+		Name:              "DockerHub",
+		URL:               "https://registry-1.docker.io",
+		Type:              model.DockerHub,
+		Username:          "admin",
 		EncryptedPassword: "s3cretP@ss",
-		Enabled:          true,
+		Enabled:           true,
 	}
 
 	id, err := repo.Create(ctx, reg)
@@ -160,12 +160,12 @@ func TestRegistryRepoCRUD(t *testing.T) {
 	}
 
 	reg2 := &model.Registry{
-		Name:             "Quay",
-		URL:              "https://quay.io",
-		Type:             model.Quay,
-		Username:         "user",
+		Name:              "Quay",
+		URL:               "https://quay.io",
+		Type:              model.Quay,
+		Username:          "user",
 		EncryptedPassword: "quayPass",
-		Enabled:          true,
+		Enabled:           true,
 	}
 	_, err = repo.Create(ctx, reg2)
 	if err != nil {

@@ -10,8 +10,7 @@ func TestMigration004(t *testing.T) {
 	db := testDB(t)
 	ctx := context.Background()
 
-
-// Verify enabled column exists via table_info.
+	// Verify enabled column exists via table_info.
 
 	// Verify enabled column exists via table_info.
 	rows, err := db.QueryContext(ctx, "PRAGMA table_info(projects)")

@@ -29,6 +29,19 @@ jobs:
       - name: Vet
         run: go vet ./...
 
+      # golangci-lint v2. Config lives in .golangci.yaml. On Linux the entire
+      # module type-checks, so this lints all packages (Windows-only dev can't,
+      # because internal/service uses Unix syscall.Statfs).
+      # NOTE: continue-on-error is intentional while the Unix-side packages
+      # (service, handler, crawler, monitor, cmd) are still being gofmt'd into
+      # the lint baseline. Flip to a hard failure once those are clean.
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.5.0
+          args: --timeout=5m
+        continue-on-error: true
+
       - name: Test
         run: go test -race ./...
 

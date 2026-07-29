@@ -128,18 +128,18 @@ type UpdateProjectRequest struct {
 }
 
 type AdminProjectResponse struct {
-	ID            int64           `json:"id"`
-	Name          string          `json:"name"`
-	DisplayName   string          `json:"display_name"`
-	SourceType    string          `json:"source_type"`
-	SourceURL     string          `json:"source_url"`
-	Enabled       bool            `json:"enabled"`
-	LatestVersion string          `json:"latest_version"`
-	LastCrawledAt *string         `json:"last_crawled_at,omitempty"`
-	CreatedAt     string          `json:"created_at"`
-	Config        json.RawMessage `json:"config"`
-	FileCount     int             `json:"file_count"`
-	VersionPattern string `json:"version_pattern,omitempty"`
+	ID             int64           `json:"id"`
+	Name           string          `json:"name"`
+	DisplayName    string          `json:"display_name"`
+	SourceType     string          `json:"source_type"`
+	SourceURL      string          `json:"source_url"`
+	Enabled        bool            `json:"enabled"`
+	LatestVersion  string          `json:"latest_version"`
+	LastCrawledAt  *string         `json:"last_crawled_at,omitempty"`
+	CreatedAt      string          `json:"created_at"`
+	Config         json.RawMessage `json:"config"`
+	FileCount      int             `json:"file_count"`
+	VersionPattern string          `json:"version_pattern,omitempty"`
 }
 type UpsertCredentialRequest struct {
 	SourceType string `json:"source_type"`
@@ -169,27 +169,27 @@ type WebDAVStatusResponse struct {
 
 // DashboardSummaryResponse aggregates all module statistics for the dashboard.
 type DashboardSummaryResponse struct {
-	System   SystemModuleStats  `json:"system"`
-	Files    FilesModuleStats   `json:"files"`
-	Deploy   DeployModuleStats  `json:"deploy"`
-	Share    SharedModuleStats   `json:"share"`
-	Activity []ActivityEvent    `json:"activity"`
+	System   SystemModuleStats `json:"system"`
+	Files    FilesModuleStats  `json:"files"`
+	Deploy   DeployModuleStats `json:"deploy"`
+	Share    SharedModuleStats `json:"share"`
+	Activity []ActivityEvent   `json:"activity"`
 }
 
 // SystemModuleStats holds system resource usage stats.
 type SystemModuleStats struct {
-	Version          string  `json:"version"`
-	Uptime           string  `json:"uptime"`
-	CpuUsage         float64 `json:"cpu_usage_percent"`
-	MemUsage         float64 `json:"memory_usage_percent"`
-	MemTotal         uint64  `json:"memory_total_bytes"`
-	MemUsed          uint64  `json:"memory_used_bytes"`
-	DiskTotal        uint64  `json:"disk_total_bytes"`
-	DiskUsed         uint64  `json:"disk_used_bytes"`
-	DiskUsagePercent float64 `json:"disk_usage_percent"`
-	ContainersEnabled bool   `json:"containers_enabled"`
-	ContainerCount    int    `json:"container_count"`
-	ContainerRunning  int    `json:"container_running"`
+	Version           string  `json:"version"`
+	Uptime            string  `json:"uptime"`
+	CpuUsage          float64 `json:"cpu_usage_percent"`
+	MemUsage          float64 `json:"memory_usage_percent"`
+	MemTotal          uint64  `json:"memory_total_bytes"`
+	MemUsed           uint64  `json:"memory_used_bytes"`
+	DiskTotal         uint64  `json:"disk_total_bytes"`
+	DiskUsed          uint64  `json:"disk_used_bytes"`
+	DiskUsagePercent  float64 `json:"disk_usage_percent"`
+	ContainersEnabled bool    `json:"containers_enabled"`
+	ContainerCount    int     `json:"container_count"`
+	ContainerRunning  int     `json:"container_running"`
 }
 
 // FilesModuleStats holds the Foraging module stats.
@@ -242,12 +242,12 @@ type MonitorConfigResponse struct {
 
 // StorageConfigResponse returns current storage path configuration.
 type StorageConfigResponse struct {
-	OSS              string `json:"oss"`
-	OSInstall        string `json:"os_install"`
-	ISO              string `json:"iso"`
-	OSSFallback      string `json:"oss_fallback"`
+	OSS               string `json:"oss"`
+	OSInstall         string `json:"os_install"`
+	ISO               string `json:"iso"`
+	OSSFallback       string `json:"oss_fallback"`
 	OSInstallFallback string `json:"os_install_fallback"`
-	ISOFallback      string `json:"iso_fallback"`
+	ISOFallback       string `json:"iso_fallback"`
 }
 
 // StorageConfigUpdateRequest updates storage module paths.

@@ -38,6 +38,17 @@ go build -o migrate ./cmd/migrate
 - Keep functions focused and single-purpose
 - Use meaningful variable and function names
 
+### Linting
+The project uses **golangci-lint v2** (config in `.golangci.yaml`). Run it locally before pushing:
+
+```bash
+golangci-lint run
+```
+
+It enforces error wrapping (`%w`, `errors.Is` for sentinel comparisons), checked errors, idiomatic Go, and `gofmt`/`goimports` formatting. A few checks are deliberately relaxed for now (see the config comments): exported-name style (ST1003) and package comments (ST1000) are pending separate cleanup PRs; common intentionally-ignored return values (`tx.Rollback`, `json.Encode`, HTTP `w.Write`) are excluded.
+
+> Note: packages under `internal/service` use Unix-only `syscall.Statfs`, so `internal/service`, `internal/handler`, `internal/crawler`, `internal/monitor`, `cmd`, `internal/supply`, and `prototype` only build on Linux. Lint them on Linux (or via CI).
+
 ### Error Handling
 ```go
 // Good

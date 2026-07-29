@@ -1,0 +1,15 @@
+apiVersion: rulesrc/v1
+kind: Source
+name: ripgrep
+request:
+  url: "https://crates.io/api/v1/crates/ripgrep"
+  format: json
+list:
+  path: ".versions[]"        # flat: each version is its own asset
+extract:
+  version: ".num"
+  filename: "ripgrep"        # constant string -> no asset filename per version in this source;
+                             # demonstrates that not every source has a per-asset filename.
+  download_url: ".dl_path"
+  size: ".crate_size"
+  classify: filename-parser

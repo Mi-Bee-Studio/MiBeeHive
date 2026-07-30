@@ -321,6 +321,72 @@ projects:
 	}
 }
 
+// minimalYAML is a valid config with an explicitly empty password_hash,
+// matching the shipped configs/config.yaml default ("default password is admin").
+const minimalYAML = `server:
+  port: 9090
+  bind_addr: "0.0.0.0"
+database:
+  path: "/tmp/test.db"
+storage:
+  base_path: "/tmp/storage"
+auth:
+  password_hash: ""
+crawler:
+  max_concurrent: 2
+  default_interval: "6h"
+projects:
+  - name: "prometheus"
+    display_name: "Prometheus"
+    source_type: "github"
+    source_url: "https://github.com/prometheus/prometheus"
+    crawl_interval: "6h"
+    github_owner: "prometheus"
+    github_repo: "prometheus"
+`
+
+func writeTempConfig(t *testing.T, content string) string {
+	t.Helper()
+	path := t.TempDir() + "/config.yaml"
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatalf("writing test config: %v", err)
+	}
+	return path
+}
+
+func TestEnsurePasswordHashEmpty(t *testing.T) {
+	cfg := DefaultConfig()
+	cfg.Auth.PasswordHash = ""
+	cfg.EnsurePasswordHash()
+	if cfg.Auth.PasswordHash == "" {
+		t.Fatal("EnsurePasswordHash should fall back to default hash when empty")
+	}
+	if !cfg.Auth.IsDefaultPassword() {
+		t.Fatal("EnsurePasswordHash should set the default password hash")
+	}
+}
+
+func TestEnsurePasswordHashPreservesExisting(t *testing.T) {
+	cfg := DefaultConfig()
+	cfg.Auth.PasswordHash = "$2a$10$customhashvalue"
+	cfg.EnsurePasswordHash()
+	if cfg.Auth.PasswordHash != "$2a$10$customhashvalue" {
+		t.Fatal("EnsurePasswordHash should not overwrite an existing hash")
+	}
+}
+
+// Regression for #15: the shipped default config has password_hash: "" and
+// must still allow login with the default "admin" password.
+func TestLoadEmptyPasswordHashFallsBackToDefault(t *testing.T) {
+	cfg, err := Load(writeTempConfig(t, minimalYAML))
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if !cfg.Auth.IsDefaultPassword() {
+		t.Fatal("empty password_hash should fall back to the default admin hash, not stay empty")
+	}
+}
+
 func TestSeedProjects(t *testing.T) {
 	projects := SeedProjects()
 	if len(projects) != 13 {

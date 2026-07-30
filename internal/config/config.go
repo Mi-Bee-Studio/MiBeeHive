@@ -354,6 +354,9 @@ func Load(path string) (*Config, error) {
 
 	// Ensure JWT secret is set even if missing from config file.
 	cfg.EnsureJWTSecret()
+	// Ensure password hash falls back to the default when empty (default
+	// config ships `password_hash: ""` meaning "use default admin password").
+	cfg.EnsurePasswordHash()
 
 	if err := cfg.Validate(); err != nil {
 		return nil, err
@@ -508,6 +511,17 @@ func generateJWTSecret() string {
 func (c *Config) EnsureJWTSecret() {
 	if c.Auth.JWTSecret == "" {
 		c.Auth.JWTSecret = generateJWTSecret()
+	}
+}
+
+// EnsurePasswordHash falls back to the default "admin" password hash when the
+// configured hash is empty. The default config file ships with
+// `password_hash: ""` and a comment "default password is admin"; without this
+// fallback the empty value (set by yaml.Unmarshal over DefaultConfig) would
+// make every login fail with "invalid password". Mirrors EnsureJWTSecret.
+func (c *Config) EnsurePasswordHash() {
+	if c.Auth.PasswordHash == "" {
+		c.Auth.PasswordHash = defaultPasswordHash
 	}
 }
 

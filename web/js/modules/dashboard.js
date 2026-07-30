@@ -988,7 +988,7 @@ const Dashboard = (function () {
                 <h1 class="text-xl font-bold tracking-tight" style="color:var(--color-text)">${t('dash_welcome')}</h1>
                 <p class="text-xs mt-1" style="color:var(--color-text-tertiary)">
                   <span>${t('dash_version')} ${Helpers.escapeHtml(sys.version||'')}</span>
-                  <span style="margin:0 0.5rem">&middot;</span>
+                  <span style="margin:0 0.5rem">·</span>
                   <span>${t('dash_uptime')} ${Helpers.escapeHtml(sys.uptime||'-')}</span>
                 </p>
               </div>

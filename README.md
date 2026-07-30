@@ -136,13 +136,19 @@ mibeehive/
 
 ## Admin Interface
 
-The web admin panel provides a dashboard overview and tabbed navigation for managing all modules:
+The web admin panel opens on a **supply-chain overview** home page (collect → store → supply) and groups navigation along that storyline:
 
-1. **Dashboard** - Aggregated overview with system stats, module cards, activity timeline, and quick actions
-2. **Files** - Browse downloaded files, manage crawl projects, monitor download queue
-3. **Deploy** - OS install config management, ISO catalog and downloading
-4. **Share** - WebDAV file sharing and file browser
-5. **Containers** - Docker container management and registry operations
+1. **Overview** (home) - Supply-chain landing page: what's been collected, storage usage, served endpoints (APT source line, WebDAV), recent activity, system resources
+2. **Foraging**
+   - **Software Sources** - Browse downloaded files, manage crawl projects, monitor download queue
+3. **Supply**
+   - **Supply Layer** - Served artifacts (APT repository over collected `.deb` files) with copy-paste client config
+   - **File Sharing** - WebDAV file sharing and file browser
+4. **Provisioning**
+   - **System Deploy** - OS install config management, ISO catalog and downloading
+5. **Ops**
+   - **System Status** - Dashboard with system stats, module cards, activity timeline; logs; tasks
+   - **Containers** - Docker container management and registry operations
 6. **Settings** - Password change, theme, language, disk threshold configuration
 
 ## Target Device

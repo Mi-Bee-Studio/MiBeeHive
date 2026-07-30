@@ -94,11 +94,11 @@ const Login = (function () {
             Components.showToast(t('password_default_warning'), 'warning');
             window.location.hash = '#/settings';
           } else {
-            window.location.hash = '#/dashboard';
+            window.location.hash = '#/overview';
             Components.showToast(t('login_success'), 'success');
           }
         }).catch(function () {
-          window.location.hash = '#/dashboard';
+          window.location.hash = '#/overview';
         });
       }).catch(function (err) {
         if (err.requirePasswordChange) {

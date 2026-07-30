@@ -115,9 +115,12 @@ var Overview = (function () {
 
     var debCount = useMemo(function () {
       if (!supply) return 0;
-      var arts = supply.artifacts || supply.data || supply.files || [];
+      // /repo/index returns { count, items:[{filename, ext, ...}] }
+      var arts = supply.items || supply.artifacts || supply.data || supply.files || [];
       if (!Array.isArray(arts)) return 0;
-      return arts.filter(function (a) { return /\.deb$/i.test(a.filename || a.name || ''); }).length;
+      return arts.filter(function (a) {
+        return a.ext === 'deb' || /\.deb$/i.test(a.filename || a.name || '');
+      }).length;
     }, [supply]);
 
     if (err && !data) {

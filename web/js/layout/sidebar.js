@@ -27,14 +27,17 @@ var Sidebar = (function () {
     search: '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>',
   };
 
+  // Navigation is grouped along the supply-chain storyline:
+  // Foraging (采集) → Supply (供应) → Provisioning (部署) → Ops (运维).
   var navItems = [
-    { route: '/system-status', hash: '#/system-status', i18nKey: 'nav_system_status', icon: icons.dashboard },
-    { route: '/files',         hash: '#/files',         i18nKey: 'nav_files',         icon: icons.files },
-    { route: '/deploy',        hash: '#/deploy',        i18nKey: 'nav_deploy',        icon: icons.deploy },
-    { route: '/share',         hash: '#/share',         i18nKey: 'nav_share',         icon: icons.share },
-    { route: '/supply',        hash: '#/supply',        i18nKey: 'nav_supply',        icon: icons.supply },
-    { route: '/containers',    hash: '#/containers',    i18nKey: 'nav_containers',    icon: icons.containers },
+    { route: '/files',         hash: '#/files',         i18nKey: 'nav_files',         icon: icons.files,         group: 'foraging' },
+    { route: '/supply',        hash: '#/supply',        i18nKey: 'nav_supply',        icon: icons.supply,        group: 'supply' },
+    { route: '/share',         hash: '#/share',         i18nKey: 'nav_share',         icon: icons.share,         group: 'supply' },
+    { route: '/deploy',        hash: '#/deploy',        i18nKey: 'nav_deploy',        icon: icons.deploy,        group: 'provisioning' },
+    { route: '/system-status', hash: '#/system-status', i18nKey: 'nav_system_status', icon: icons.dashboard,     group: 'ops' },
+    { route: '/containers',    hash: '#/containers',    i18nKey: 'nav_containers',    icon: icons.containers,    group: 'ops' },
   ];
+  var navGroupOrder = ['foraging', 'supply', 'provisioning', 'ops'];
   var settingsItem = { route: '/settings', hash: '#/settings', i18nKey: 'nav_settings', icon: icons.settings };
 
   function isCollapsed() {
@@ -46,13 +49,15 @@ var Sidebar = (function () {
   }
 
   function getActiveRoute(hash) {
-    var raw = (hash || window.location.hash || '').replace(/^#/, '') || '/system-status';
+    var raw = (hash || window.location.hash || '').replace(/^#/, '') || '/overview';
     var firstSegment = '/' + raw.split('/').filter(Boolean)[0];
     var allItems = navItems.concat(settingsItem);
+    // The overview home page ('/', '/overview') is not part of any nav group,
+    // so no sidebar item is highlighted on it.
+    if (raw === '/' || raw === '/overview') return null;
     for (var i = 0; i < allItems.length; i++) {
       var item = allItems[i];
       if (raw === item.route || firstSegment === item.route) return item.route;
-      if (item.route === '/system-status' && (raw === '/system-status' || raw === '/')) return '/system-status';
     }
     return null;
   }
@@ -71,7 +76,7 @@ var Sidebar = (function () {
     var collapsed = _c[0];
     var setColl = _c[1];
 
-    var _a = useState(window.location.hash || '#/system-status');
+    var _a = useState(window.location.hash || '#/overview');
     var activeHash = _a[0];
     var setActiveHash = _a[1];
 
@@ -84,7 +89,7 @@ var Sidebar = (function () {
     // Listen for route changes via App event bus
     useEffect(function () {
       function onRouteChange(info) {
-        var hash = window.location.hash || '#/dashboard';
+        var hash = window.location.hash || '#/overview';
         setActiveHash(hash);
       }
       App.on('route:change', onRouteChange);
@@ -174,21 +179,31 @@ var Sidebar = (function () {
         </button>
 
         <nav class="sidebar-nav-section" aria-label="Main navigation">
-          ${navItems.map(function (item) {
-            var isActive = activeRoute === item.route;
+          ${navGroupOrder.map(function (group) {
+            var items = navItems.filter(function (it) { return it.group === group; });
             return html`
-              <a href=${item.hash}
-                 class=${'sidebar-nav-item' + (isActive ? ' active' : '')}
-                 data-route=${item.route}>
-                <span class="sidebar-nav-icon" dangerouslySetInnerHTML=${{ __html: item.icon }}></span>
-                <span class="sidebar-nav-label">${t(item.i18nKey)}</span>
-              </a>
+              <div class="sidebar-nav-group">
+                ${collapsed ? null : html`<div class="sidebar-nav-group-label">${t('nav_group_' + group)}</div>`}
+                ${items.map(function (item) {
+                  var isActive = activeRoute === item.route;
+                  return html`
+                    <a href=${item.hash}
+                       class=${'sidebar-nav-item' + (isActive ? ' active' : '')}
+                       data-route=${item.route}
+                       title=${collapsed ? t(item.i18nKey) : ''}>
+                      <span class="sidebar-nav-icon" dangerouslySetInnerHTML=${{ __html: item.icon }}></span>
+                      <span class="sidebar-nav-label">${t(item.i18nKey)}</span>
+                    </a>
+                  `;
+                })}
+              </div>
             `;
           })}
           <div class="divider"></div>
           <a href=${settingsItem.hash}
              class=${'sidebar-nav-item' + (activeRoute === settingsItem.route ? ' active' : '')}
-             data-route=${settingsItem.route}>
+             data-route=${settingsItem.route}
+             title=${collapsed ? t(settingsItem.i18nKey) : ''}>
             <span class="sidebar-nav-icon" dangerouslySetInnerHTML=${{ __html: settingsItem.icon }}></span>
             <span class="sidebar-nav-label">${t(settingsItem.i18nKey)}</span>
           </a>

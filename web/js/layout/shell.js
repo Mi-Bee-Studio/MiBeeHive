@@ -84,7 +84,7 @@ var Shell = (function () {
 
     useEffect(function () {
       function onRouteChange(routeInfo) {
-        var hash = window.location.hash || '#/dashboard';
+        var hash = window.location.hash || '#/overview';
         var isSub = BottomTab.isSubPage(hash);
         if (isSub) {
           setTitle(_getPageTitle(routeInfo));
@@ -131,7 +131,7 @@ var Shell = (function () {
 
     useEffect(function () {
       function onRouteChange() {
-        var hash = window.location.hash || '#/dashboard';
+        var hash = window.location.hash || '#/overview';
         setVisible(!BottomTab.isSubPage(hash));
       }
       App.on('route:change', onRouteChange);

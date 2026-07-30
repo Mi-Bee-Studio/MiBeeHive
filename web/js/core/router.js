@@ -43,7 +43,9 @@
   // ── Route definitions ───────────────────────────────────────────
   var routes = [
     { pattern: '/login',                          handler: function() { Login.render(); },                                          public: true  },
-    { pattern: '/dashboard',                      handler: function() { window.location.hash = '#/system-status'; }                 },
+    { pattern: '/',                               handler: function() { Overview.render(); }                                        },
+    { pattern: '/overview',                       handler: function() { Overview.render(); }                                        },
+    { pattern: '/dashboard',                      handler: function() { window.location.hash = '#/overview'; }                      },
     { pattern: '/files',                          handler: function() { Files.render(); }                                           },
     { pattern: '/files/projects/:id',             handler: function(p) { FilesProjects.render(p.id); }                              },
     { pattern: '/files/queue',                    handler: function() { FilesQueue.render(); }                                      },
@@ -91,7 +93,7 @@
 
   // ── Parse hash into route match ─────────────────────────────────
   function parseRoute(hash) {
-    var raw = (hash || '').replace(/^#/, '') || '/system-status';
+    var raw = (hash || '').replace(/^#/, '') || '/overview';
     var qIndex = raw.indexOf('?');
     var path = qIndex >= 0 ? raw.substring(0, qIndex) : raw;
     var queryString = qIndex >= 0 ? raw.substring(qIndex + 1) : '';
@@ -192,7 +194,7 @@
       return false;
     }
     if (hasToken && parsed && parsed.routeDef && parsed.routeDef.public && parsed.path === '/login') {
-      window.location.hash = '#/system-status';
+      window.location.hash = '#/overview';
       return false;
     }
     return true;
@@ -209,7 +211,7 @@
         '</svg>' +
         '<p class="text-lg font-medium" style="color:var(--color-text)">' + _t('not_found') + '</p>' +
         '<p class="text-sm mt-2" style="color:var(--color-text-secondary)">' + _t('not_found_desc') + '</p>' +
-        '<button class="btn btn-primary mt-4" onclick="Router.push(\'/dashboard\')">' + _t('back_to_dashboard') + '</button>' +
+        '<button class="btn btn-primary mt-4" onclick="Router.push(\'/overview\')">' + _t('back_to_dashboard') + '</button>' +
       '</div>';
   }
 
@@ -239,7 +241,7 @@
     if (!parsed) {
       _cleanup();
       current = {
-        path: window.location.hash.replace(/^#/, '') || '/dashboard',
+        path: window.location.hash.replace(/^#/, '') || '/overview',
         params: {},
         query: {},
         routeDef: null,

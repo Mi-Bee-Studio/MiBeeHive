@@ -465,6 +465,24 @@ a:focus-visible,
   margin-bottom: var(--space-lg);
 }
 
+.sidebar-nav-group {
+  margin-bottom: var(--space-md);
+}
+
+.sidebar-nav-group-label {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-quaternary);
+  padding: 0 var(--space-sm);
+  margin-bottom: var(--space-2xs);
+}
+
+.sidebar-collapsed .sidebar-nav-group {
+  margin-bottom: var(--space-sm);
+}
+
 .sidebar-nav-section-title {
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);

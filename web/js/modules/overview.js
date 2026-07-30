@@ -75,53 +75,34 @@ var Overview = (function () {
   function OverviewPage() {
     var _d = useState(null);
     var data = _d[0], setData = _d[1];
-    var _s = useState(null);
-    var supply = _s[0], setSupply = _s[1];
     var _e = useState(false);
     var err = _e[0], setErr = _e[1];
 
-    function load(signal) {
-      Promise.all([
-        Api.get('/admin/dashboard/summary', { signal: signal, silent: true }),
-        _fetchJSON(hostOrigin() + '/repo/index')
-      ]).then(function (results) {
-        var sum = results[0];
-        var idx = results[1];
+    function load() {
+      // Load the dashboard summary (small, fast). Do NOT fetch /repo/index
+      // here — with thousands of artifacts it is multiple MB and parsing it
+      // freezes the browser main thread on low-RAM ARM64 devices.
+      Api.get('/admin/dashboard/summary', { silent: true }).then(function (sum) {
         if (!sum || !sum.success || !sum.data) {
-          if (!signal || !signal.aborted) setErr(true);
+          setErr(true);
           return;
         }
         setErr(false);
         setData(sum.data);
-        // repo/index returns { artifacts: [...] } or similar; count deb/rpm/etc.
-        if (idx && idx.success !== false) {
-          setSupply(idx);
-        }
       });
     }
 
     // initial + polling
     useEffect(function () {
-      var signal = Router.getSignal ? Router.getSignal() : null;
-      load(signal);
+      load();
       if (usePolling) {
-        usePolling(function () { load(Router.getSignal ? Router.getSignal() : null); }, 15000, { scope: SCOPE, signal: signal });
+        usePolling(function () { load(); }, 15000, { scope: SCOPE });
       } else {
         var id = setInterval(function () { load(null); }, 15000);
         if (window.App) App.addTimer(id, SCOPE);
         return function () { clearInterval(id); };
       }
     }, []);
-
-    var debCount = useMemo(function () {
-      if (!supply) return 0;
-      // /repo/index returns { count, items:[{filename, ext, ...}] }
-      var arts = supply.items || supply.artifacts || supply.data || supply.files || [];
-      if (!Array.isArray(arts)) return 0;
-      return arts.filter(function (a) {
-        return a.ext === 'deb' || /\.deb$/i.test(a.filename || a.name || '');
-      }).length;
-    }, [supply]);
 
     if (err && !data) {
       return html`<div class="p-6">
@@ -169,8 +150,8 @@ var Overview = (function () {
             href="#/supply"
             title=${t('overview_stage_supply')}
             tag=${t('nav_group_supply')}
-            big=${String(debCount)}
-            bigLabel=".deb"
+            big=${String(share.file_count || 0)}
+            bigLabel=${t('overview_files_label')}
             desc=${t('overview_stage_supply_desc', { webdav: String(share.file_count || 0) })} />
         </div>
 

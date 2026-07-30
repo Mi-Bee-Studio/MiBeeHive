@@ -91,18 +91,18 @@ const Login = (function () {
 
         Api.get('/auth/password-status').then(function (resp) {
           if (resp && resp.success && resp.data && resp.data.is_default) {
-            showToast(t('password_default_warning'), 'warning');
+            Components.showToast(t('password_default_warning'), 'warning');
             window.location.hash = '#/settings';
           } else {
             window.location.hash = '#/dashboard';
-            showToast(t('login_success'), 'success');
+            Components.showToast(t('login_success'), 'success');
           }
         }).catch(function () {
           window.location.hash = '#/dashboard';
         });
       }).catch(function (err) {
         if (err.requirePasswordChange) {
-          showToast(t('password_change_required'), 'warning');
+          Components.showToast(t('password_change_required'), 'warning');
           window.location.hash = '#/settings';
           return;
         }

@@ -35,9 +35,9 @@ const Files = (function () {
       Api.post('/admin/projects/' + p.id + '/toggle', {}).then(function (res) {
         setToggling(false);
         if (!res || !res.success) {
-          showToast((res && res.message) || t('error'), 'error');
+          Components.showToast((res && res.message) || t('error'), 'error');
         } else {
-          showToast(t('proj_toggled'), 'success');
+          Components.showToast(t('proj_toggled'), 'success');
         }
       });
     }
@@ -158,10 +158,10 @@ const Files = (function () {
       Api.post('/admin/projects', body).then(function (res) {
         setSubmitting(false);
         if (!res || !res.success) {
-          showToast((res && res.message) || t('error'), 'error');
+          Components.showToast((res && res.message) || t('error'), 'error');
           return;
         }
-        showToast(t('proj_created'), 'success');
+        Components.showToast(t('proj_created'), 'success');
         if (props.onCreated) props.onCreated(res.data);
         if (props.onClose) props.onClose();
       });

@@ -8,6 +8,7 @@ migrate-arm64
 # IDE
 .idea/
 .vscode/
+.zcode/
 *.swp
 *.swo
 

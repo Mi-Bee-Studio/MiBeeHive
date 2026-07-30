@@ -60,7 +60,7 @@ const Api = {
       }
     }
     // All retries exhausted
-    if (window.showToast) window.showToast(lastErr ? lastErr.message || lastErr : t('network_error'), 'error');
+    if (typeof Components !== "undefined" && Components.showToast) Components.showToast(lastErr ? lastErr.message || lastErr : t('network_error'), 'error');
     return null;
   },
   async patch(url, body, options) { return this._request('PATCH', url, body, options); },
@@ -129,7 +129,7 @@ const Api = {
         }
       }
     } catch (err) {
-      if (window.showToast) window.showToast(t('network_error') + ': ' + (err.message || err), 'error');
+      if (typeof Components !== "undefined" && Components.showToast) Components.showToast(t('network_error') + ': ' + (err.message || err), 'error');
       return { success: false, data: null, message: err.message };
     } finally {
       if (loadingBar) {
@@ -165,7 +165,7 @@ const Api = {
         if (retryRes.status === 401) {
           // Retry also failed — force re-login
           Auth.logout();
-          if (window.showToast) window.showToast(t('auth_expired'), 'error');
+          if (typeof Components !== "undefined" && Components.showToast) Components.showToast(t('auth_expired'), 'error');
           return null;
         }
 
@@ -175,7 +175,7 @@ const Api = {
         } catch (_jsonErr) {
           _handling401 = false;
           Auth.logout();
-          if (window.showToast) window.showToast(t('error_invalid_response'), 'error');
+          if (typeof Components !== "undefined" && Components.showToast) Components.showToast(t('error_invalid_response'), 'error');
           return null;
         }
         if (returnHeaders) {
@@ -186,7 +186,7 @@ const Api = {
         // Refresh failed
         _handling401 = false;
         Auth.logout();
-        if (window.showToast) window.showToast(t('auth_refresh_failed'), 'error');
+        if (typeof Components !== "undefined" && Components.showToast) Components.showToast(t('auth_refresh_failed'), 'error');
         return null;
       }
     }
@@ -194,7 +194,7 @@ const Api = {
     _handling401 = false;
 
     if (errorCode === 'PASSWORD_CHANGED') {
-      if (window.showToast) window.showToast(t('auth_password_changed'), 'error');
+      if (typeof Components !== "undefined" && Components.showToast) Components.showToast(t('auth_password_changed'), 'error');
       Auth.logout();
       return null;
     }

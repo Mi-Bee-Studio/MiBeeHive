@@ -145,10 +145,10 @@ const FilesQueue = (function () {
     function handleRetry(id) {
       Api.post('/admin/files/' + id + '/retry', {}).then(function (res) {
         if (res && res.success) {
-          showToast(t('retry_started') || 'Retry started', 'success');
+          Components.showToast(t('retry_started') || 'Retry started', 'success');
           loadData();
         } else {
-          showToast(res && res.error ? res.error : (t('error') || 'Error'), 'error');
+          Components.showToast(res && res.error ? res.error : (t('error') || 'Error'), 'error');
         }
       });
     }

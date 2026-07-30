@@ -33,7 +33,8 @@ var Tasks = (function () {
     var typeLabel = t('tasks_type_' + k.type) || TYPE_LABELS[k.type] || k.type;
     var sd = STATUS_DOT[k.status] || STATUS_DOT.idle;
     var sb = STATUS_BADGE[k.status] || STATUS_BADGE.idle;
-    var statusLabel = t('tasks_status_' + k.status) || k.status;
+    var statusLabel = t('status_' + k.status);
+    if (statusLabel === 'status_' + k.status) statusLabel = k.status;
 
     var progressBar = null;
     if (k.status === 'running' && k.progress > 0) {
@@ -248,7 +249,7 @@ var Tasks = (function () {
     function cancelMigration(id) {
       Api.post('/admin/storage/migrations/' + id + '/cancel').then(function(r) {
         if (r && r.success) {
-          if (window.showToast) window.showToast(t('mig_cancelled') || 'Migration cancelled', 'success');
+          if (window.showToast) window.Components.showToast(t('mig_cancelled') || 'Migration cancelled', 'success');
           fetchMigrations();
         }
       });

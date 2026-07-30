@@ -320,7 +320,7 @@ const FilesProjects = (function () {
         Router.push('/login');
         return;
       }
-      showToast(filename ? t('download_starting') + ': ' + filename : t('download_starting'), 'success');
+      Components.showToast(filename ? t('download_starting') + ': ' + filename : t('download_starting'), 'success');
       window.location.href = '/api/v1/files/' + fileId + '/download?token=' + encodeURIComponent(token);
     }
 
@@ -333,12 +333,12 @@ const FilesProjects = (function () {
         modalBtn.textContent = '...';
         Api.delete('/admin/projects/' + project.id).then(function (res) {
           if (!res || !res.success) {
-            showToast((res && res.message) || t('error'), 'error');
+            Components.showToast((res && res.message) || t('error'), 'error');
             modalBtn.disabled = false;
             modalBtn.textContent = t('common_delete');
             return;
           }
-          showToast(t('proj_deleted'), 'success');
+          Components.showToast(t('proj_deleted'), 'success');
           Router.push('/files');
         });
       });

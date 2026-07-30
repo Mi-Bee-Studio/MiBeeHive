@@ -94,7 +94,7 @@ function _ld(tab) {
   var url = tab === 'files' ? '/admin/projects' : tab === 'isos' ? '/admin/os-install/catalog' : '/admin/os-install/configs';
   Api.get(url).then(function (r) {
     _d[tab] = (r && r.success && r.data) ? r.data : []; _rc();
-  }).catch(function () { _d[tab] = []; _rc(); if (window.showToast) showToast(t('error'),'error'); });
+  }).catch(function () { _d[tab] = []; _rc(); if (typeof Components !== "undefined" && Components.showToast) Components.showToast(t('error'),'error'); });
 }
 
 function _rc() { _cn(_ct); if (_at === 'files') _rF(); else if (_at === 'isos') _rI(); else _rC(); }
@@ -175,7 +175,7 @@ function _rC() {
           e.stopPropagation();
           if (typeof Helpers !== 'undefined') Helpers.copyToClipboard(u);
           else if (navigator.clipboard) navigator.clipboard.writeText(u);
-          if (typeof showToast === 'function') showToast(_t('common_copied'), 'success');
+          if (typeof Components !== "undefined" && Components.showToast) Components.showToast(_t('common_copied'), 'success');
         });
       })(url);
       ur.appendChild(ut); ur.appendChild(cp); it.appendChild(ur);

@@ -58,7 +58,7 @@ const Share = (function () {
 
     function handleCopy() {
       Helpers.copyToClipboard(props.url).then(function () {
-        showToast(t('webdav_url_copied'), 'success');
+        Components.showToast(t('webdav_url_copied'), 'success');
         setCopied(true);
         setTimeout(function () { setCopied(false); }, 2000);
       });

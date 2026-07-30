@@ -118,6 +118,10 @@ globalThis.Components = {
   createModal: vi.fn(),
   downloadProgress: vi.fn(),
   updateProgress: vi.fn(),
+  showToast: vi.fn(),
+  showConfirmModal: vi.fn(() => Promise.resolve(true)),
+  showFieldError: vi.fn(),
+  clearFieldErrors: vi.fn(),
 };
 
 // showToast / showConfirmModal — global UI helpers

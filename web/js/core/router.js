@@ -28,8 +28,8 @@
   }
 
   function _showToast(msg, type) {
-    if (typeof showToast === 'function') {
-      showToast(msg, type);
+    if (typeof Components !== 'undefined' && Components.showToast) {
+      Components.showToast(msg, type);
     } else {
       console.error('[Router]', msg);
     }

@@ -63,12 +63,12 @@ const FilesCrawl = (function () {
       Api.post('/admin/credentials', { source_type: c.source_type, token: tokenVal }).then(function (r) {
         setSaving(false);
         if (r && r.success) {
-          showToast(t('tokens_saved'), 'success');
+          Components.showToast(t('tokens_saved'), 'success');
           setEditing(false);
           setTokenVal('');
           if (props.onRefresh) props.onRefresh();
         } else {
-          showToast((r && r.message) || t('error'), 'error');
+          Components.showToast((r && r.message) || t('error'), 'error');
         }
       });
     }
@@ -77,10 +77,10 @@ const FilesCrawl = (function () {
       showConfirmModal(t('crawl_trigger_confirm'), function () {
         Api.delete('/admin/credentials?source_type=' + encodeURIComponent(c.source_type)).then(function (r) {
           if (r && r.success) {
-            showToast(t('tokens_saved'), 'success');
+            Components.showToast(t('tokens_saved'), 'success');
             if (props.onRefresh) props.onRefresh();
           } else {
-            showToast((r && r.message) || t('error'), 'error');
+            Components.showToast((r && r.message) || t('error'), 'error');
           }
         });
       });
@@ -140,10 +140,10 @@ const FilesCrawl = (function () {
       var r = await Api.post(url + encodeURIComponent(p.project_name));
       setBusy(false);
       if (r && r.success) {
-        showToast(successMsg, 'success');
+        Components.showToast(successMsg, 'success');
         if (props.onRefresh) props.onRefresh();
       } else {
-        showToast((r && r.message) || t('error'), 'error');
+        Components.showToast((r && r.message) || t('error'), 'error');
       }
     }
 
@@ -233,10 +233,10 @@ const FilesCrawl = (function () {
         if (mb) { mb.disabled = true; mb.textContent = '...'; }
         Api.post('/admin/crawl/trigger-all').then(function (r) {
           if (r && r.success) {
-            showToast(t('crawl_triggered'), 'success');
+            Components.showToast(t('crawl_triggered'), 'success');
             loadCrawl();
           } else {
-            showToast((r && r.message) || t('error'), 'error');
+            Components.showToast((r && r.message) || t('error'), 'error');
           }
         });
       });

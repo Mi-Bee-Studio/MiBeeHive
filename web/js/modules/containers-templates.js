@@ -56,13 +56,13 @@ const ContainersTemplates = (function() {
         overlay.querySelector('#tpl-no').addEventListener('click', modal.close);
         overlay.querySelector('#tpl-go').addEventListener('click', async function(){
           var nm=document.getElementById('tpl-nm').value.trim();
-          if(!nm){showToast(t('container_name_required'),'error');return;}
+          if(!nm){Components.showToast(t('container_name_required'),'error');return;}
           var b={name:nm,image:tpl.image};if(tpl.command)b.command=tpl.command;if(tpl.restart_policy)b.restart_policy=tpl.restart_policy;
           var pts=document.getElementById('tpl-ports').value.trim();
           if(pts)b.ports=pts.split('\n').filter(function(l){return l.trim();}).map(function(l){var p=l.trim().split(':');return{host_port:parseInt(p[0])||0,container_port:parseInt(p[1]||p[0])||0,protocol:'tcp'};});
           var evs=document.getElementById('tpl-env').value.trim();
           if(evs){b.env={};evs.split('\n').filter(function(l){return l.trim();}).forEach(function(l){var i=l.indexOf('=');if(i>0)b.env[l.substring(0,i).trim()]=l.substring(i+1).trim();});}
-          var r=await Api.post('/admin/containers',b);modal.close();if(r&&r.success)showToast(tpl.name+' '+t('container_deployed'),'success');
+          var r=await Api.post('/admin/containers',b);modal.close();if(r&&r.success)Components.showToast(tpl.name+' '+t('container_deployed'),'success');
         });
       }
     });

@@ -41,7 +41,7 @@ const DeployConfigs = (function () {
     var hasISO = props.hasISO;
 
     function handleCopyUrl() {
-      Helpers.copyToClipboard(url).then(function () { showToast(t('osinstall_url_copied'), 'success'); });
+      Helpers.copyToClipboard(url).then(function () { Components.showToast(t('osinstall_url_copied'), 'success'); });
     }
     function handleEdit() { props.onEdit(c); }
     function handleView() { props.onView(c); }
@@ -121,7 +121,7 @@ const DeployConfigs = (function () {
     var pretty = JSON.stringify(obj, null, 2);
 
     function handleCopy() {
-      Helpers.copyToClipboard(pretty).then(function () { showToast(t('osinstall_config_copied'), 'success'); });
+      Helpers.copyToClipboard(pretty).then(function () { Components.showToast(t('osinstall_config_copied'), 'success'); });
     }
 
     return html`
@@ -253,19 +253,19 @@ const DeployConfigs = (function () {
       var req = isEdit ? Api.put('/admin/os-install/configs/' + config.id, body) : Api.post('/admin/os-install/configs', body);
       req.then(function (r) {
         setSubmitting(false);
-        if (!r || !r.success) { showToast((r && r.message) || t('error'), 'error'); return; }
-        showToast(isEdit ? t('osinstall_updated') : t('osinstall_created'), 'success');
+        if (!r || !r.success) { Components.showToast((r && r.message) || t('error'), 'error'); return; }
+        Components.showToast(isEdit ? t('osinstall_updated') : t('osinstall_created'), 'success');
         props.onClose();
         props.onSaved();
       });
     }
 
     function handlePreview() {
-      if (!osType) { showToast(t('osinstall_select_os_type'), 'error'); return; }
+      if (!osType) { Components.showToast(t('osinstall_select_os_type'), 'error'); return; }
       setPreviewing(true);
       Api.post('/admin/os-install/configs/preview', { os_type: osType, params: gatherParams() }).then(function (r) {
         setPreviewing(false);
-        if (!r || !r.success) { showToast(t('osinstall_preview_error') + ': ' + ((r && r.message) || t('error')), 'error'); return; }
+        if (!r || !r.success) { Components.showToast(t('osinstall_preview_error') + ': ' + ((r && r.message) || t('error')), 'error'); return; }
         setPreviewContent((r.data || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'));
       });
     }
@@ -595,8 +595,8 @@ const DeployConfigs = (function () {
       showConfirmModal(t('osinstall_delete_confirm', { name: c.name }), function (mb) {
         var o = mb.textContent; mb.disabled = true; mb.textContent = '...';
         Api.delete('/admin/os-install/configs/' + c.id).then(function (r) {
-          if (!r || !r.success) { mb.disabled = false; mb.textContent = o; showToast((r && r.message) || t('error'), 'error'); return; }
-          showToast(t('osinstall_deleted'), 'success');
+          if (!r || !r.success) { mb.disabled = false; mb.textContent = o; Components.showToast((r && r.message) || t('error'), 'error'); return; }
+          Components.showToast(t('osinstall_deleted'), 'success');
           loadConfigs();
         });
       });

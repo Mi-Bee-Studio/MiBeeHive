@@ -132,7 +132,7 @@ const Logs = (function () {
               <span class="badge ${bc}">${Helpers.escapeHtml(e.level)}</span>
               ${e.source ? html`<span class="text-xs" style="color:var(--color-text-tertiary)">${Helpers.escapeHtml(e.source)}</span>` : null}
             </div>
-            <div class="text-sm" style="color:var(--color-text-secondary)">${Helpers.escapeHtml(e.message)}</div>
+            <div class="text-sm" style="color:var(--color-text-secondary)">${e.message}</div>
           </div>`;
       });
     }

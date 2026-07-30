@@ -162,7 +162,7 @@ const Dashboard = (function () {
         <div style=${{ width:'1.5rem', height:'1.5rem', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, background: _alpha(iconColorHex, 0.1), color: color }} dangerouslySetInnerHTML=${{ __html: _actIcon(evt.type) }} />
         <div style="flex:1;min-width:0">
           <div class="text-sm" style="color:var(--color-text)">${Helpers.escapeHtml(label)}</div>
-          ${evt.subtitle ? html`<div class="text-xs" style="color:var(--color-text-tertiary)">${Helpers.escapeHtml(evt.subtitle)}</div>` : null}
+          ${evt.subtitle ? html`<div class="text-xs" style="color:var(--color-text-tertiary)">${evt.subtitle}</div>` : null}
         </div>
         <div class="text-xs" style="color:var(--color-text-tertiary);flex-shrink:0">${timeStr}</div>
       </div>`;
@@ -825,8 +825,8 @@ const Dashboard = (function () {
       btn.disabled = true;
       Api.post('/admin/crawl/trigger-all', {}).then(function (r) {
         btn.disabled = false;
-        if (r && r.success) showToast(t('action_crawl_triggered'), 'success');
-        else showToast((r && r.message) || t('error'), 'error');
+        if (r && r.success) Components.showToast(t('action_crawl_triggered'), 'success');
+        else Components.showToast((r && r.message) || t('error'), 'error');
       });
     }
 
@@ -835,8 +835,8 @@ const Dashboard = (function () {
       if (btn) btn.disabled = true;
       Api.post('/admin/os-install/catalog/download-all', {}).then(function (r) {
         if (btn) btn.disabled = false;
-        if (r && r.success) { showToast(r.message || t('iso_queue_download_all'), 'success'); _loadISOData(); }
-        else showToast((r && r.message) || t('error'), 'error');
+        if (r && r.success) { Components.showToast(r.message || t('iso_queue_download_all'), 'success'); _loadISOData(); }
+        else Components.showToast((r && r.message) || t('error'), 'error');
       });
     }
 

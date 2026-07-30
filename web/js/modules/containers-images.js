@@ -62,10 +62,10 @@ const ContainersImages = (function() {
           if (!res || !res.success) {
             modalBtn.disabled = false;
             modalBtn.textContent = originalText;
-            showToast((res && res.message) || t('error'), 'error');
+            Components.showToast((res && res.message) || t('error'), 'error');
             return;
           }
-          showToast(t('image_deleted'), 'success');
+          Components.showToast(t('image_deleted'), 'success');
           _loadImages();
         });
       });
@@ -159,7 +159,10 @@ const ContainersImages = (function() {
     var res = await Api.get('/admin/images', {silent: true});
     if (!res || !res.success) {
       if (!_init && res && res.message) {
-        el.innerHTML = '<div class="empty-state"><p class="text-sm" style="color:var(--color-error)">' + _esc(res.message) + '</p></div>';
+        // Localize the backend "Docker is not available" message; fall back to
+        // the raw message for any other error.
+        var msg = /docker/i.test(res.message) ? t('error_docker_unavailable') : _esc(res.message);
+        el.innerHTML = '<div class="empty-state"><p class="text-sm" style="color:var(--color-error)">' + msg + '</p></div>';
       }
       _init = true;
       return;
@@ -197,10 +200,10 @@ const ContainersImages = (function() {
       btn.textContent = originalText;
 
       if (!res || !res.success) {
-        showToast((res && res.message) || t('error'), 'error');
+        Components.showToast((res && res.message) || t('error'), 'error');
         return;
       }
-      showToast(t('image_pull_started'), 'success');
+      Components.showToast(t('image_pull_started'), 'success');
       inp.value = '';
       setTimeout(_loadImages, 3000);
     });

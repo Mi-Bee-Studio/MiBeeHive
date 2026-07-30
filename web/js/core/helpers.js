@@ -65,10 +65,16 @@ const Helpers = (function () {
       error: 'statusError',
     };
     var iconKey = iconMap[status] || 'statusPending';
+    // Translate the status label via i18n (status_<value>); fall back to the
+    // raw value if no translation exists. Escape the translated text since this
+    // HTML string is injected via dangerouslySetInnerHTML.
+    var label = (typeof t === 'function' && t('status_' + status) !== 'status_' + status)
+      ? t('status_' + status)
+      : status;
     return '<span class="inline-flex items-center" style="' + (colorCls[status] || 'color:var(--color-text-tertiary)') + '">' +
       '<span class="status-dot ' + (dotCls[status] || 'status-dot-neutral') + '"></span>' +
       ICONS[iconKey] +
-      '<span>' + escapeHtml(status) + '</span></span>';
+      '<span>' + escapeHtml(label) + '</span></span>';
   }
 
   function loadingSpinner(size) {

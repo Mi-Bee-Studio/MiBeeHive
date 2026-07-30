@@ -66,7 +66,7 @@ const Containers = (function () {
           ? await Api.delete('/admin/containers/' + id)
           : await Api.post('/admin/containers/' + id + '/' + action);
         if (res && res.success) {
-          showToast(t('container_' + action + 'ed'), 'success');
+          Components.showToast(t('container_' + action + 'ed'), 'success');
           if (props.onDone) props.onDone();
         }
       } finally {
@@ -200,7 +200,7 @@ const Containers = (function () {
         overlay.querySelector('#ct-ok').addEventListener('click', async function () {
           var img = document.getElementById('ct-img').value.trim();
           var nm = document.getElementById('ct-name').value.trim();
-          if (!img || !nm) { showToast(t('container_image_name_required'), 'error'); return; }
+          if (!img || !nm) { Components.showToast(t('container_image_name_required'), 'error'); return; }
           var pt = document.getElementById('ct-port').value.trim();
           if (pt && portErr && portErr.textContent) return;
           if (envInput && envErr && envErr.textContent) return;
@@ -210,7 +210,7 @@ const Containers = (function () {
           if (ev) b.env = ev.split('\n').filter(function (l) { return l.trim(); });
           var r = await Api.post('/admin/containers', b);
           modal.close();
-          if (r && r.success) { showToast(t('container_created'), 'success'); onDone(); }
+          if (r && r.success) { Components.showToast(t('container_created'), 'success'); onDone(); }
         });
         overlay.querySelector('#ct-img').focus();
       }

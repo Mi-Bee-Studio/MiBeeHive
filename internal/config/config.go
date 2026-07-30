@@ -181,7 +181,10 @@ func DefaultConfig() *Config {
 		Auth: AuthConfig{
 			PasswordHash:      defaultPasswordHash,
 			JWTSecret:         generateJWTSecret(),
-			PasswordChangedAt: time.Now().UTC().Format(time.RFC3339),
+			PasswordChangedAt: "", // do NOT default to time.Now() — that would
+			// invalidate all existing tokens on every restart. Only set when the
+			// password is actually changed (GetPasswordChangedAt returns zero →
+			// middleware skips the iat check).
 		},
 		Crawler: CrawlerConfig{
 			MaxConcurrent:   2,

@@ -13,6 +13,18 @@ func TestDefaultConfigValidation(t *testing.T) {
 	}
 }
 
+// Regression for #25: PasswordChangedAt must NOT default to time.Now(),
+// otherwise every restart invalidates all existing JWT tokens.
+func TestDefaultConfigPasswordChangedAtEmpty(t *testing.T) {
+	cfg := DefaultConfig()
+	if cfg.Auth.PasswordChangedAt != "" {
+		t.Fatalf("PasswordChangedAt should be empty by default, got %q", cfg.Auth.PasswordChangedAt)
+	}
+	if !cfg.Auth.GetPasswordChangedAt().IsZero() {
+		t.Fatal("GetPasswordChangedAt should return zero time when empty")
+	}
+}
+
 func TestGenerateDefault(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "subdir", "config.yaml")

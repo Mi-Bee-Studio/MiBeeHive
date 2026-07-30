@@ -66,10 +66,10 @@
     { pattern: '/containers/registries/:subtab',  handler: function(p) { Registries.render(p.subtab); }                             },
     { pattern: '/containers/:id',                 handler: function(p) { ContainersDetail.render(p.id); }                           },
     { pattern: '/containers',                     handler: function() { Containers.render(); }                                      },
-    { pattern: '/registries',                     handler: function() { Registries.render(); }                                      },
-    { pattern: '/registries/repos',               handler: function(p, q, s) { Registries.render('repos'); }                        },
-    { pattern: '/registries/sync',                handler: function(p, q, s) { Registries.render('sync'); }                         },
-    { pattern: '/registries/cleanup',             handler: function(p, q, s) { Registries.render('cleanup'); }                      },
+    // Legacy /registries* paths now live under /containers/registries; redirect
+    // for backward compatibility with old bookmarks.
+    { pattern: '/registries',                     handler: function() { window.location.hash = '#/containers/registries'; }         },
+    { pattern: '/registries/:subtab',             handler: function(p) { window.location.hash = '#/containers/registries/' + (p.subtab || ''); } },
     { pattern: '/logs',                           handler: function() { window.location.hash = '#/system-status/logs'; }            },
     { pattern: '/tasks',                          handler: function() { window.location.hash = '#/system-status/tasks'; }           },
     { pattern: '/settings',                       handler: function() { Settings.render(); }                                        },
@@ -158,34 +158,6 @@
     return _abortController.signal;
   }
 
-  // ── Navigation highlight sync ───────────────────────────────────
-  function _syncNav() {
-    if (!current) return;
-    var path = current.path;
-    var firstSegment = '/' + path.split('/').filter(Boolean)[0];
-
-    var links = document.querySelectorAll('#main-nav a[data-route]');
-    links.forEach(function (a) {
-      var route = a.dataset.route;
-      var isActive = (path === route) ||
-                     (firstSegment === route) ||
-                     (route === '/dashboard' && (path === '/dashboard' || path === '/'));
-      if (isActive) {
-        a.classList.add('nav-link-active');
-      } else {
-        a.classList.remove('nav-link-active');
-      }
-    });
-
-    var hasToken = !!_getToken();
-    var logoutBtn = document.getElementById('nav-logout');
-    if (logoutBtn) logoutBtn.style.display = hasToken ? '' : 'none';
-    var adminLink = document.getElementById('nav-admin');
-    var mAdminLink = document.getElementById('m-nav-admin');
-    if (adminLink) adminLink.style.display = hasToken ? '' : 'none';
-    if (mAdminLink) mAdminLink.style.display = hasToken ? '' : 'none';
-  }
-
   // ── Auth guard ──────────────────────────────────────────────────
   function _checkAuth(parsed) {
     var hasToken = !!_getToken();
@@ -246,7 +218,6 @@
         query: {},
         routeDef: null,
       };
-      _syncNav();
       _render404();
       _fireChangeCallbacks(current);
       _notifyApp(current);
@@ -272,7 +243,6 @@
     current = parsed;
     current.signal = signal;
 
-    _syncNav();
     _fireChangeCallbacks(current);
     _notifyApp(current);
 

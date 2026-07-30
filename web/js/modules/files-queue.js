@@ -23,11 +23,13 @@ const FilesQueue = (function () {
   }
 
   // ── Nav tabs (shared HTML) ────────────────────────────────────────
+  var FILES_TABS = [
+    { hash: '/files', i18nKey: 'nav_files', tooltipKey: 'tooltip_files' },
+    { hash: '/files/queue', i18nKey: 'file_queue' },
+    { hash: '/files/crawl', i18nKey: 'file_crawl' },
+  ];
   function _nav() {
-    return '<div class="module-tabs">' +
-      '<a href="#/files" class="module-tab">' + t('project') + '</a>' +
-      '<a href="#/files/queue" class="module-tab active">' + t('queue_status') + '</a>' +
-      '<a href="#/files/crawl" class="module-tab">' + t('crawl_status_title') + '</a></div>';
+    return Components.moduleTabs(FILES_TABS, 'file_queue');
   }
 
   // ── Stat Card ─────────────────────────────────────────────────────

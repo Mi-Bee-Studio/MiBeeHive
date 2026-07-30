@@ -14,10 +14,12 @@ const DeployISO = (function () {
   var POLL_INTERVAL = 5000;
 
   // ── Sub-navigation ───────────────────────────────────────────────────
+  var DEPLOY_TABS = [
+    { hash: '/deploy', i18nKey: 'nav_deploy_configs' },
+    { hash: '/deploy/iso', i18nKey: 'nav_deploy_iso' },
+  ];
   function _subNav(active) {
-    return '<nav class="module-tabs">' +
-      '<a href="#/deploy" class="module-tab' + (active === 'configs' ? ' active' : '') + '">' + t('nav_deploy_configs') + '</a>' +
-      '<a href="#/deploy/iso" class="module-tab' + (active === 'iso' ? ' active' : '') + '">' + t('nav_deploy_iso') + '</a></nav>';
+    return Components.moduleTabs(DEPLOY_TABS, active === 'configs' ? 'nav_deploy_configs' : 'nav_deploy_iso');
   }
 
   function _getLabels() {

@@ -10,11 +10,13 @@ const Files = (function () {
   var useMemo = PreactBridge.useMemo;
 
   // ── Nav tabs (shared HTML) ────────────────────────────────────────
+  var FILES_TABS = [
+    { hash: '/files', i18nKey: 'nav_files', tooltipKey: 'tooltip_files' },
+    { hash: '/files/queue', i18nKey: 'file_queue' },
+    { hash: '/files/crawl', i18nKey: 'file_crawl' },
+  ];
   function _nav() {
-    return '<div class="module-tabs">' +
-      '<a href="#/files" class="module-tab active" data-tooltip="' + t('tooltip_files') + '">' + t('nav_files') + '</a>' +
-      '<a href="#/files/queue" class="module-tab">' + t('file_queue') + '</a>' +
-      '<a href="#/files/crawl" class="module-tab">' + t('file_crawl') + '</a></div>';
+    return Components.moduleTabs(FILES_TABS, 'nav_files');
   }
 
   var SORT_OPTIONS = ['name', 'file_count', 'last_activity'];

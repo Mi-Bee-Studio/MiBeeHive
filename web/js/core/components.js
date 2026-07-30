@@ -970,6 +970,20 @@
     `;
   }
 
+  // ── Module tabs (shared sub-navigation) ──────────────────────────────────
+  // Renders the horizontal tab strip used at the top of grouped pages
+  // (files/deploy/share/containers). items: [{ hash, i18nKey, tooltipKey? }];
+  // activeKey is the i18nKey of the active tab.
+  function moduleTabs(items, activeKey) {
+    var html_ = '<div class="module-tabs">';
+    items.forEach(function (it) {
+      var isActive = it.i18nKey === activeKey;
+      var tooltip = it.tooltipKey ? ' data-tooltip="' + t(it.tooltipKey) + '"' : '';
+      html_ += '<a href="#' + it.hash + '" class="module-tab' + (isActive ? ' active' : '') + '"' + tooltip + '>' + t(it.i18nKey) + '</a>';
+    });
+    return html_ + '</div>';
+  }
+
   // ── Global API ──────────────────────────────────────────────────────────
 
   window.Components = {
@@ -991,6 +1005,7 @@
     emptyState: emptyState,
     downloadProgress: downloadProgress,
     updateProgress: updateProgress,
-    ActionMenu: ActionMenu
+    ActionMenu: ActionMenu,
+    moduleTabs: moduleTabs
   };
 })();

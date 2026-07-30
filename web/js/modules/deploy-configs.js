@@ -26,10 +26,12 @@ const DeployConfigs = (function () {
   var ACCORDION_ID = 'configs-list-accordion';
 
   // ── Sub-navigation ───────────────────────────────────────────────────
+  var DEPLOY_TABS = [
+    { hash: '/deploy', i18nKey: 'nav_deploy_configs', tooltipKey: 'tooltip_deploy' },
+    { hash: '/deploy/iso', i18nKey: 'nav_deploy_iso' },
+  ];
   function _subNav(active) {
-    return '<nav class="module-tabs">' +
-      '<a href="#/deploy" class="module-tab' + (active === 'configs' ? ' active' : '') + '" data-tooltip="' + t('tooltip_deploy') + '">' + t('nav_deploy_configs') + '</a>' +
-      '<a href="#/deploy/iso" class="module-tab' + (active === 'iso' ? ' active' : '') + '">' + t('nav_deploy_iso') + '</a></nav>';
+    return Components.moduleTabs(DEPLOY_TABS, active === 'configs' ? 'nav_deploy_configs' : 'nav_deploy_iso');
   }
 
   // ── Config Row Component ─────────────────────────────────────────────

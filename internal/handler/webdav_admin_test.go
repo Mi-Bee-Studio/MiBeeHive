@@ -61,6 +61,40 @@ func TestWebDAVStatus(t *testing.T) {
 	}
 }
 
+// TestWebDAVStatus_UsesRequestHost verifies the generated URLs reflect the
+// hostname the admin is browsing from, not the server's bind address. The
+// connection guide is pasted into OTHER machines, so localhost (the default
+// when bound to 0.0.0.0) is useless — r.Host is reachable externally by
+// definition.
+func TestWebDAVStatus_UsesRequestHost(t *testing.T) {
+	h, _ := setupWebDAVAdminHandler(t)
+
+	mux := http.NewServeMux()
+	registerWebDAVAdminRoutes(mux, h)
+	handler := wrapWithAuth(mux)
+
+	req := authedRequest(http.MethodGet, "/api/v1/admin/webdav/status", nil)
+	req.Host = "192.168.63.32:9090" // simulate browsing from the device's LAN IP
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var resp model.ApiResponse[model.WebDAVStatusResponse]
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if !resp.Success {
+		t.Fatal("expected success=true")
+	}
+	wantURL := "http://192.168.63.32:9090/webdav/"
+	if resp.Data.HTTPURL != wantURL {
+		t.Fatalf("HTTPURL = %q, want %q (should use the request host, not localhost)", resp.Data.HTTPURL, wantURL)
+	}
+}
+
 func TestWebDAVFileList_Empty(t *testing.T) {
 	h, _ := setupWebDAVAdminHandler(t)
 

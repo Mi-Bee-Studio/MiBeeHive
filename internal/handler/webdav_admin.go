@@ -2,6 +2,7 @@ package handler
 
 import (
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -30,7 +31,19 @@ func NewWebDAVAdminHandler(cfg *config.Config, resolver *service.StorageResolver
 
 // WebDAVStatus handles GET /api/v1/admin/webdav/status.
 func (h *WebDAVAdminHandler) WebDAVStatus(w http.ResponseWriter, r *http.Request) {
-	host := h.config.Server.BindAddr
+	// The generated URLs are connection guides pasted into OTHER machines'
+	// WebDAV clients, so they must be reachable externally. The server's own
+	// BindAddr is typically "0.0.0.0" (or empty), which is useless for that —
+	// use the hostname the admin is currently browsing from (r.Host) instead,
+	// since that is by definition an address that reaches this server.
+	host := r.Host
+	if host == "" {
+		host = h.config.Server.BindAddr
+	}
+	// Strip any port from r.Host; we append the configured ports below.
+	if h, _, err := net.SplitHostPort(host); err == nil {
+		host = h
+	}
 	if host == "" || host == "0.0.0.0" {
 		host = "localhost"
 	}

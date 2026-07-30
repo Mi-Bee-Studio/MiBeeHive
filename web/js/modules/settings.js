@@ -700,8 +700,8 @@ const Settings = (function () {
         <//>
 
         <${SectionCard} title=${t('about')}>
-          <p class="text-sm" style="color:var(--color-text-secondary)">MiBeeHive \u2014 Small team file utility platform</p>
-          <p class="text-xs" style="margin-top:0.5rem;color:var(--color-text-tertiary)">Automatically crawl, download and serve binary releases for your NAS.</p>
+          <p class="text-sm" style="color:var(--color-text-secondary)">${t('about_desc')}</p>
+          <p class="text-xs" style="margin-top:0.5rem;color:var(--color-text-tertiary)">${t('about_sub')}</p>
         <//>
 
         <${SectionCard} title=${t('settings_disk_threshold')} noPad=${true}>

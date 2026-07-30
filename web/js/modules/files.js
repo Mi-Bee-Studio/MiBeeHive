@@ -421,11 +421,5 @@ const Files = (function () {
     if (app) render(null, app);
   }
 
-  // renderProjects is called by the router after initial render to refresh data
-  function renderProjects() {
-    // With Preact, the component manages its own data loading.
-    // This is kept as a no-op for API compatibility with the router.
-  }
-
-  return { render: renderFn, renderProjects: renderProjects, destroy: destroyFn };
+  return { render: renderFn, destroy: destroyFn };
 })();

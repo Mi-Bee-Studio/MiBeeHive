@@ -90,9 +90,13 @@ const Api = {
     var lastErr = null;
 
     try {
+      // AbortSignal passthrough: callers pass { signal } (e.g. from
+      // Router.getSignal()) so in-flight requests are cancelled on route change.
+      const fetchOpts = { method, headers, body: body ? JSON.stringify(body) : undefined };
+      if (options.signal) fetchOpts.signal = options.signal;
       for (var attempt = 0; attempt <= (isRetryable ? 2 : 0); attempt++) {
         try {
-          const res = await fetch(API_BASE + url, { method, headers, body: body ? JSON.stringify(body) : undefined });
+          const res = await fetch(API_BASE + url, fetchOpts);
 
           // 503 Service Unavailable — retry for GET
           if (res.status === 503 && attempt < 2 && isRetryable) {
@@ -129,6 +133,11 @@ const Api = {
         }
       }
     } catch (err) {
+      // AbortError is expected when a route change cancels in-flight requests;
+      // do not treat it as a network failure.
+      if (err && err.name === 'AbortError') {
+        return { success: false, data: null, message: 'aborted', aborted: true };
+      }
       if (typeof Components !== "undefined" && Components.showToast) Components.showToast(t('network_error') + ': ' + (err.message || err), 'error');
       return { success: false, data: null, message: err.message };
     } finally {

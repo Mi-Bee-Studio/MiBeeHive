@@ -134,7 +134,9 @@ globalThis.App = {
   off: vi.fn(),
   emit: vi.fn(),
   addTimer: vi.fn(),
+  clearScope: vi.fn(),
   clearAllTimers: vi.fn(),
+  cache: { invalidatePattern: vi.fn(), get: vi.fn(() => null), set: vi.fn() },
 };
 
 // t — i18n translation function (i18n.js)

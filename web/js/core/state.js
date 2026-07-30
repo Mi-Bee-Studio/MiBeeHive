@@ -24,7 +24,15 @@
   var _listeners = {};
 
   // ── Timer management ────────────────────────────────────────────
-  var _timers = [];
+  // Timers are tracked per scope (usually a route/path) so that leaving a
+  // page only clears that page's timers, not every timer in the app.
+  var _timersByScope = {};
+  var _legacyTimers = []; // backward-compat for addTimer(id) without scope
+
+  function _clearId(id) {
+    clearInterval(id);
+    clearTimeout(id);
+  }
 
   // ── App singleton (backward compatible) ─────────────────────────
   var App = {
@@ -36,14 +44,34 @@
       this.emit('state:sync');
     },
 
-    // Timer management
-    addTimer: function (id) { _timers.push(id); },
+    // Timer management.
+    // addTimer(id, scope?) — scope defaults to '' (legacy bucket).
+    // clearScope(scope) clears only timers registered under that scope.
+    // clearAllTimers() clears everything (kept for backward compat).
+    addTimer: function (id, scope) {
+      scope = scope || '';
+      if (scope) {
+        if (!_timersByScope[scope]) _timersByScope[scope] = [];
+        _timersByScope[scope].push(id);
+      } else {
+        _legacyTimers.push(id);
+      }
+    },
+    clearScope: function (scope) {
+      if (!scope) return;
+      var ids = _timersByScope[scope];
+      if (ids) {
+        ids.forEach(_clearId);
+        delete _timersByScope[scope];
+      }
+    },
     clearAllTimers: function () {
-      _timers.forEach(function (id) {
-        clearInterval(id);
-        clearTimeout(id);
+      Object.keys(_timersByScope).forEach(function (scope) {
+        _timersByScope[scope].forEach(_clearId);
+        delete _timersByScope[scope];
       });
-      _timers = [];
+      _legacyTimers.forEach(_clearId);
+      _legacyTimers = [];
     },
 
     // Event bus

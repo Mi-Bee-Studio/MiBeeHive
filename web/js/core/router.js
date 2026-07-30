@@ -142,12 +142,11 @@
       _abortController.abort();
       _abortController = null;
     }
-    // Per-page cleanup (modules set window._clearPageTimers)
-    if (typeof window._clearPageTimers === 'function') {
-      window._clearPageTimers();
-    }
-    if (typeof clearPageTimers === 'function') {
-      clearPageTimers();
+    // Clear only the previous route's scoped timers (polling registered via
+    // Hooks.usePolling with { scope }). `current` still holds the previous
+    // route at this point.
+    if (window.App && current && current.path) {
+      App.clearScope(current.path);
     }
   }
 

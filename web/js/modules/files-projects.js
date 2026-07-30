@@ -242,8 +242,19 @@ const FilesProjects = (function () {
         var projRes = results[0];
         var filesRes = results[1];
 
+        // Distinguish "project does not exist" (e.g. after deletion, or a stale
+        // URL → backend 404 "project not found") from a genuine load/network
+        // failure, so the user is not shown a misleading "check your network"
+        // message. (#14)
+        var projectMissing = projRes && !projRes.success &&
+          /not found|不存在/i.test(projRes.message || '');
+        if (projectMissing) {
+          setError({ notFound: true });
+          setLoading(false);
+          return;
+        }
         if (!projRes || !projRes.success || !projRes.data) {
-          setError(t('error_load_failed'));
+          setError({ message: t('error_load_failed') });
           setLoading(false);
           return;
         }
@@ -328,18 +339,24 @@ const FilesProjects = (function () {
     function handleDelete() {
       if (!project) return;
       var name = project.display_name || project.name;
+      var pid = project.id;
       Components.showConfirmModal(t('proj_delete_confirm', { name: name }), function (modalBtn) {
-        modalBtn.disabled = true;
-        modalBtn.textContent = '...';
-        Api.delete('/admin/projects/' + project.id).then(function (res) {
+        if (modalBtn) { modalBtn.disabled = true; modalBtn.textContent = '...'; }
+        Api.delete('/admin/projects/' + pid).then(function (res) {
           if (!res || !res.success) {
             Components.showToast((res && res.message) || t('error'), 'error');
-            modalBtn.disabled = false;
-            modalBtn.textContent = t('common_delete');
+            // Modal is already closed by ConfirmModal.handleConfirm; nothing
+            // to re-enable here.
             return;
           }
           Components.showToast(t('proj_deleted'), 'success');
+          // Invalidate cached project list so the deleted project is gone.
+          if (window.App && App.cache) App.cache.invalidatePattern('GET:/admin/projects');
+          // Navigate back to the project list. Use location.hash directly so
+          // it fires even though the confirm modal has already unmounted.
           Router.push('/files');
+        }).catch(function (err) {
+          Components.showToast(t('error') + ': ' + (err && err.message ? err.message : err), 'error');
         });
       });
     }
@@ -386,12 +403,15 @@ const FilesProjects = (function () {
     }
 
     if (error) {
+      var isNotFound = error && error.notFound;
       return html`
         <div class="p-4 md:p-6 max-w-7xl mx-auto">
           <div class="anim-fade-in empty-state">
             <div style="color:var(--color-text-quaternary);margin-bottom:0.75rem" dangerouslySetInnerHTML=${{ __html: Helpers.ICONS.inbox }}></div>
-            <p class="text-sm font-medium" style="color:var(--color-text-tertiary);margin-bottom:1rem">${error}</p>
-            <button class="btn btn-primary btn-sm retry-btn" onClick=${handleRetry}>${t('error_retry')}</button>
+            <p class="text-sm font-medium" style="color:var(--color-text-tertiary);margin-bottom:1rem">${isNotFound ? t('error_project_not_found') : (error.message || t('error_load_failed'))}</p>
+            ${isNotFound
+              ? html`<a class="btn btn-primary btn-sm" href="#/files">${t('back_to_files')}</a>`
+              : html`<button class="btn btn-primary btn-sm retry-btn" onClick=${handleRetry}>${t('error_retry')}</button>`}
           </div>
         </div>`;
     }

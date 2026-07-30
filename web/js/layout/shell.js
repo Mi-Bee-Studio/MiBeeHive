@@ -147,6 +147,22 @@ var Shell = (function () {
 
   // ── init() — mount Preact components into existing containers ─────
 
+  // Wrap a component tree with AppProvider + I18nProvider so the shell
+  // components (sidebar / bottom-tab / mobile-top-bar) re-render reactively
+  // on theme / language / auth state changes. Each mount point gets its own
+  // provider subtree; they all share the same App singleton + i18n globals.
+  function withProviders(component) {
+    var h = PreactBridge.h;
+    var tree = component;
+    if (typeof window.AppProvider === 'function') {
+      tree = h(window.AppProvider, null, tree);
+    }
+    if (typeof window.I18nProvider === 'function') {
+      tree = h(window.I18nProvider, null, tree);
+    }
+    return tree;
+  }
+
   function init() {
     var appShell = document.getElementById('app-shell');
     if (!appShell) return;
@@ -157,7 +173,7 @@ var Shell = (function () {
 
     // Mount sidebar component into #sidebar
     if (sidebarEl) {
-      PreactBridge.render(PreactBridge.h(Sidebar.SidebarComponent), sidebarEl);
+      PreactBridge.render(withProviders(PreactBridge.h(Sidebar.SidebarComponent)), sidebarEl);
     }
 
     // Initialize global search
@@ -165,12 +181,12 @@ var Shell = (function () {
 
     // Mount bottom tab component into #bottom-tab
     if (bottomTabEl) {
-      PreactBridge.render(PreactBridge.h(BottomTabVisibility), bottomTabEl);
+      PreactBridge.render(withProviders(PreactBridge.h(BottomTabVisibility)), bottomTabEl);
     }
 
     // Mount mobile top bar component into #mobile-top-bar
     if (mobileTopBarEl) {
-      PreactBridge.render(PreactBridge.h(MobileTopBarWrapper), mobileTopBarEl);
+      PreactBridge.render(withProviders(PreactBridge.h(MobileTopBarWrapper)), mobileTopBarEl);
     }
 
     // Listen for route changes to update document title

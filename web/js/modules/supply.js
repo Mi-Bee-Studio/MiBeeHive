@@ -167,5 +167,6 @@ var Supply = (function () {
     if (app) preactRender(null, app);
   }
 
-  return { render: render, cleanup: cleanup };
+  // `destroy` is the standard module contract name; keep `cleanup` as an alias.
+  return { render: render, destroy: cleanup, cleanup: cleanup };
 })();

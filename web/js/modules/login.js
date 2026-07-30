@@ -89,17 +89,19 @@ const Login = (function () {
         var appShell = document.getElementById('app-shell');
         if (appShell) appShell.style.gridTemplateColumns = '';
 
-        Api.get('/auth/password-status').then(function (resp) {
+        // Navigate to the overview home immediately — do NOT block on the
+        // password-status request. If it 401s (e.g. a stale _handling401 guard
+        // from page load), _handle401 may call Auth.logout() and wipe the
+        // freshly-stored token, trapping the user on /login. Fetch it in the
+        // background only to show a "change default password" hint.
+        window.location.hash = '#/overview';
+        Components.showToast(t('login_success'), 'success');
+
+        Api.get('/auth/password-status', { silent: true }).then(function (resp) {
           if (resp && resp.success && resp.data && resp.data.is_default) {
             Components.showToast(t('password_default_warning'), 'warning');
-            window.location.hash = '#/settings';
-          } else {
-            window.location.hash = '#/overview';
-            Components.showToast(t('login_success'), 'success');
           }
-        }).catch(function () {
-          window.location.hash = '#/overview';
-        });
+        }).catch(function () { /* best-effort hint; ignore */ });
       }).catch(function (err) {
         if (err.requirePasswordChange) {
           Components.showToast(t('password_change_required'), 'warning');

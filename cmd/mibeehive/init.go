@@ -113,6 +113,7 @@ type appHandlers struct {
 	download      *handler.DownloadHandler // public file download by token
 	shareLink     *handler.ShareLinkHandler // share link admin and public download
 	adminInternal *handler.AdminInternalHandler // admin-only internal file details (exposes local_path)
+	cacheMetrics  *handler.CacheMetricsHandler // admin cache metrics endpoint
 	}
 // loadConfig initializes the logger, loads or generates the config file,
 // loadConfig initializes the logger, loads or generates the config file,
@@ -517,6 +518,7 @@ func initHandlers(cfg *config.Config, svcs *appServices, database *sql.DB, confi
 	h.shareLink = handler.NewShareLinkHandler(database, svcs.readDB, cfg.Storage.BasePath)
 	// Admin-only internal file details endpoint (exposes physical local_path).
 	h.adminInternal = handler.NewAdminInternalHandler(svcs.readDB)
+	h.cacheMetrics = handler.NewCacheMetricsHandler()
 	
 	h.download = handler.NewDownloadHandler(database, cfg.Storage.BasePath)
 
@@ -680,6 +682,7 @@ func buildRouter(cfg *config.Config, h *appHandlers, svcs *appServices, database
 	apiMux.HandleFunc("POST "+model.RouteAdminBackupRestore, h.backupH.RestoreBackup)
 	// Dashboard summary (admin).
 	apiMux.HandleFunc("GET "+model.RouteAdminDashboardSummary, h.dashboard.Summary)
+	apiMux.HandleFunc("GET "+model.RouteAdminCacheMetrics, h.cacheMetrics.CacheMetrics)
 
 	// Registry management routes (admin).
 	if h.registry != nil {

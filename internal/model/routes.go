@@ -62,6 +62,7 @@ const (
 	RouteAdminISOCatalogProfiles    = "GET /api/v1/admin/os-install/catalog/profiles"
 	RouteAdminDashboardSummary      = "/api/v1/admin/dashboard/summary"
 	RouteAdminISOQueueProgress      = "/api/v1/admin/os-install/catalog/progress"
+	RouteAdminCacheMetrics       = "/api/v1/admin/metrics/cache"
 	// File management (admin)
 	// File management (admin)
 	RouteAdminFileRetry = "/api/v1/admin/files/{id}/retry"

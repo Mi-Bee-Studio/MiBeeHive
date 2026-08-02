@@ -25,6 +25,7 @@ import (
 // Cache wraps a fixed-size LRU cache with hit/miss/eviction counters.
 type Cache[K comparable, V any] struct {
 	cache     *lru.Cache[K, V]
+	size      int
 	hits      atomic.Int64
 	misses    atomic.Int64
 	evictions atomic.Int64
@@ -36,7 +37,7 @@ func NewCache[K comparable, V any](size int) *Cache[K, V] {
 	if err != nil {
 		panic(err)
 	}
-	return &Cache[K, V]{cache: c}
+	return &Cache[K, V]{cache: c, size: size}
 }
 
 // Get retrieves value. Returns (value, ok). Updates hit/miss counters.
@@ -75,6 +76,27 @@ func (c *Cache[K, V]) Len() int {
 // Stats returns (hits, misses, evictions).
 func (c *Cache[K, V]) Stats() (hits, misses, evictions int64) {
 	return c.hits.Load(), c.misses.Load(), c.evictions.Load()
+}
+
+// CacheStats is a point-in-time snapshot of a cache's capacity and counters.
+type CacheStats struct {
+	Size      int   `json:"size"`
+	Len       int   `json:"len"`
+	Hits      int64 `json:"hits"`
+	Misses    int64 `json:"misses"`
+	Evictions int64 `json:"evictions"`
+}
+
+// Snapshot returns a point-in-time view of capacity and hit/miss/eviction
+// counters. It is safe for concurrent use.
+func (c *Cache[K, V]) Snapshot() CacheStats {
+	return CacheStats{
+		Size:      c.size,
+		Len:       c.cache.Len(),
+		Hits:      c.hits.Load(),
+		Misses:    c.misses.Load(),
+		Evictions: c.evictions.Load(),
+	}
 }
 
 // Global cache instances. Sizes chosen to keep total memory well under 64MB.
@@ -138,6 +160,11 @@ func (c *TTLCache) Delete(key string) {
 // Purge clears all entries.
 func (c *TTLCache) Purge() {
 	c.inner.Purge()
+}
+
+// Snapshot returns the underlying cache's point-in-time statistics.
+func (c *TTLCache) Snapshot() CacheStats {
+	return c.inner.Snapshot()
 }
 
 // EventInvalidator subscribes to the event bus and deletes relevant cache

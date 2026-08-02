@@ -30,6 +30,7 @@ type ProjectSettings struct {
 	GitHubRepo     string   `json:"github_repo,omitempty"`
 	FilterPatterns []string `json:"filter_patterns,omitempty"`
 	StorageSubpath string   `json:"storage_subpath,omitempty"`
+	StorageSubdir  string   `json:"storage_subdir,omitempty"`
 	DownloadAll    bool     `json:"download_all_assets,omitempty"`
 	VersionPattern string   `json:"version_pattern,omitempty"`
 }

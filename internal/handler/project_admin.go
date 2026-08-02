@@ -13,6 +13,7 @@ import (
 	"github.com/Mi-Bee-Studio/mibeehive/internal/crawler"
 	"github.com/Mi-Bee-Studio/mibeehive/internal/middleware"
 	"github.com/Mi-Bee-Studio/mibeehive/internal/model"
+	"github.com/Mi-Bee-Studio/mibeehive/internal/service"
 
 	dbrepo "github.com/Mi-Bee-Studio/mibeehive/internal/db"
 )
@@ -151,6 +152,18 @@ func (h *ProjectAdminHandler) CreateProject(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	// Default storage_subdir to oss/{name} and reject path traversal.
+	if req.Settings.StorageSubdir == "" {
+		req.Settings.StorageSubdir = service.DefaultStorageSubdir(req.Name)
+	}
+	if err := service.ValidateStorageSubdir(h.config.Storage.BasePath, req.Settings.StorageSubdir); err != nil {
+		writeJSON(w, http.StatusBadRequest, model.ApiResponse[any]{
+			Success: false,
+			Message: err.Error(),
+		})
+		return
+	}
+
 	project, err := h.projectRepo.CreateWithSettings(r.Context(), req.Name, req.DisplayName, string(req.SourceType), req.SourceURL, req.Settings)
 	if err != nil {
 		middleware.WriteError(w, http.StatusInternalServerError, model.ERR_INTERNAL, "操作失败，请稍后重试", err)
@@ -193,6 +206,17 @@ func (h *ProjectAdminHandler) UpdateProject(w http.ResponseWriter, r *http.Reque
 			Message: "invalid request body",
 		})
 		return
+	}
+
+	// Reject path traversal in storage_subdir on update.
+	if req.Settings.StorageSubdir != "" {
+		if err := service.ValidateStorageSubdir(h.config.Storage.BasePath, req.Settings.StorageSubdir); err != nil {
+			writeJSON(w, http.StatusBadRequest, model.ApiResponse[any]{
+				Success: false,
+				Message: err.Error(),
+			})
+			return
+		}
 	}
 
 	if err := h.projectRepo.UpdateProject(r.Context(), id, req.Name, req.DisplayName, string(req.SourceType), req.SourceURL, req.Settings); err != nil {

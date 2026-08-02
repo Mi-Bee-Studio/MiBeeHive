@@ -14,6 +14,7 @@ type Project struct {
 	LastCrawledAt *time.Time
 	CreatedAt     time.Time
 	Enabled       bool
+	StorageSubdir string
 }
 
 // File represents a downloaded release file.

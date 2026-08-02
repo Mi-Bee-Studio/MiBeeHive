@@ -229,5 +229,13 @@ func scanProjectFromScanner(s interface{ Scan(dest ...any) error }) (*Project, e
 	if err != nil {
 		return nil, fmt.Errorf("scanning project: %w", err)
 	}
+	// StorageSubdir is not a projects table column; it lives in the config JSON.
+	// Populate it so the crawler can use it without a separate lookup.
+	if p.Config != "" {
+		var settings model.ProjectSettings
+		if err := json.Unmarshal([]byte(p.Config), &settings); err == nil {
+			p.StorageSubdir = settings.StorageSubdir
+		}
+	}
 	return p, nil
 }

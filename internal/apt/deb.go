@@ -8,6 +8,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/klauspost/compress/zstd"
 	"github.com/ulikunitz/xz"
 )
 
@@ -39,8 +40,9 @@ type DebInfo struct {
 // control.tar.{gz,xz,zst}, extracts the ./control file, and parses its
 // RFC822-style fields. Returns an error if the control member is missing.
 //
-// Supported control archive compressions: gzip and xz (xz is the modern default
-// for Debian/Ubuntu .deb packages). zstd is detected and reported as unsupported.
+// Supported control archive compressions: gzip, xz (xz is the modern default for
+// Debian/Ubuntu .deb packages), and zstd (dpkg's default since dpkg 1.21.18 /
+// Debian bullseye). Uncompressed control.tar is also accepted (rare but valid).
 func ParseDeb(r io.Reader) (*DebInfo, error) {
 	entries, err := ReadAr(r)
 	if err != nil {
@@ -81,7 +83,15 @@ func decompressControl(entry *ArEntry) ([]byte, error) {
 		}
 		return io.ReadAll(xr)
 	case strings.HasSuffix(entry.Name, ".zst"):
-		return nil, fmt.Errorf("zstd-compressed control.tar not supported yet")
+		// zstd is dpkg's default control compression since Debian bullseye
+		// (dpkg 1.21.18). Use a reusable decoder with concurrent-rdecode off to
+		// keep the memory footprint small on the resource-constrained device.
+		zr, err := zstd.NewReader(bytes.NewReader(entry.Data))
+		if err != nil {
+			return nil, fmt.Errorf("zstd control.tar: %w", err)
+		}
+		defer zr.Close()
+		return io.ReadAll(zr)
 	default:
 		// Uncompressed control.tar (rare but valid).
 		return entry.Data, nil

@@ -9,10 +9,12 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/klauspost/compress/zstd"
 )
 
-// makeControlTar builds a gzipped control.tar containing a control file with
-// the given text. Used to assemble a minimal .deb for tests.
+// makeControlTar builds a control.tar (raw bytes) containing a control file
+// with the given text. Used to assemble a minimal .deb for tests.
 func makeControlTar(t *testing.T, controlText string) []byte {
 	t.Helper()
 	var tarBuf bytes.Buffer
@@ -27,16 +29,50 @@ func makeControlTar(t *testing.T, controlText string) []byte {
 	if err := tw.Close(); err != nil {
 		t.Fatalf("close tar: %v", err)
 	}
+	return tarBuf.Bytes()
+}
+
+// compressControlGz returns a gzip-compressed control.tar.
+func compressControlGz(t *testing.T, tarBytes []byte) []byte {
+	t.Helper()
 	var gzBuf bytes.Buffer
 	zw := gzip.NewWriter(&gzBuf)
-	zw.Write(tarBuf.Bytes())
-	zw.Close()
+	if _, err := zw.Write(tarBytes); err != nil {
+		t.Fatalf("gzip write: %v", err)
+	}
+	if err := zw.Close(); err != nil {
+		t.Fatalf("gzip close: %v", err)
+	}
 	return gzBuf.Bytes()
+}
+
+// compressControlZst returns a zstd-compressed control.tar, mirroring the gzip
+// path so the zstd parser can be exercised end-to-end on a synthetic .deb.
+func compressControlZst(t *testing.T, tarBytes []byte) []byte {
+	t.Helper()
+	enc, err := zstd.NewWriter(nil)
+	if err != nil {
+		t.Fatalf("zstd writer: %v", err)
+	}
+	defer enc.Close()
+	out := enc.EncodeAll(tarBytes, nil)
+	if len(out) == 0 {
+		t.Fatal("zstd encoded empty bytes")
+	}
+	return out
 }
 
 // makeDeb assembles a minimal .deb (ar archive) with a debian-binary member
 // and a control.tar.gz member. data.tar is omitted (we only parse control).
 func makeDeb(t *testing.T, controlText string) []byte {
+	t.Helper()
+	return makeDebWithControl(t, "control.tar.gz", compressControlGz(t, makeControlTar(t, controlText)))
+}
+
+// makeDebWithControl assembles a minimal .deb whose control member uses the
+// given name (e.g. "control.tar.zst") and pre-compressed bytes. Lets tests
+// exercise each supported compression format.
+func makeDebWithControl(t *testing.T, controlMember string, controlBytes []byte) []byte {
 	t.Helper()
 	var ar bytes.Buffer
 	ar.WriteString("!<arch>\n")
@@ -49,7 +85,7 @@ func makeDeb(t *testing.T, controlText string) []byte {
 		}
 	}
 	writeArMember("debian-binary", []byte("2.0\n"))
-	writeArMember("control.tar.gz", makeControlTar(t, controlText))
+	writeArMember(controlMember, controlBytes)
 	return ar.Bytes()
 }
 
@@ -107,6 +143,46 @@ Description: Prometheus node exporter
 	// Multiline description folded with a newline continuation.
 	if !strings.Contains(info.Description, "Prometheus node exporter") || !strings.Contains(info.Description, "Runs on machines") {
 		t.Errorf("Description multiline not folded: %q", info.Description)
+	}
+}
+
+func TestParseDeb_ZstdControl(t *testing.T) {
+	// zstd is dpkg's default control.tar compression since Debian bullseye.
+	// A .deb with control.tar.zst must parse to the same result as gzip/xz,
+	// rather than being silently dropped from the Packages index.
+	control := `Package: prometheus-node-exporter
+Version: 1.7.0-1
+Architecture: arm64
+Maintainer: Test <t@example.com>
+Installed-Size: 9000
+Depends: libc6, adduser, daemon
+Section: net
+Priority: optional
+Homepage: https://example.org
+Description: Prometheus node exporter (zstd deb)
+ Collects machine metrics.
+`
+	deb := makeDebWithControl(t, "control.tar.zst",
+		compressControlZst(t, makeControlTar(t, control)))
+	info, err := ParseDeb(bytes.NewReader(deb))
+	if err != nil {
+		t.Fatalf("ParseDeb zstd: %v", err)
+	}
+	if info.Package != "prometheus-node-exporter" {
+		t.Errorf("Package: want prometheus-node-exporter, got %q", info.Package)
+	}
+	if info.Version != "1.7.0-1" {
+		t.Errorf("Version: got %q", info.Version)
+	}
+	if info.Architecture != "arm64" {
+		t.Errorf("Architecture: got %q", info.Architecture)
+	}
+	if info.Depends != "libc6, adduser, daemon" {
+		t.Errorf("Depends: got %q", info.Depends)
+	}
+	// Multiline Description must survive the zstd path like the gzip path.
+	if !strings.Contains(info.Description, "Collects machine metrics") {
+		t.Errorf("multiline Description not folded: %q", info.Description)
 	}
 }
 

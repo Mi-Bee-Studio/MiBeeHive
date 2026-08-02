@@ -6,6 +6,7 @@ require (
 	github.com/docker/docker v27.5.1+incompatible
 	github.com/docker/go-connections v0.5.0
 	github.com/golang-jwt/jwt/v5 v5.3.1
+	github.com/klauspost/compress v1.19.1
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/prometheus/client_golang v1.23.2
 	github.com/ulikunitz/xz v0.5.12

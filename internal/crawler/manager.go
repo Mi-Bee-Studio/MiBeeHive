@@ -58,6 +58,10 @@ type CrawlManager struct {
 	// manager uses the legacy Scheduler.GetCrawler path.
 	fetchFunc FetchFunc
 
+	// retryCfg is the resolved per-crawl retry/timeout policy (built from config
+	// in NewCrawlManager). See internal/crawler/retry.go.
+	retryCfg retryConfig
+
 	// Per-project crawl locks to prevent concurrent crawls of the same project.
 	crawlMu sync.Map // string -> *sync.Mutex
 }
@@ -77,7 +81,28 @@ func NewCrawlManager(db *sql.DB, fileService *service.FileService, cfg *config.C
 		config:      cfg,
 		logger:      logger,
 		metrics:     m,
+		retryCfg:    retryConfigFromCfg(cfg),
 	}
+}
+
+// retryConfigFromCfg translates the config.CrawlerConfig knobs into a resolved
+// retry policy. Missing/zero values fall back to safe defaults so a partial or
+// old config still enables retry+timeout (the whole point of #23).
+func retryConfigFromCfg(cfg *config.Config) retryConfig {
+	if cfg == nil {
+		return defaultRetryConfig()
+	}
+	rc := retryConfig{sleeper: sleepContext}
+	if d, err := time.ParseDuration(cfg.Crawler.FetchTimeout); err == nil && d > 0 {
+		rc.timeout = d
+	}
+	if cfg.Crawler.MaxRetries > 0 {
+		rc.maxRetries = cfg.Crawler.MaxRetries
+	}
+	if d, err := time.ParseDuration(cfg.Crawler.RetryInitialBackoff); err == nil && d > 0 {
+		rc.initialBackoff = d
+	}
+	return rc
 }
 
 // Start begins scheduled crawling for all enabled projects from the database.
@@ -207,29 +232,35 @@ func (m *CrawlManager) resolveCrawlSetup(ctx context.Context, projectName string
 // Routing: when the new two-track fetchFunc is set (SetFetchFunc), it is used;
 // otherwise the legacy Scheduler crawler (crwl) is used. This is the incremental
 // migration seam (design Step 3).
+//
+// The fetch is run through fetchWithRetry so transient errors (timeout,
+// connection reset, 5xx) are retried with bounded backoff, the whole fetch is
+// bounded by a per-crawl timeout, and the final error is classified into one
+// of: rate_limited, network_error (transient, after retries), or error
+// (permanent upstream/config problem). This lets operators distinguish a
+// flaky-network moment from a genuinely broken source (#23).
 func (m *CrawlManager) fetchReleases(ctx context.Context, proj *dbrepo.Project, crwl Crawler, logID int64, projectName string) ([]model.ReleaseAsset, *model.CrawlResult, error) {
-	var releases []model.ReleaseAsset
-	var err error
 	crawlerName := ""
 	if crwl != nil {
 		crawlerName = crwl.Name()
 	}
 
-	if m.fetchFunc != nil {
-		// New two-track path: hand off name/type/params to the Registry.
-		releases, err = m.fetchFunc(ctx, projectName, proj.SourceType, m.getParams(proj))
-		crawlerName = "registry:" + proj.SourceType
-	} else {
+	// fetchOnce is the single-attempt fetch for either routing path. It closes
+	// over which path is active so fetchWithRetry can retry it uniformly.
+	fetchOnce := func(fctx context.Context) ([]model.ReleaseAsset, error) {
+		if m.fetchFunc != nil {
+			crawlerName = "registry:" + proj.SourceType
+			return m.fetchFunc(fctx, projectName, proj.SourceType, m.getParams(proj))
+		}
 		// Legacy path.
 		owner, repo := m.getOwnerRepo(proj)
-		releases, err = crwl.FetchReleases(ctx, owner, repo)
+		return crwl.FetchReleases(fctx, owner, repo)
 	}
+
+	releases, err, class := fetchWithRetry(ctx, m.retryCfg, fetchOnce)
 	if err != nil {
-		status := model.CrawlStatusError
+		status := classToStatus(class)
 		errMsg := err.Error()
-		if isRateLimitError(err) {
-			status = model.CrawlStatusRateLimited
-		}
 		m.logger.Error("crawl failed",
 			"project", projectName,
 			"source_type", proj.SourceType,
@@ -249,6 +280,20 @@ func (m *CrawlManager) fetchReleases(ctx context.Context, proj *dbrepo.Project, 
 		}, err
 	}
 	return releases, nil, nil
+}
+
+// classToStatus maps a retry error class to the crawl status persisted to the DB
+// and emitted as a metric label. network_error is distinct from error so a
+// transient (post-retry) failure is distinguishable from a permanent one.
+func classToStatus(class errorClass) model.CrawlStatus {
+	switch class {
+	case classRateLimit:
+		return model.CrawlStatusRateLimited
+	case classTransient:
+		return model.CrawlStatusNetworkError
+	default:
+		return model.CrawlStatusError
+	}
 }
 
 // processAssets filters out existing files and downloads new ones.

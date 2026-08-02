@@ -3,10 +3,11 @@ package model
 type CrawlStatus string
 
 const (
-	CrawlStatusRunning     CrawlStatus = "running"
-	CrawlStatusSuccess     CrawlStatus = "success"
-	CrawlStatusError       CrawlStatus = "error"
-	CrawlStatusRateLimited CrawlStatus = "rate_limited"
+	CrawlStatusRunning       CrawlStatus = "running"
+	CrawlStatusSuccess       CrawlStatus = "success"
+	CrawlStatusError         CrawlStatus = "error"
+	CrawlStatusRateLimited   CrawlStatus = "rate_limited"
+	CrawlStatusNetworkError  CrawlStatus = "network_error" // transient fetch failure after retries (timeout, reset, 5xx)
 )
 
 type CrawlLog struct {

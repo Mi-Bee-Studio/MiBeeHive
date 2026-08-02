@@ -19,6 +19,11 @@ auth:
 crawler:
   max_concurrent: 2
   default_interval: "6h"
+  # Issue #23: transient network errors (timeout, connection reset, 5xx) are
+  # retried before being marked failed; one slow source can't hang a crawl cycle.
+  fetch_timeout: "60s"          # per-source deadline for the whole fetch+retry
+  max_retries: 3                # retries on transient errors (4xx/rate-limited never retry)
+  retry_initial_backoff: "2s"   # base delay; later retries back off ×2 with jitter
 # Monitor settings for system stats sampling and disk monitoring.
 monitor:
   sample_interval: 30       # seconds between system stat samples

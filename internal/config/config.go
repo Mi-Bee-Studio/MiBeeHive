@@ -99,6 +99,18 @@ func (a *AuthConfig) IsDefaultPassword() bool {
 type CrawlerConfig struct {
 	MaxConcurrent   int    `yaml:"max_concurrent"`
 	DefaultInterval string `yaml:"default_interval"`
+
+	// FetchTimeout bounds a single source's fetch+parse so one slow/hung source
+	// can't stall a crawl cycle. Parses as a Go duration; "0" disables it (then
+	// the shared HTTP client's 30s overall timeout is the only bound). Default "60s".
+	FetchTimeout string `yaml:"fetch_timeout"`
+	// MaxRetries is how many times a transient fetch error (timeout, connection
+	// reset, 5xx) is retried with exponential backoff before being marked failed.
+	// Non-transient errors (4xx, config, rate-limited) are never retried. Default 3.
+	MaxRetries int `yaml:"max_retries"`
+	// RetryInitialBackoff is the base delay before the first retry; subsequent
+	// retries back off exponentially (×2, with light jitter). Default "2s".
+	RetryInitialBackoff string `yaml:"retry_initial_backoff"`
 }
 
 // MonitorConfig holds system monitoring settings.
@@ -187,8 +199,11 @@ func DefaultConfig() *Config {
 			// middleware skips the iat check).
 		},
 		Crawler: CrawlerConfig{
-			MaxConcurrent:   2,
-			DefaultInterval: "6h",
+			MaxConcurrent:      2,
+			DefaultInterval:    "6h",
+			FetchTimeout:       "60s",
+			MaxRetries:         3,
+			RetryInitialBackoff: "2s",
 		},
 		Monitor: MonitorConfig{
 			SampleInterval:      30,
@@ -412,6 +427,21 @@ func (c *Config) Validate() error {
 	}
 	if _, err := time.ParseDuration(c.Crawler.DefaultInterval); err != nil {
 		return fmt.Errorf("invalid crawler default_interval %q: %w", c.Crawler.DefaultInterval, err)
+	}
+	if c.Crawler.FetchTimeout == "" {
+		c.Crawler.FetchTimeout = "60s"
+	}
+	if _, err := time.ParseDuration(c.Crawler.FetchTimeout); err != nil {
+		return fmt.Errorf("invalid crawler fetch_timeout %q: %w", c.Crawler.FetchTimeout, err)
+	}
+	if c.Crawler.RetryInitialBackoff == "" {
+		c.Crawler.RetryInitialBackoff = "2s"
+	}
+	if _, err := time.ParseDuration(c.Crawler.RetryInitialBackoff); err != nil {
+		return fmt.Errorf("invalid crawler retry_initial_backoff %q: %w", c.Crawler.RetryInitialBackoff, err)
+	}
+	if c.Crawler.MaxRetries < 0 {
+		return fmt.Errorf("crawler max_retries must be >= 0")
 	}
 	// Validate monitor config
 	if c.Monitor.RetentionDays <= 0 {

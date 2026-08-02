@@ -34,6 +34,10 @@ type File struct {
 	CreatedAt     time.Time
 	RetryCount    int
 	LastAttemptAt *time.Time
+	SourceType    string
+	Category      string
+	StorageSubdir string
+	PublicToken   string
 }
 
 // CrawlLog records a crawl attempt for a project.

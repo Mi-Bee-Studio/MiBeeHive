@@ -2555,6 +2555,40 @@ a:focus-visible,
 
   /* Search input: full width */
   .search-input { width: 100%; }
+
+  /* View manager: stack panels vertically */
+  .view-manager-layout {
+    flex-direction: column;
+  }
+
+  .view-manager-tree,
+  .view-manager-detail {
+    width: 100%;
+  }
+
+  /* Bulk bar: fixed to bottom with horizontal scroll */
+  .bulk-bar {
+    position: fixed;
+    bottom: 3.5rem;
+    left: 0;
+    right: 0;
+    background: var(--color-bg);
+    border-top: 1px solid var(--color-border);
+    padding: var(--space-sm) var(--space-md);
+    z-index: calc(var(--z-overlay) - 1);
+  }
+
+  .bulk-bar .bulk-actions {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    display: flex;
+    gap: var(--space-sm);
+  }
+
+  .bulk-bar .bulk-actions::-webkit-scrollbar {
+    display: none;
+  }
+  .search-input { width: 100%; }
 }
 
 @media (max-width: 1024px) {
@@ -2597,6 +2631,59 @@ a:focus-visible,
   }
 
   .token-edit-form {
+    flex-wrap: wrap;
+  }
+
+  /* Table → card transformation for file center */
+  .table-wrap {
+    display: block;
+  }
+
+  .table-wrap thead {
+    display: none;
+  }
+
+  .table-wrap tbody tr {
+    display: block;
+    margin-bottom: var(--space-md);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-md);
+    background: var(--color-surface);
+  }
+
+  .table-wrap tbody td {
+    display: block;
+    padding: var(--space-sm) 0;
+    text-align: left;
+    border-bottom: 1px solid var(--color-border-subtle);
+  }
+
+  .table-wrap tbody td:last-child {
+    border-bottom: none;
+  }
+
+  .table-wrap tbody td::before {
+    content: attr(data-label);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-text-secondary);
+    display: block;
+    margin-bottom: var(--space-2xs);
+    font-size: var(--font-size-sm);
+  }
+
+  /* Drawer → full-screen sheet */
+  .drawer-panel {
+    width: 100%;
+    height: 100vh;
+    border-radius: 0;
+    max-width: none;
+  }
+
+  .drawer-overlay {
+    position: fixed;
+    inset: 0;
+  }
     flex-wrap: wrap;
   }
 }

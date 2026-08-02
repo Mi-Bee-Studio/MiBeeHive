@@ -86,7 +86,7 @@ func main() {
 	flag.Parse()
 
 	cfg := loadConfig(*configPath)
-	database := initDatabase(cfg)
+	database, readDB := initDatabase(cfg)
 	defer db.Close(database)
 	// Backfill empty versions from filenames (one-time migration, idempotent).
 	if n, err := db.NewFileRepo(database).BackfillEmptyVersions(context.Background()); err != nil {
@@ -99,7 +99,7 @@ func main() {
 	quit := make(chan os.Signal, 1)
 	requestShutdown := func() { quit <- syscall.SIGTERM }
 
-	svcs := initServices(cfg, database)
+	svcs := initServices(cfg, database, readDB)
 	handlers := initHandlers(cfg, svcs, database, *configPath, requestShutdown)
 	httpHandler, httpsHandler := buildRouter(cfg, handlers, svcs, database)
 

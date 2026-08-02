@@ -35,6 +35,10 @@ import (
 
 // appServices holds all initialized services, repositories, and background task handles.
 type appServices struct {
+	// Database pools
+	readDB *sql.DB
+
+	// Metrics
 	// Metrics
 	appMetrics *metrics.Metrics
 
@@ -179,8 +183,10 @@ func loadConfig(configPath string) *config.Config {
 	return cfg
 }
 
-// initDatabase opens the SQLite database and runs pending migrations.
-func initDatabase(cfg *config.Config) *sql.DB {
+// initDatabase opens the SQLite database (write + read pools) and runs pending
+// migrations. It returns the write pool for backward compatibility and the
+// read pool for concurrent read workloads.
+func initDatabase(cfg *config.Config) (*sql.DB, *sql.DB) {
 	database, err := db.Open(cfg.Database.Path)
 	if err != nil {
 		slog.Error("failed to open database", "error", err)
@@ -191,15 +197,35 @@ func initDatabase(cfg *config.Config) *sql.DB {
 		slog.Error("failed to migrate database", "error", err)
 		os.Exit(1)
 	}
+
+	// Verify WAL journal mode is active.
+	var journalMode string
+	if err := database.QueryRow("PRAGMA journal_mode").Scan(&journalMode); err != nil {
+		slog.Error("failed to verify journal_mode", "error", err)
+		os.Exit(1)
+	}
+	if journalMode != "wal" {
+		slog.Error("journal_mode is not wal", "mode", journalMode)
+		os.Exit(1)
+	}
+	slog.Info("database pragmas verified", "journal_mode", journalMode)
+
+	readDB, err := db.OpenReadDB(cfg.Database.Path)
+	if err != nil {
+		slog.Error("failed to open read database", "error", err)
+		os.Exit(1)
+	}
+
 	slog.Info("database initialized", "path", cfg.Database.Path)
 
-	return database
+	return database, readDB
 }
 
 // initServices creates all repositories, services, and starts background goroutines
 // that need to run before HTTP handlers are registered.
-func initServices(cfg *config.Config, database *sql.DB) *appServices {
+func initServices(cfg *config.Config, database *sql.DB, readDB *sql.DB) *appServices {
 	s := &appServices{}
+	s.readDB = readDB
 
 	// Initialize Prometheus metrics.
 	s.appMetrics = metrics.NewMetrics()

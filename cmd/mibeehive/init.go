@@ -110,8 +110,8 @@ type appHandlers struct {
 	supply        *supply.Handler    // public ops-tool supply endpoints (#3)
 	aptRepo       *supply.AptHandler // public APT repository over /apt/ (deb supply)
 	pypiRepo      *supply.PyPIHandler // public PyPI Simple repository over /simple/ (#24)
+	download      *handler.DownloadHandler // public file download by token
 }
-
 // loadConfig initializes the logger, loads or generates the config file,
 // and sets up log rotation via lumberjack.
 func loadConfig(configPath string) *config.Config {
@@ -508,6 +508,9 @@ func initHandlers(cfg *config.Config, svcs *appServices, database *sql.DB, confi
 		h.registry = handler.NewRegistryHandler(svcs.registrySvc, svcs.syncSvc, svcs.retentionSvc, true)
 	}
 
+	// Download handler: public file download by public_token (no auth).
+	h.download = handler.NewDownloadHandler(database, cfg.Storage.BasePath)
+
 	return h
 }
 
@@ -531,6 +534,8 @@ func buildRouter(cfg *config.Config, h *appHandlers, svcs *appServices, database
 	// File download route (public — does its own JWT validation from header or ?token= query param).
 	mux.HandleFunc("GET /api/v1/files/{id}/download", h.file.Download)
 
+	// Public file download by token (no auth — token-based access).
+	mux.HandleFunc("GET "+model.RouteFileDownloadByToken, h.download.ServeDownload)
 	// Public ISO endpoints (list is public, download does its own JWT validation).
 	mux.HandleFunc("GET "+model.RouteISOsList, h.iso.PublicListISOs)
 	mux.HandleFunc("GET "+model.RouteISODownload, h.iso.DownloadISO)

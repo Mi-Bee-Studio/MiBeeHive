@@ -131,4 +131,13 @@ const (
 	RouteShareLinkCreate  = "/api/v1/admin/share-links"
 	RouteShareLinkRevoke = "/api/v1/admin/share-links/{token}"
 	RouteShareDownload   = "GET /s/{token}"
+	// Virtual index admin (channels, views, nodes)
+	RouteChannels = "/api/v1/admin/channels"
+	RouteChannelGet = "/api/v1/admin/channels/{id}"
+	RouteViews = "/api/v1/admin/channels/{channel_id}/views"
+	RouteViewGet = "/api/v1/admin/views/{id}"
+	RouteViewTree = "/api/v1/admin/views/{view_id}/tree"
+	RouteNodes = "/api/v1/admin/views/{view_id}/nodes"
+	RouteNodeUpdate = "/api/v1/admin/nodes/{id}"
+	RouteNodeDelete = "/api/v1/admin/nodes/{id}"
 )

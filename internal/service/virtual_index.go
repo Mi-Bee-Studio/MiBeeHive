@@ -96,6 +96,12 @@ func (s *VirtualIndexService) ListViewsByChannel(ctx context.Context, channelID 
 	return s.repo.ListViewsByChannel(ctx, channelID)
 }
 
+// GetView returns a view by ID, or nil if not found.
+func (s *VirtualIndexService) GetView(ctx context.Context, id int64) (*db.View, error) {
+	return s.repo.GetView(ctx, id)
+}
+
+
 // --- Nodes ---
 
 // CreateNode creates a node. Emits NodeTreeChanged, and additionally

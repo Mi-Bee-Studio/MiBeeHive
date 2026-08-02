@@ -29,6 +29,7 @@ import (
 	"github.com/Mi-Bee-Studio/mibeehive/internal/service"
 	"github.com/Mi-Bee-Studio/mibeehive/internal/source"
 	"github.com/Mi-Bee-Studio/mibeehive/internal/supply"
+	"github.com/Mi-Bee-Studio/mibeehive/internal/eventbus"
 	webdavpkg "github.com/Mi-Bee-Studio/mibeehive/internal/webdav"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
@@ -78,6 +79,10 @@ type appServices struct {
 	// Storage resolver
 	storageResolver *service.StorageResolver
 	migrationSvc    *service.MigrationService
+	// Virtual index
+	virtualIndexSvc *service.VirtualIndexService
+	// Event bus
+	eventbus       *eventbus.Bus
 	// Cancel funcs for background goroutines started during init
 	diskCancel     context.CancelFunc
 	retryCancel    context.CancelFunc
@@ -115,6 +120,7 @@ type appHandlers struct {
 	adminInternal *handler.AdminInternalHandler // admin-only internal file details (exposes local_path)
 	fileCenter   *handler.FileCenterHandler // cross-project file listing with filtering
 	cacheMetrics  *handler.CacheMetricsHandler // admin cache metrics endpoint
+	virtualAdmin  *handler.VirtualAdminHandler // virtual index admin API
 	}
 // loadConfig initializes the logger, loads or generates the config file,
 // loadConfig initializes the logger, loads or generates the config file,
@@ -468,6 +474,15 @@ func initServices(cfg *config.Config, database *sql.DB, readDB *sql.DB) *appServ
 		slog.Info("remote registry management disabled")
 	}
 
+	// Initialize event bus for virtual index events.
+	s.eventbus = eventbus.NewBus(100)
+	// Initialize virtual index service.
+	virtualRepo := db.NewVirtualRepo(database)
+	s.virtualIndexSvc = service.NewVirtualIndexService(virtualRepo, s.eventbus, logger)
+	slog.Info("virtual index service initialized")
+
+	return s
+
 	return s
 }
 
@@ -522,9 +537,10 @@ func initHandlers(cfg *config.Config, svcs *appServices, database *sql.DB, confi
 	h.cacheMetrics = handler.NewCacheMetricsHandler()
 	// File center handler: cross-project file listing with filtering (requires auth).
 	h.fileCenter = handler.NewFileCenterHandler(svcs.readDB)
-	
-	h.download = handler.NewDownloadHandler(database, cfg.Storage.BasePath)
+	// Virtual index admin handler.
+	h.virtualAdmin = handler.NewVirtualAdminHandler(svcs.virtualIndexSvc)
 
+	return h
 	return h
 }
 
@@ -687,6 +703,21 @@ func buildRouter(cfg *config.Config, h *appHandlers, svcs *appServices, database
 	// Dashboard summary (admin).
 	apiMux.HandleFunc("GET "+model.RouteAdminDashboardSummary, h.dashboard.Summary)
 	apiMux.HandleFunc("GET "+model.RouteAdminCacheMetrics, h.cacheMetrics.CacheMetrics)
+	// Virtual index admin routes.
+	apiMux.HandleFunc("POST "+model.RouteChannels, h.virtualAdmin.CreateChannel)
+	apiMux.HandleFunc("GET "+model.RouteChannels, h.virtualAdmin.ListChannels)
+	apiMux.HandleFunc("GET "+model.RouteChannelGet, h.virtualAdmin.GetChannel)
+	apiMux.HandleFunc("PUT "+model.RouteChannelGet, h.virtualAdmin.UpdateChannel)
+	apiMux.HandleFunc("DELETE "+model.RouteChannelGet, h.virtualAdmin.DeleteChannel)
+	apiMux.HandleFunc("POST "+model.RouteViews, h.virtualAdmin.CreateView)
+	apiMux.HandleFunc("GET "+model.RouteViews, h.virtualAdmin.ListViews)
+	apiMux.HandleFunc("GET "+model.RouteViewGet, h.virtualAdmin.GetView)
+	apiMux.HandleFunc("PUT "+model.RouteViewGet, h.virtualAdmin.UpdateView)
+	apiMux.HandleFunc("DELETE "+model.RouteViewGet, h.virtualAdmin.DeleteView)
+	apiMux.HandleFunc("POST "+model.RouteNodes, h.virtualAdmin.CreateNode)
+	apiMux.HandleFunc("GET "+model.RouteViewTree, h.virtualAdmin.GetViewTree)
+	apiMux.HandleFunc("PUT "+model.RouteNodeUpdate, h.virtualAdmin.UpdateNode)
+	apiMux.HandleFunc("DELETE "+model.RouteNodeDelete, h.virtualAdmin.DeleteNode)
 
 	// Registry management routes (admin).
 	if h.registry != nil {

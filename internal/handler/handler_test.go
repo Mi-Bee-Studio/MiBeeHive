@@ -50,23 +50,21 @@ func seedTestData(t *testing.T, database *sql.DB) {
 	}
 
 	// Insert files for the project.
-	files := []struct {
+	for _, f := range []struct {
 		version, filename, os, arch, ext, downloadURL, localPath, checksum, status string
 	}{
 		{"2.50.0", "prometheus-2.50.0.linux-arm64.tar.gz", "linux", "arm64", ".tar.gz", "https://example.com/p1.tar.gz", "/tmp/p1.tar.gz", "abc123", "complete"},
 		{"2.50.0", "prometheus-2.50.0.darwin-amd64.tar.gz", "darwin", "amd64", ".tar.gz", "https://example.com/p2.tar.gz", "/tmp/p2.tar.gz", "def456", "complete"},
 		{"2.49.0", "prometheus-2.49.0.linux-arm64.tar.gz", "linux", "arm64", ".tar.gz", "https://example.com/p3.tar.gz", "/tmp/p3.tar.gz", "ghi789", "pending"},
-	}
-	for _, f := range files {
-		_, err := database.Exec(`INSERT INTO files (project_id, version, filename, os, arch, ext, size_bytes, download_url, local_path, checksum, status)
-			VALUES (1, ?, ?, ?, ?, ?, 1024, ?, ?, ?, ?)`,
-			f.version, f.filename, f.os, f.arch, f.ext, f.downloadURL, f.localPath, f.checksum, f.status)
+	} {
+		_, err := database.Exec(`INSERT INTO files (project_id, version, filename, os, arch, ext, size_bytes, download_url, local_path, checksum, status, source_type, category, storage_subdir, public_token)
+			VALUES (1, ?, ?, ?, ?, ?, 1024, ?, ?, ?, ?, 'github', 'ops', 'oss', ?)`,
+			f.version, f.filename, f.os, f.arch, f.ext, f.downloadURL, f.localPath, f.checksum, f.status, f.filename+"-token")
 		if err != nil {
 			t.Fatalf("failed to seed file: %v", err)
 		}
 	}
 }
-
 // validTestToken returns a valid JWT token string for testing.
 // Reuses generateTestToken from auth_test.go (same package).
 func validTestToken() string {

@@ -113,6 +113,7 @@ type appHandlers struct {
 	download      *handler.DownloadHandler // public file download by token
 	shareLink     *handler.ShareLinkHandler // share link admin and public download
 	adminInternal *handler.AdminInternalHandler // admin-only internal file details (exposes local_path)
+	fileCenter   *handler.FileCenterHandler // cross-project file listing with filtering
 	cacheMetrics  *handler.CacheMetricsHandler // admin cache metrics endpoint
 	}
 // loadConfig initializes the logger, loads or generates the config file,
@@ -519,6 +520,8 @@ func initHandlers(cfg *config.Config, svcs *appServices, database *sql.DB, confi
 	// Admin-only internal file details endpoint (exposes physical local_path).
 	h.adminInternal = handler.NewAdminInternalHandler(svcs.readDB)
 	h.cacheMetrics = handler.NewCacheMetricsHandler()
+	// File center handler: cross-project file listing with filtering (requires auth).
+	h.fileCenter = handler.NewFileCenterHandler(svcs.readDB)
 	
 	h.download = handler.NewDownloadHandler(database, cfg.Storage.BasePath)
 
@@ -646,6 +649,7 @@ func buildRouter(cfg *config.Config, h *appHandlers, svcs *appServices, database
 	// File management routes (admin).
 	apiMux.HandleFunc("POST "+model.RouteAdminFileRetry, h.file.Retry)
 	apiMux.HandleFunc("GET "+model.RouteFileInternal, h.adminInternal.GetFileInternal)
+	apiMux.HandleFunc("GET "+model.RouteFiles, h.fileCenter.ServeFileCenter)
 	// File management routes (admin).
 	apiMux.HandleFunc("POST "+model.RouteAdminFileRetry, h.file.Retry)
 	// Share link routes (admin).

@@ -107,3 +107,22 @@ type Node struct {
 	Status     string
 	CreatedAt  time.Time
 }
+
+// FileSummaryDTO is a lightweight file representation for the file center API.
+// Excludes sensitive paths (local_path, storage_subdir) but includes public_token.
+type FileSummaryDTO struct {
+	ID          int64  `json:"id"`
+	ProjectID   int64  `json:"project_id"`
+	Version     string `json:"version"`
+	Filename    string `json:"filename"`
+	OS          string `json:"os"`
+	Arch        string `json:"arch"`
+	SizeBytes   int64  `json:"size_bytes"`
+	SourceType  string `json:"source_type"`
+	Category    string `json:"category"`
+	PublicToken string `json:"public_token"`
+	Status      string `json:"status"`
+	DownloadURL string `json:"download_url"`
+	Checksum    string `json:"checksum"`
+	CreatedAt   string `json:"created_at"`
+}

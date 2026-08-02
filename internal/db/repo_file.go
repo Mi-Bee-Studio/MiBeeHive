@@ -477,3 +477,128 @@ func (r *FileRepo) FindByLocalPath(ctx context.Context, localPath string) (*File
 	}
 	return f, nil
 }
+
+// FileFilters holds filter criteria for cross-project file listing.
+type FileFilters struct {
+	ProjectID  *int64  // numeric project_id (nil = no filter)
+	ProjectName string // project name (empty = no filter)
+	Version    string // exact version match (empty = no filter)
+	OS         string // exact OS match (empty = no filter)
+	Arch       string // exact arch match (empty = no filter)
+	Category   string // exact category match (empty = no filter)
+	SourceType string // exact source_type match (empty = no filter)
+	Keyword    string // searches filename OR version with LIKE (empty = no filter)
+}
+
+// ListFilesCrossProject returns files with server-side filtering, sorting, and pagination.
+// Builds WHERE clause dynamically based on non-empty filter values.
+func (r *FileRepo) ListFilesCrossProject(ctx context.Context, filters FileFilters, sortField, sortOrder string, limit, offset int) ([]*FileSummaryDTO, int, error) {
+	// Build WHERE clause and args dynamically.
+	whereClauses := []string{}
+	args := []any{}
+
+	if filters.ProjectID != nil {
+		whereClauses = append(whereClauses, "project_id = ?")
+		args = append(args, *filters.ProjectID)
+	} else if filters.ProjectName != "" {
+		// Subquery to find project by name.
+		whereClauses = append(whereClauses, "project_id IN (SELECT id FROM projects WHERE name LIKE ?)")
+		args = append(args, "%"+filters.ProjectName+"%")
+	}
+
+	if filters.Version != "" {
+		whereClauses = append(whereClauses, "version = ?")
+		args = append(args, filters.Version)
+	}
+
+	if filters.OS != "" {
+		whereClauses = append(whereClauses, "os = ?")
+		args = append(args, filters.OS)
+	}
+
+	if filters.Arch != "" {
+		whereClauses = append(whereClauses, "arch = ?")
+		args = append(args, filters.Arch)
+	}
+
+	if filters.Category != "" {
+		whereClauses = append(whereClauses, "category = ?")
+		args = append(args, filters.Category)
+	}
+
+	if filters.SourceType != "" {
+		whereClauses = append(whereClauses, "source_type = ?")
+		args = append(args, filters.SourceType)
+	}
+
+	if filters.Keyword != "" {
+		whereClauses = append(whereClauses, "(filename LIKE ? OR version LIKE ?)")
+		args = append(args, "%"+filters.Keyword+"%", "%"+filters.Keyword+"%")
+	}
+
+	// Build full query.
+	selectCols := `id, project_id, version, filename, os, arch, size_bytes, download_url, checksum, status, COALESCE(source_type,''), COALESCE(category,''), COALESCE(public_token,''), created_at`
+	query := "SELECT " + selectCols + " FROM files"
+	if len(whereClauses) > 0 {
+		query += " WHERE " + strings.Join(whereClauses, " AND ")
+	}
+
+	// Validate and normalize sort field.
+	allowedSortFields := map[string]bool{
+		"filename":    true,
+		"version":     true,
+		"size_bytes":  true,
+		"created_at":  true,
+		"status":      true,
+	}
+	if !allowedSortFields[sortField] {
+		sortField = "created_at" // default
+	}
+
+	// Validate and normalize sort order.
+	if sortOrder != "asc" && sortOrder != "desc" {
+		sortOrder = "desc" // default
+	}
+	query += fmt.Sprintf(" ORDER BY %s %s", sortField, sortOrder)
+
+	// Count total matching rows.
+	countQuery := "SELECT COUNT(*) FROM files"
+	if len(whereClauses) > 0 {
+		countQuery += " WHERE " + strings.Join(whereClauses, " AND ")
+	}
+	var total int
+	err := r.db.QueryRowContext(ctx, countQuery, args...).Scan(&total)
+	if err != nil {
+		return nil, 0, fmt.Errorf("counting files: %w", err)
+	}
+
+	// Query with pagination.
+	query += " LIMIT ? OFFSET ?"
+	args = append(args, limit, offset)
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("listing files: %w", err)
+	}
+	defer rows.Close()
+
+	var results []*FileSummaryDTO
+	for rows.Next() {
+		var f FileSummaryDTO
+		err := rows.Scan(
+			&f.ID, &f.ProjectID, &f.Version, &f.Filename, &f.OS, &f.Arch,
+			&f.SizeBytes, &f.DownloadURL, &f.Checksum, &f.Status,
+			&f.SourceType, &f.Category, &f.PublicToken, &f.CreatedAt,
+		)
+		if err != nil {
+			return nil, 0, fmt.Errorf("scanning file: %w", err)
+		}
+		results = append(results, &f)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("iterating files: %w", err)
+	}
+
+	return results, total, nil
+}

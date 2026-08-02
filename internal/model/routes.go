@@ -66,6 +66,7 @@ const (
 	// File management (admin)
 	// File management (admin)
 	RouteAdminFileRetry = "/api/v1/admin/files/{id}/retry"
+	RouteFiles = "/api/v1/admin/files"
 	RouteFileInternal  = "/api/v1/admin/files/{id}/internal"
 	RouteHealth         = "GET /health"
 	RouteMetrics        = "GET /metrics"

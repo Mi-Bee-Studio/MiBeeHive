@@ -53,6 +53,9 @@ type FileResponse struct {
 	Status       FileStatus `json:"status"`
 	ErrorMessage string     `json:"error_message"`
 	CreatedAt    string     `json:"created_at"`
+	PublicToken  string     `json:"public_token"`
+	SourceType   string     `json:"source_type"`
+	Category     string     `json:"category"`
 }
 
 type SystemInfoResponse struct {

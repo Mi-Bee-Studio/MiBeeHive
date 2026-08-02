@@ -69,3 +69,41 @@ type SourceCredential struct {
 	CreatedAt  string `json:"created_at"`
 	UpdatedAt  string `json:"updated_at"`
 }
+
+// Channel represents a distribution channel in the virtual index (public,
+// internal, token).
+type Channel struct {
+	ID          int64
+	Slug        string
+	Name        string
+	AuthMode    string
+	Description string
+	CreatedAt   time.Time
+}
+
+// View represents a logical directory tree within a channel.
+type View struct {
+	ID        int64
+	Slug      string
+	Name      string
+	ChannelID int64
+	Mode      string
+	Writable  bool
+	SortOrder int
+	CreatedAt time.Time
+}
+
+// Node represents a node in the virtual tree (folder, file reference, or
+// rule folder). Status is 'visible' or 'hidden' (soft-deleted).
+type Node struct {
+	ID         int64
+	ViewID     int64
+	ParentID   *int64
+	Name       string
+	NodeType   string
+	FileID     *int64
+	RuleConfig *string
+	SortOrder  int
+	Status     string
+	CreatedAt  time.Time
+}

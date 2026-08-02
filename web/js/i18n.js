@@ -886,7 +886,12 @@ const I18N = {
   "stats.virtual_index": "虚拟索引",
   "stats.virtual_index_count": "频道数",
   "stats.share_links": "分享链接",
-  "stats.share_links_count": "活跃链接"
+  "stats.share_links_count": "活跃链接",
+  ext_service_title: "对外服务台",
+  ext_service_tab_channels: "渠道与视图",
+  ext_service_tab_upload: "手动上传",
+  ext_service_tab_links: "分享链接",
+  ext_service_tab_endpoints: "协议端点",
 },
   en: {
   app_name: "MiBeeHive",
@@ -1760,7 +1765,12 @@ const I18N = {
   "stats.virtual_index": "Virtual Index",
   "stats.virtual_index_count": "Channels",
   "stats.share_links": "Share Links",
-  "stats.share_links_count": "Active Links"
+  "stats.share_links_count": "Active Links",
+  ext_service_title: "External Service Hub",
+  ext_service_tab_channels: "Channels & Views",
+  ext_service_tab_upload: "Manual Upload",
+  ext_service_tab_links: "Share Links",
+  ext_service_tab_endpoints: "Protocol Endpoints",
 }
 };
 let currentLang = localStorage.getItem('mibeehive_lang') || 'zh';

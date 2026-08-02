@@ -140,4 +140,7 @@ const (
 	RouteNodes = "/api/v1/admin/views/{view_id}/nodes"
 	RouteNodeUpdate = "/api/v1/admin/nodes/{id}"
 	RouteNodeDelete = "/api/v1/admin/nodes/{id}"
+	// Tool catalog
+	RouteToolCatalog       = "/api/v1/admin/tool-catalog"
+	RouteToolCatalogEnable = "/api/v1/admin/tool-catalog/{slug}/enable"
 )

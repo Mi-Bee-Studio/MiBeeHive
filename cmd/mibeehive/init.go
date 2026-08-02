@@ -121,6 +121,7 @@ type appHandlers struct {
 	fileCenter   *handler.FileCenterHandler // cross-project file listing with filtering
 	cacheMetrics  *handler.CacheMetricsHandler // admin cache metrics endpoint
 	virtualAdmin  *handler.VirtualAdminHandler // virtual index admin API
+	toolCatalog   *handler.ToolCatalogHandler // built-in tool catalog + one-click enable
 	}
 // loadConfig initializes the logger, loads or generates the config file,
 // loadConfig initializes the logger, loads or generates the config file,
@@ -539,6 +540,8 @@ func initHandlers(cfg *config.Config, svcs *appServices, database *sql.DB, confi
 	h.fileCenter = handler.NewFileCenterHandler(svcs.readDB)
 	// Virtual index admin handler.
 	h.virtualAdmin = handler.NewVirtualAdminHandler(svcs.virtualIndexSvc)
+	// Tool catalog handler: built-in catalog + one-click enable.
+	h.toolCatalog = handler.NewToolCatalogHandler(service.NewToolCatalogService(), db.NewProjectRepo(database))
 
 	return h
 	return h
@@ -718,6 +721,9 @@ func buildRouter(cfg *config.Config, h *appHandlers, svcs *appServices, database
 	apiMux.HandleFunc("GET "+model.RouteViewTree, h.virtualAdmin.GetViewTree)
 	apiMux.HandleFunc("PUT "+model.RouteNodeUpdate, h.virtualAdmin.UpdateNode)
 	apiMux.HandleFunc("DELETE "+model.RouteNodeDelete, h.virtualAdmin.DeleteNode)
+	// Tool catalog routes (admin).
+	apiMux.HandleFunc("GET "+model.RouteToolCatalog, h.toolCatalog.ListCatalog)
+	apiMux.HandleFunc("POST "+model.RouteToolCatalogEnable, h.toolCatalog.EnableTool)
 
 	// Registry management routes (admin).
 	if h.registry != nil {

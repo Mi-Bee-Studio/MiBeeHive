@@ -63,7 +63,9 @@ const (
 	RouteAdminDashboardSummary      = "/api/v1/admin/dashboard/summary"
 	RouteAdminISOQueueProgress      = "/api/v1/admin/os-install/catalog/progress"
 	// File management (admin)
+	// File management (admin)
 	RouteAdminFileRetry = "/api/v1/admin/files/{id}/retry"
+	RouteFileInternal  = "/api/v1/admin/files/{id}/internal"
 	RouteHealth         = "GET /health"
 	RouteMetrics        = "GET /metrics"
 	// Container management

@@ -112,6 +112,7 @@ type appHandlers struct {
 	pypiRepo      *supply.PyPIHandler // public PyPI Simple repository over /simple/ (#24)
 	download      *handler.DownloadHandler // public file download by token
 	shareLink     *handler.ShareLinkHandler // share link admin and public download
+	adminInternal *handler.AdminInternalHandler // admin-only internal file details (exposes local_path)
 	}
 // loadConfig initializes the logger, loads or generates the config file,
 // loadConfig initializes the logger, loads or generates the config file,
@@ -514,6 +515,8 @@ func initHandlers(cfg *config.Config, svcs *appServices, database *sql.DB, confi
 	h.download = handler.NewDownloadHandler(database, cfg.Storage.BasePath)
 	// Share link handler: admin CRUD + public download.
 	h.shareLink = handler.NewShareLinkHandler(database, svcs.readDB, cfg.Storage.BasePath)
+	// Admin-only internal file details endpoint (exposes physical local_path).
+	h.adminInternal = handler.NewAdminInternalHandler(svcs.readDB)
 	
 	h.download = handler.NewDownloadHandler(database, cfg.Storage.BasePath)
 
@@ -638,6 +641,9 @@ func buildRouter(cfg *config.Config, h *appHandlers, svcs *appServices, database
 	apiMux.HandleFunc("POST "+model.RouteAdminISOCatalogDownloadAll, h.iso.ISOCatalogDownloadAll)
 	apiMux.HandleFunc("GET "+model.RouteAdminISOQueueProgress, h.iso.ISOQueueProgress)
 	apiMux.HandleFunc(model.RouteAdminISOCatalogProfiles, h.iso.ISOCatalogProfiles)
+	// File management routes (admin).
+	apiMux.HandleFunc("POST "+model.RouteAdminFileRetry, h.file.Retry)
+	apiMux.HandleFunc("GET "+model.RouteFileInternal, h.adminInternal.GetFileInternal)
 	// File management routes (admin).
 	apiMux.HandleFunc("POST "+model.RouteAdminFileRetry, h.file.Retry)
 	// Share link routes (admin).

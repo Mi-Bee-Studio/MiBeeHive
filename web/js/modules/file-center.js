@@ -264,16 +264,16 @@ const FileCenter = (function () {
     function renderActions(file) {
       var dlUrl = '/api/v1/files/' + file.public_token + '/download';
       return html`
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2" onClick=${function (e) { e.stopPropagation(); }}>
           <a href=${dlUrl} target="_blank" rel="noopener" title=${t('file_center_download')}
              class="btn btn-icon" aria-label="${t('file_center_download')}"
              dangerouslySetInnerHTML=${{ __html: Helpers.ICONS.download }} />
           <button type="button" class="btn btn-icon" title="${t('file_center_copy_link')}"
                   aria-label="${t('file_center_copy_link')}"
-                  onClick=${function () { copyLink(file); }}
+                  onClick=${function (e) { e.stopPropagation(); copyLink(file); }}
                   dangerouslySetInnerHTML=${{ __html: Helpers.ICONS.link }} />
           <${Components.ActionMenu} items=${[
-            { label: t('file_center_view_details'), onClick: function () { copyLink(file); } },
+            { label: t('file_center_view_details'), onClick: function () { FileDetail.open(file); } },
             { label: t('file_center_copy_link'), onClick: function () { copyLink(file); } },
             { label: t('file_center_download'), onClick: function () { window.open(dlUrl, '_blank'); } },
           ]} />
@@ -318,7 +318,7 @@ const FileCenter = (function () {
             <tbody>
               ${files.map(function (f) {
                 return html`
-                  <tr key=${f.id} data-id=${f.id}>
+                  <tr key=${f.id} data-id=${f.id} style="cursor:pointer" onClick=${function () { FileDetail.open(f); }}>
                     <td style="padding:0.625rem 0.75rem">
                       <div class="flex items-center gap-2" style="min-width:0">
                         <span style="color:var(--color-text-quaternary);flex-shrink:0"

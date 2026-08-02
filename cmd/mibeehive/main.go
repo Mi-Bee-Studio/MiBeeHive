@@ -95,6 +95,11 @@ func main() {
 		slog.Info("version backfill completed", "updated", n)
 	}
 
+	// Backfill public_token for files that predate the column (idempotent).
+	if err := service.BackfillPublicTokens(database); err != nil {
+		slog.Warn("public_token backfill failed", "error", err)
+	}
+
 
 	quit := make(chan os.Signal, 1)
 	requestShutdown := func() { quit <- syscall.SIGTERM }

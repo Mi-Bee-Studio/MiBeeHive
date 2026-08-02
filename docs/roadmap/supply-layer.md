@@ -38,7 +38,7 @@ Collected artifacts should be served to external servers over standard protocols
 |-------|----------|----------|--------|-------|
 | **1** | Software tool repo + ISO repo + Helm repo (`index.yaml`) | Very high | **Low** | Natural extension of current Foraging (files already stored; only index/protocol layout is new). Ship first. |
 | **2** | Go module proxy (`/goproxy/`) | Med-high | Med | `GOPROXY` protocol is clear; `golang` already collected. |
-| **2** | PyPI `/simple` / NPM registry | Med | Med | Common in SOHO IT; pick one first. |
+| **2** | PyPI `/simple` / NPM registry | Med | Med | Common in SOHO IT; pick one first. **PyPI `/simple/` shipped (#24)** — PEP 503 index over collected wheels/sdists, verified with `pip`/`uv`. |
 | **3** | APT / YUM repo layout | High | Med-high | Needs `Packages.gz`/`repomd.xml` metadata; install-scenario-critical but heavier. |
 | **4** | OCI image registry | Very high | **Very heavy** | OCI distribution spec (blob/manifest/content addressing) is complex. Evaluate forwarding to an existing registry vs self-hosting. |
 

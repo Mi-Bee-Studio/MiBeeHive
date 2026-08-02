@@ -472,6 +472,44 @@ Authorization: Bearer <jwt-token>
 /api/v1/isos/ubuntu-22.04/download?token=<jwt-token>
 ```
 
+## 供应端点（公开，无需认证）
+
+MiBeeHive 把采集（采蜜）到的产物通过外部服务器的**原生协议**对外供应，使整个服务器集群能用各自的工具直接消费采集到的 ops 工具，无需专用客户端。这些端点是公开的（无需 JWT），便于外部主机无人值守地拉取。
+
+### GET /repo/index
+**描述**：所有可供应（status=complete）文件的通用 JSON 清单。
+**认证**：无
+**响应**：`{ "count": N, "items": [ { "id", "filename", "version", "size_bytes", "checksum", "download_url": "/repo/files/{id}", ... } ] }`
+
+### GET /repo/files/{id}
+**描述**：按 id 流式下载单个采集产物（通用兜底下载）。
+**认证**：无
+**参数**：`id`（路径）：文件 id
+**响应**：文件下载流
+
+### GET /apt/{rest...}
+**描述**：基于采集到的 `.deb` 构建的 APT 仓库。按需生成
+`dists/{suite}/main/binary-{arch}/Packages[.gz]` 与 `Release`（带缓存、按
+mtime 失效），并提供 pool 下载。外部 Debian/Ubuntu 主机将其加入 apt 源：
+```
+echo "deb http://<host>:9090/apt stable main" | tee /etc/apt/sources.list.d/mibeehive.list
+apt update && apt install <pkg>
+```
+**认证**：无
+
+### GET /simple/{rest...}
+**描述**：基于采集到的 Python wheel/sdist 构建的 PyPI「Simple Repository
+API」（PEP 503）。`GET /simple/` 列出已供应的项目；`GET /simple/<project>/`
+列出该项目的分发包并附带 `#sha256=...` 校验片段。项目名按 PEP 503 归一化
+（`My_Pkg`、`my-pkg`、`my.pkg` 均可匹配）。外部 Python 主机用原生工具安装：
+```
+pip install --index-url http://<host>:9090/simple/ <pkg>
+# 或
+uv pip install --index-url http://<host>:9090/simple/ <pkg>
+```
+**认证**：无
+
+
 ## 公共 PXE 端点（无需认证）
 
 ### GET /pxe/{format}/{name}

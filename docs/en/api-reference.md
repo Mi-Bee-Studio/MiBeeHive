@@ -473,6 +473,49 @@ Authorization: Bearer <jwt-token>
 /api/v1/isos/ubuntu-22.04/download?token=<jwt-token>
 ```
 
+## Supply Endpoints (Public, No Authentication)
+
+MiBeeHive serves the artifacts it collects (the "Foraging" → "Supply" pipeline)
+to external servers over their **native** protocols, so a fleet can consume
+collected tools without bespoke clients. These endpoints are public (no JWT) so
+external hosts can reach them unattended.
+
+### GET /repo/index
+**Description**: Generic JSON manifest of all servable (status=complete) files.
+**Authentication**: None
+**Response**: `{ "count": N, "items": [ { "id", "filename", "version", "size_bytes", "checksum", "download_url": "/repo/files/{id}", ... } ] }`
+
+### GET /repo/files/{id}
+**Description**: Stream a single collected artifact by id (the generic fallback download).
+**Authentication**: None
+**Parameters**: `id` (path): file id
+**Response**: File download stream
+
+### GET /apt/{rest...}
+**Description**: APT repository over collected `.deb` files. Generates
+`dists/{suite}/main/binary-{arch}/Packages[.gz]` + `Release` on demand (cached,
+mtime-invalidated) and serves pool downloads. External Debian/Ubuntu hosts add
+this as an apt source:
+```
+echo "deb http://<host>:9090/apt stable main" | tee /etc/apt/sources.list.d/mibeehive.list
+apt update && apt install <pkg>
+```
+**Authentication**: None
+
+### GET /simple/{rest...}
+**Description**: PyPI "Simple Repository API" (PEP 503) over collected Python
+wheels/sdists. `GET /simple/` lists served projects; `GET /simple/<project>/`
+lists that project's distributions with `#sha256=...` verification fragments.
+Project names are normalized per PEP 503 (`My_Pkg`, `my-pkg`, `my.pkg` all match).
+External Python hosts install from it with native tooling:
+```
+pip install --index-url http://<host>:9090/simple/ <pkg>
+# or
+uv pip install --index-url http://<host>:9090/simple/ <pkg>
+```
+**Authentication**: None
+
+
 ## Public PXE Endpoints (No Authentication)
 
 ### GET /pxe/{format}/{name}

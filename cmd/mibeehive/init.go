@@ -105,6 +105,7 @@ type appHandlers struct {
 	storageConfig *handler.StorageConfigHandler
 	supply        *supply.Handler    // public ops-tool supply endpoints (#3)
 	aptRepo       *supply.AptHandler // public APT repository over /apt/ (deb supply)
+	pypiRepo      *supply.PyPIHandler // public PyPI Simple repository over /simple/ (#24)
 }
 
 // loadConfig initializes the logger, loads or generates the config file,
@@ -453,6 +454,9 @@ func initHandlers(cfg *config.Config, svcs *appServices, database *sql.DB, confi
 	// APT repository: serve collected .deb files as a Debian repo under /apt/.
 	// basePath is where .deb files live on disk (for control-metadata parsing).
 	h.aptRepo = supply.NewAptHandler(db.NewFileRepo(database), svcs.fileService, cfg.Storage.BasePath, "stable")
+	// PyPI Simple repository (#24): serve collected wheels/sdists as a PEP 503
+	// index under /simple/ so external Python hosts can `pip install` from it.
+	h.pypiRepo = supply.NewPyPIHandler(db.NewFileRepo(database), db.NewProjectRepo(database), svcs.fileService)
 	h.crawl = handler.NewCrawlHandler(svcs.crawlManager, db.NewCrawlLogRepo(database), db.NewProjectRepo(database))
 	h.system = handler.NewSystemHandler(database, svcs.fileService, cfg.Storage.BasePath, version, cfg.Monitor.NodeExporterURL)
 	h.osInstall = handler.NewOSInstallHandler(db.NewOsInstallConfigRepo(database), service.NewOsTemplateService(), cfg.Storage.BasePath)
@@ -515,6 +519,12 @@ func buildRouter(cfg *config.Config, h *appHandlers, svcs *appServices, database
 	// external Debian/Ubuntu hosts can `apt update` / `apt install` from it.
 	if h.aptRepo != nil {
 		mux.HandleFunc("GET /apt/{rest...}", h.aptRepo.Serve)
+	}
+	// PyPI Simple repository (#24): PEP 503 index of collected wheels/sdists.
+	// Public (no auth) so external Python hosts can `pip install --index-url
+	// http://<host>/simple/ <pkg>` from it.
+	if h.pypiRepo != nil {
+		mux.HandleFunc("GET /simple/{rest...}", h.pypiRepo.Serve)
 	}
 
 	// API routes (protected by auth middleware).

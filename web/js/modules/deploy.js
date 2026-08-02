@@ -9,10 +9,9 @@ const Deploy = (function () {
   // ── Sub-navigation tabs (shared HTML) ────────────────────────────────
   var DEPLOY_TABS = [
     { hash: '/deploy', i18nKey: 'nav_deploy_configs', tooltipKey: 'tooltip_deploy' },
-    { hash: '/deploy/iso', i18nKey: 'nav_deploy_iso' },
   ];
   function _subNav(active) {
-    return Components.moduleTabs(DEPLOY_TABS, active === 'configs' ? 'nav_deploy_configs' : 'nav_deploy_iso');
+    return Components.moduleTabs(DEPLOY_TABS, 'nav_deploy_configs');
   }
 
   // ── Deploy Component ─────────────────────────────────────────────────

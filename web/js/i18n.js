@@ -830,6 +830,11 @@ const I18N = {
   copy_link: "复制链接",
   file_registry: "文件注册表",
   unified_registry: "统一注册表",
+  "deploy.os_install": "OS 安装配置",
+  "stats.virtual_index": "虚拟索引",
+  "stats.virtual_index_count": "频道数",
+  "stats.share_links": "分享链接",
+  "stats.share_links_count": "活跃链接"
 },
   en: {
   app_name: "MiBeeHive",
@@ -1662,6 +1667,11 @@ const I18N = {
   copy_link: "Copy Link",
   file_registry: "File Registry",
   unified_registry: "Unified Registry",
+  "deploy.os_install": "OS Install Configs",
+  "stats.virtual_index": "Virtual Index",
+  "stats.virtual_index_count": "Channels",
+  "stats.share_links": "Share Links",
+  "stats.share_links_count": "Active Links"
 }
 };
 let currentLang = localStorage.getItem('mibeehive_lang') || 'zh';

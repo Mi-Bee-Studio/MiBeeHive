@@ -273,6 +273,9 @@ const Dashboard = (function () {
 
     var _consecFails = useState(0);
 
+    var _extCounts = useState({ channels: 0, shareLinks: 0 });
+    var extCounts = _extCounts[0], setExtCounts = _extCounts[1];
+
     // Refs for Chart.js instances — persist across re-renders
     var cpuMemChartRef = useRef(null);
     var netChartRef = useRef(null);
@@ -372,6 +375,22 @@ const Dashboard = (function () {
       });
     }
 
+    function fetchExternalCounts() {
+      return Promise.all([
+        Api.get('/admin/channels', { silent: true }),
+        Api.get('/admin/share-links', { silent: true })
+      ]).then(function (r) {
+        var ch = r[0], sl = r[1];
+        var channels = (ch && ch.success && Array.isArray(ch.data)) ? ch.data.length : 0;
+        var now = Date.now() / 1000;
+        var shareLinks = 0;
+        if (sl && sl.success && Array.isArray(sl.data)) {
+          shareLinks = sl.data.filter(function (l) { return !l.expires_at || l.expires_at > now; }).length;
+        }
+        return { channels: channels, shareLinks: shareLinks };
+      });
+    }
+
     // ── Initial load ────────────────────────────────────────────────────
 
     useEffect(function () {
@@ -390,6 +409,7 @@ const Dashboard = (function () {
           }
           setSummary(data);
           setActivity(data.activity || []);
+          fetchExternalCounts().then(function (c) { if (mountedRef.current) setExtCounts(c); });
           if (_isFirstRun(data)) {
             setPhase('welcome');
             _startWelcomePolling();
@@ -644,6 +664,7 @@ const Dashboard = (function () {
           if (connLost) setConnLost(false);
           setSummary(data);
           setActivity(data.activity || []);
+          fetchExternalCounts().then(function (c) { if (mountedRef.current) setExtCounts(c); });
           // Update disk chart in-place
           var sys = data.system || {};
           if (diskChartRef.current) {
@@ -1027,6 +1048,12 @@ const Dashboard = (function () {
                 { l: t('container_running'), v: sys.container_running || 0 }
               ]} />
             ` : null}
+            <${StatusCard} title="stats.virtual_index" accent="stat-accent-blue" href="#/files" stats=${[
+              { l: t('stats.virtual_index_count'), v: extCounts.channels }
+            ]} />
+            <${StatusCard} title="stats.share_links" accent="stat-accent-amber" href="#/share" stats=${[
+              { l: t('stats.share_links_count'), v: extCounts.shareLinks }
+            ]} />
           </div>
 
           <!-- Monitor controls -->

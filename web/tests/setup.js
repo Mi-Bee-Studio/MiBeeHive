@@ -148,3 +148,8 @@ globalThis.App = {
 
 // t — i18n translation function (i18n.js)
 globalThis.t = vi.fn((key) => key);
+
+// Hooks — polling and lifecycle hooks (hooks.js)
+globalThis.Hooks = {
+  usePolling: vi.fn(function (url, opts, cb) { return { start: vi.fn(), stop: vi.fn() }; }),
+};

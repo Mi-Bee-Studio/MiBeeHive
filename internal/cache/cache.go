@@ -89,7 +89,8 @@ var (
 	RuleCache = NewCache[int64, []string](256)
 	// NegativeCache maps token/path → "not found" (5s TTL).
 	NegativeCache = NewTTLCache(4096, 5*time.Second)
-)
+	// ShareTokenCache maps share_token → file_id.
+	)
 
 // TTLItem is the value stored in a TTLCache; it carries the expiry timestamp.
 type TTLItem struct {

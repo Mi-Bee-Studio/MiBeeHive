@@ -111,7 +111,9 @@ type appHandlers struct {
 	aptRepo       *supply.AptHandler // public APT repository over /apt/ (deb supply)
 	pypiRepo      *supply.PyPIHandler // public PyPI Simple repository over /simple/ (#24)
 	download      *handler.DownloadHandler // public file download by token
-}
+	shareLink     *handler.ShareLinkHandler // share link admin and public download
+	}
+// loadConfig initializes the logger, loads or generates the config file,
 // loadConfig initializes the logger, loads or generates the config file,
 // and sets up log rotation via lumberjack.
 func loadConfig(configPath string) *config.Config {
@@ -510,6 +512,10 @@ func initHandlers(cfg *config.Config, svcs *appServices, database *sql.DB, confi
 
 	// Download handler: public file download by public_token (no auth).
 	h.download = handler.NewDownloadHandler(database, cfg.Storage.BasePath)
+	// Share link handler: admin CRUD + public download.
+	h.shareLink = handler.NewShareLinkHandler(database, svcs.readDB, cfg.Storage.BasePath)
+	
+	h.download = handler.NewDownloadHandler(database, cfg.Storage.BasePath)
 
 	return h
 }
@@ -535,6 +541,10 @@ func buildRouter(cfg *config.Config, h *appHandlers, svcs *appServices, database
 	mux.HandleFunc("GET /api/v1/files/{id}/download", h.file.Download)
 
 	// Public file download by token (no auth — token-based access).
+	mux.HandleFunc("GET "+model.RouteFileDownloadByToken, h.download.ServeDownload)
+	// Public share link download (no auth — token-based access).
+	mux.HandleFunc(model.RouteShareDownload, h.shareLink.ShareDownload)
+	// Public ISO endpoints (list is public, download does its own JWT validation).
 	mux.HandleFunc("GET "+model.RouteFileDownloadByToken, h.download.ServeDownload)
 	// Public ISO endpoints (list is public, download does its own JWT validation).
 	mux.HandleFunc("GET "+model.RouteISOsList, h.iso.PublicListISOs)
@@ -629,6 +639,12 @@ func buildRouter(cfg *config.Config, h *appHandlers, svcs *appServices, database
 	apiMux.HandleFunc("GET "+model.RouteAdminISOQueueProgress, h.iso.ISOQueueProgress)
 	apiMux.HandleFunc(model.RouteAdminISOCatalogProfiles, h.iso.ISOCatalogProfiles)
 	// File management routes (admin).
+	apiMux.HandleFunc("POST "+model.RouteAdminFileRetry, h.file.Retry)
+	// Share link routes (admin).
+	apiMux.HandleFunc("POST "+model.RouteShareLinkCreate, h.shareLink.Create)
+	apiMux.HandleFunc("GET "+model.RouteShareLinks, h.shareLink.List)
+	apiMux.HandleFunc("DELETE "+model.RouteShareLinkRevoke, h.shareLink.Revoke)
+	
 	apiMux.HandleFunc("POST "+model.RouteAdminFileRetry, h.file.Retry)
 
 	// Container management routes (admin).

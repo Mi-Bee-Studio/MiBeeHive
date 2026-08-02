@@ -706,6 +706,9 @@ func buildRouter(cfg *config.Config, h *appHandlers, svcs *appServices, database
 	webdavStoragePath := filepath.Join(cfg.Storage.BasePath, "webdav")
 	webdavHandler := webdavpkg.NewHandler(webdavStoragePath, "/webdav")
 	webdavMux := middleware.BasicAuthMiddleware(cfg.Auth.PasswordHash)(http.StripPrefix("/webdav", webdavHandler))
+	// Legacy /webdav/ root redirects to the new default view; sub-paths pass through.
+	mux.Handle("GET /webdav/", handler.WebDAVRedirectHandler(webdavMux))
+	mux.Handle("/webdav/", webdavMux)
 	mux.Handle("/webdav/", webdavMux)
 	slog.Info("WebDAV enabled", "path", webdavStoragePath)
 

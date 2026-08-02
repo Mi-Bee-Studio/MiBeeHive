@@ -90,6 +90,7 @@ var (
 	// NegativeCache maps token/path → "not found" (5s TTL).
 	NegativeCache = NewTTLCache(4096, 5*time.Second)
 	// ShareTokenCache maps share_token → file_id.
+	ShareTokenCache = NewCache[string, int64](4096)
 	)
 
 // TTLItem is the value stored in a TTLCache; it carries the expiry timestamp.

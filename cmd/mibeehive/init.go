@@ -484,8 +484,6 @@ func initServices(cfg *config.Config, database *sql.DB, readDB *sql.DB) *appServ
 	slog.Info("virtual index service initialized")
 
 	return s
-
-	return s
 }
 
 // initHandlers creates all HTTP handlers.
@@ -544,7 +542,6 @@ func initHandlers(cfg *config.Config, svcs *appServices, database *sql.DB, confi
 	// Tool catalog handler: built-in catalog + one-click enable.
 	h.toolCatalog = handler.NewToolCatalogHandler(service.NewToolCatalogService(), db.NewProjectRepo(database))
 
-	return h
 	return h
 }
 

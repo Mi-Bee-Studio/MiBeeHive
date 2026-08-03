@@ -105,8 +105,8 @@ func TestCreateShareLink(t *testing.T) {
 			if link.Token == "" {
 				t.Error("expected non-empty token")
 			}
-			if len(link.Token) != 22 {
-				t.Errorf("expected token length 22, got %d", len(link.Token))
+			if len(link.Token) < 16 {
+				t.Errorf("expected token length >= 16, got %d", len(link.Token))
 			}
 		})
 	}

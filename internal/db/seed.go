@@ -27,6 +27,7 @@ func SeedProjectsFromConfig(ctx context.Context, repo *ProjectRepo, projects []c
 			GitHubOwner:    pc.GitHubOwner,
 			GitHubRepo:     pc.GitHubRepo,
 			FilterPatterns: pc.FilterPatterns,
+			StorageSubdir:  pc.StorageSubdir,
 		}
 
 		if pc.CrawlInterval != "" {

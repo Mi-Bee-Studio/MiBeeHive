@@ -23,15 +23,15 @@
    */
   function usePolling(fn, intervalMs, options) {
     options = options || {};
+    var signal = options.signal || null;
+    var scope = options.scope || '';
+    var immediate = options.immediate !== false;
     var fnRef = useRef(fn);
     fnRef.current = fn;
 
     useEffect(function () {
       var cancelled = false;
       var timerId = null;
-      var scope = options.scope || '';
-      var signal = options.signal || null;
-      var immediate = options.immediate !== false; // default true
 
       function run() {
         if (cancelled) return;

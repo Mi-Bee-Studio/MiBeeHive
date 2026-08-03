@@ -122,7 +122,14 @@ func (h *FileHandler) Search(w http.ResponseWriter, r *http.Request) {
 }
 
 // Download handles GET /api/v1/files/{id}/download.
+// Download handles GET /api/v1/files/{id}/download.
 func (h *FileHandler) Download(w http.ResponseWriter, r *http.Request) {
+	// Legacy endpoint: mark as deprecated. Clients should migrate to the
+	// token-based download at /api/v1/files/{token}/download.
+	w.Header().Set("Deprecation", "true")
+	w.Header().Set("Warning", `299 - "Deprecated API" "This endpoint is deprecated. Use /api/v1/files/{token}/download instead."`)
+
+	// Auth: check Authorization header first, then ?token= query param
 	// Auth: check Authorization header first, then ?token= query param
 	tokenString := ""
 	if authHeader := r.Header.Get("Authorization"); strings.HasPrefix(authHeader, "Bearer ") {

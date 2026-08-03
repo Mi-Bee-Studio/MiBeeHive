@@ -27,18 +27,22 @@ var Sidebar = (function () {
     search: '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>',
   };
 
-  // Navigation is grouped along the supply-chain storyline:
-  // Foraging (采集) → Supply (供应) → Provisioning (部署) → Ops (运维).
+  // Navigation is grouped into two sections:
+  // Workspace (工作区) → File Center, External Services, Foraging; Ops (运维) → Deploy, Status, Containers, Settings.
   var navItems = [
-    { route: '/files',         hash: '#/files',         i18nKey: 'nav_files',         icon: icons.files,         group: 'foraging' },
-    { route: '/supply',        hash: '#/supply',        i18nKey: 'nav_supply',        icon: icons.supply,        group: 'supply' },
-    { route: '/share',         hash: '#/share',         i18nKey: 'nav_share',         icon: icons.share,         group: 'supply' },
-    { route: '/deploy',        hash: '#/deploy',        i18nKey: 'nav_deploy',        icon: icons.deploy,        group: 'provisioning' },
-    { route: '/system-status', hash: '#/system-status', i18nKey: 'nav_system_status', icon: icons.dashboard,     group: 'ops' },
-    { route: '/containers',    hash: '#/containers',    i18nKey: 'nav_containers',    icon: icons.containers,    group: 'ops' },
+    // Workspace (工作区)
+    { route: '/',              hash: '#/',              i18nKey: 'nav.file_center',      icon: icons.files,      group: 'workspace', featured: true },
+    { route: '/share',         hash: '#/share',         i18nKey: 'nav.external_services', icon: icons.share,     group: 'workspace' },
+    { route: '/foraging',      hash: '#/foraging',      i18nKey: 'nav.foraging',          icon: icons.supply,     group: 'workspace' },
+    { route: '/foraging/iso',  hash: '#/foraging/iso',  i18nKey: 'nav.foraging_iso',      icon: icons.deploy,     group: 'workspace' },
+    // Ops (运维)
+    { route: '/deploy',        hash: '#/deploy',        i18nKey: 'nav_deploy',            icon: icons.deploy,     group: 'ops' },
+    { route: '/system-status', hash: '#/system-status', i18nKey: 'nav_system_status',     icon: icons.dashboard,  group: 'ops' },
+    { route: '/containers',    hash: '#/containers',    i18nKey: 'nav_containers',        icon: icons.containers, group: 'ops' },
+    { route: '/settings',      hash: '#/settings',      i18nKey: 'nav_settings',          icon: icons.settings,   group: 'ops' },
   ];
-  var navGroupOrder = ['foraging', 'supply', 'provisioning', 'ops'];
-  var settingsItem = { route: '/settings', hash: '#/settings', i18nKey: 'nav_settings', icon: icons.settings };
+  var navGroupOrder = ['workspace', 'ops'];
+  var groupLabels = { workspace: 'nav.workspace', ops: 'nav.ops' };
 
   function isCollapsed() {
     return localStorage.getItem(STORAGE_KEY) === 'true';
@@ -49,15 +53,16 @@ var Sidebar = (function () {
   }
 
   function getActiveRoute(hash) {
-    var raw = (hash || window.location.hash || '').replace(/^#/, '') || '/overview';
-    var firstSegment = '/' + raw.split('/').filter(Boolean)[0];
-    var allItems = navItems.concat(settingsItem);
-    // The overview home page ('/', '/overview') is not part of any nav group,
-    // so no sidebar item is highlighted on it.
-    if (raw === '/' || raw === '/overview') return null;
+    var raw = (hash || window.location.hash || '').replace(/^#/, '') || '/';
+    var allItems = navItems;
+    if (raw === '/' || raw === '/overview') return '/';
+    // Exact match first so /foraging/iso highlights the ISO item, not /foraging
     for (var i = 0; i < allItems.length; i++) {
-      var item = allItems[i];
-      if (raw === item.route || firstSegment === item.route) return item.route;
+      if (raw === allItems[i].route) return allItems[i].route;
+    }
+    var firstSegment = '/' + raw.split('/').filter(Boolean)[0];
+    for (var j = 0; j < allItems.length; j++) {
+      if (firstSegment === allItems[j].route) return allItems[j].route;
     }
     return null;
   }
@@ -76,7 +81,7 @@ var Sidebar = (function () {
     var collapsed = _c[0];
     var setColl = _c[1];
 
-    var _a = useState(window.location.hash || '#/overview');
+    var _a = useState(window.location.hash || '#/');
     var activeHash = _a[0];
     var setActiveHash = _a[1];
 
@@ -89,7 +94,7 @@ var Sidebar = (function () {
     // Listen for route changes via App event bus
     useEffect(function () {
       function onRouteChange(info) {
-        var hash = window.location.hash || '#/overview';
+        var hash = window.location.hash || '#/';
         setActiveHash(hash);
       }
       App.on('route:change', onRouteChange);
@@ -183,30 +188,23 @@ var Sidebar = (function () {
             var items = navItems.filter(function (it) { return it.group === group; });
             return html`
               <div class="sidebar-nav-group">
-                ${collapsed ? null : html`<div class="sidebar-nav-group-label">${t('nav_group_' + group)}</div>`}
+                ${collapsed ? null : html`<div class="sidebar-nav-group-label">${t(groupLabels[group])}</div>`}
                 ${items.map(function (item) {
                   var isActive = activeRoute === item.route;
+                  var labelStyle = item.featured ? 'color:var(--color-primary);font-weight:var(--font-weight-bold,700)' : '';
                   return html`
                     <a href=${item.hash}
                        class=${'sidebar-nav-item' + (isActive ? ' active' : '')}
                        data-route=${item.route}
                        title=${collapsed ? t(item.i18nKey) : ''}>
                       <span class="sidebar-nav-icon" dangerouslySetInnerHTML=${{ __html: item.icon }}></span>
-                      <span class="sidebar-nav-label">${t(item.i18nKey)}</span>
+                      <span class="sidebar-nav-label" style=${labelStyle}>${t(item.i18nKey)}</span>
                     </a>
                   `;
                 })}
               </div>
             `;
           })}
-          <div class="divider"></div>
-          <a href=${settingsItem.hash}
-             class=${'sidebar-nav-item' + (activeRoute === settingsItem.route ? ' active' : '')}
-             data-route=${settingsItem.route}
-             title=${collapsed ? t(settingsItem.i18nKey) : ''}>
-            <span class="sidebar-nav-icon" dangerouslySetInnerHTML=${{ __html: settingsItem.icon }}></span>
-            <span class="sidebar-nav-label">${t(settingsItem.i18nKey)}</span>
-          </a>
         </nav>
 
         <button class="sidebar-nav-item sidebar-collapse-btn"

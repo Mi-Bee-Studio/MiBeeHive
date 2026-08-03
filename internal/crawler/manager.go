@@ -311,7 +311,11 @@ func (m *CrawlManager) processAssets(ctx context.Context, proj *dbrepo.Project, 
 			continue // Already have this file.
 		}
 
-		localPath := filepath.Join(m.config.Storage.BasePath, projectName, asset.Version, asset.Filename)
+		storageSubdir := proj.StorageSubdir
+		if storageSubdir == "" {
+			storageSubdir = service.DefaultStorageSubdir(projectName)
+		}
+		localPath := filepath.Join(m.config.Storage.BasePath, storageSubdir, asset.Version, asset.Filename)
 		dbFile := &dbrepo.File{
 			ProjectID:   proj.ID,
 			Version:     asset.Version,

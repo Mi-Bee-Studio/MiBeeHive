@@ -186,10 +186,6 @@ const ShareFiles = (function () {
             <div class="empty-state" role="region" aria-label="File upload zone">
               <div style="color:var(--color-text-quaternary)" dangerouslySetInnerHTML=${{ __html: Helpers.ICONS.inbox }} />
               <p class="text-sm" style="color:var(--color-text-tertiary);margin-top:0.75rem">${t('webdav_files_empty')}</p>
-              <div style="margin-top:0.75rem">
-                <button class="btn btn-primary btn-sm" disabled title="${t('cta_upload_webdav_desc')}">${t('cta_upload_webdav')}</button>
-              </div>
-              <p class="text-xs" style="color:var(--color-text-quaternary);margin-top:0.5rem">${t('cta_upload_webdav_desc')}</p>
             </div>
           ` : null}
           ${!loading && !error && !isEmpty ? html`

@@ -6,50 +6,42 @@ var BottomTab = (function () {
   var useState = PreactBridge.useState;
   var useEffect = PreactBridge.useEffect;
 
-  // Order aligns with the sidebar supply-chain storyline:
-  // Foraging (files) → Supply (supply, share) → Provisioning (deploy) → Ops (system-status, containers).
+  // Mobile bottom tabs: File Center (home) → External Services → Foraging → Status → Containers.
   var TABS = [
     {
-      id: 'files',
-      path: '#/files',
-      match: function (hash) { return hash.startsWith('#/files'); },
+      id: 'file-center',
+      path: '#/',
+      match: function (hash) { return hash === '#' || hash === '#/' || hash === ''; },
       icon: '<svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5A1.5 1.5 0 0 1 4.5 3h3.672a1.5 1.5 0 0 1 1.06.44L10.94 4.5H15.5A1.5 1.5 0 0 1 17 6v9.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 3 15.5z"/></svg>',
-      label: function () { return t('nav_files'); },
+      label: function () { return t('nav.file_center'); },
     },
     {
-      id: 'supply',
-      path: '#/supply',
-      match: function (hash) { return hash.startsWith('#/supply'); },
-      icon: '<svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 13.33V6.67a1.67 1.67 0 00-.83-1.44l-5.84-3.34a1.67 1.67 0 00-1.66 0L3.33 5.23A1.67 1.67 0 002.5 6.67v6.66a1.67 1.67 0 00.83 1.44l5.84 3.34a1.67 1.67 0 001.66 0l5.84-3.34a1.67 1.67 0 00.83-1.44z"/><path d="M2.72 5.8 10 10l7.28-4.2M10 17.57V10"/></svg>',
-      label: function () { return t('nav_supply'); },
+      id: 'external-services',
+      path: '#/share',
+      match: function (hash) { return hash.startsWith('#/share'); },
+      icon: '<svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>',
+      label: function () { return t('nav.external_services'); },
     },
     {
-      id: 'deploy',
-      path: '#/deploy',
-      match: function (hash) { return hash.startsWith('#/deploy'); },
-      icon: '<svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="14" height="11" rx="1.5"/><path d="M7 6V4.5A1.5 1.5 0 0 1 8.5 3h3A1.5 1.5 0 0 1 13 4.5V6"/><line x1="10" y1="9" x2="10" y2="13"/><polyline points="8,11 10,9 12,11"/></svg>',
-      label: function () { return t('nav_deploy'); },
+      id: 'foraging',
+      path: '#/foraging',
+      match: function (hash) { return hash.startsWith('#/foraging'); },
+      icon: '<svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 13.33V6.67a1.67 1.67 0 0 0-.83-1.44l-5.84-3.34a1.67 1.67 0 0 0-1.66 0L3.33 5.23A1.67 1.67 0 0 0 2.5 6.67v6.66a1.67 1.67 0 0 0 .83 1.44l5.84 3.34a1.67 1.67 0 0 0 1.66 0l5.84-3.34a1.67 1.67 0 0 0 .83-1.44z"/><path d="M2.72 5.8 10 10l7.28-4.2M10 17.57V10"/></svg>',
+      label: function () { return t('nav.foraging'); },
     },
     {
       id: 'system-status',
       path: '#/system-status',
       match: function (hash) { return hash.startsWith('#/system-status'); },
-      icon: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"/></svg>',
+      icon: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125z"/></svg>',
       label: function () { return t('nav_system_status'); },
     },
     {
       id: 'containers',
       path: '#/containers',
       match: function (hash) { return hash.startsWith('#/containers'); },
-      icon: '<svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 13.33V6.67a1.67 1.67 0 00-.83-1.44l-5.84-3.34a1.67 1.67 0 00-1.66 0L3.33 5.23A1.67 1.67 0 002.5 6.67v6.66a1.67 1.67 0 00.83 1.44l5.84 3.34a1.67 1.67 0 001.66 0l5.84-3.34a1.67 1.67 0 00.83-1.44z"/><path d="M2.72 5.8 10 10l7.28-4.2M10 17.57V10"/></svg>',
+      icon: '<svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 13.33V6.67a1.67 1.67 0 0 0-.83-1.44l-5.84-3.34a1.67 1.67 0 0 0-1.66 0L3.33 5.23A1.67 1.67 0 0 0 2.5 6.67v6.66a1.67 1.67 0 0 0 .83 1.44l5.84 3.34a1.67 1.67 0 0 0 1.66 0l5.84-3.34a1.67 1.67 0 0 0 .83-1.44z"/><path d="M2.72 5.8 10 10l7.28-4.2M10 17.57V10"/></svg>',
       label: function () { return t('nav_containers'); },
-    },
-    {
-      id: 'settings',
-      path: '#/settings',
-      match: function (hash) { return hash === '#/settings'; },
-      icon: '<svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="2.5"/><path d="M10 2v2.5M10 15.5V18M2 10h2.5M15.5 10H18M4.22 4.22l1.77 1.77M14.01 14.01l1.77 1.77M4.22 15.78l1.77-1.77M14.01 5.99l1.77-1.77"/></svg>',
-      label: function () { return t('nav_settings'); },
     },
   ];
 
@@ -62,13 +54,13 @@ var BottomTab = (function () {
   // ── Preact BottomTabComponent ──────────────────────────────────────
 
   function BottomTabComponent() {
-    var _a = useState(window.location.hash || '#/overview');
+    var _a = useState(window.location.hash || '#/');
     var activeHash = _a[0];
     var setActiveHash = _a[1];
 
     useEffect(function () {
       function onRouteChange() {
-        setActiveHash(window.location.hash || '#/overview');
+        setActiveHash(window.location.hash || '#/');
       }
       App.on('route:change', onRouteChange);
       return function () { App.off('route:change', onRouteChange); };

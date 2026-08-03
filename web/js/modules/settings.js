@@ -712,6 +712,16 @@ const Settings = (function () {
           <${StoragePathsCard} />
         <//>
 
+        <${SectionCard} title=${t('nav.external_services')}>
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm" style="color:var(--color-text-secondary)">${t('webdav_title')}</p>
+              <p class="text-xs" style="margin-top:0.25rem;color:var(--color-text-tertiary)">${t('webdav_auth_note')}</p>
+            </div>
+            <span class="badge badge-default">${t('webdav_disabled')}</span>
+          </div>
+        <//>
+
         <${SectionCard} title=${t('backup_restore_title')}>
           <p class="text-xs" style="margin-bottom:1rem;color:var(--color-text-tertiary)">${t('backup_restore_desc')}</p>
           <${BackupList} />

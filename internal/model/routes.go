@@ -5,6 +5,7 @@ const (
 	RouteProjectDetail              = "/api/v1/projects/"
 	RouteProjectFiles               = "/api/v1/projects/{id}/files"
 	RouteFileDownload               = "/api/v1/files/{id}/download"
+	RouteFileDownloadByToken          = "/api/v1/files/{token}/download"
 	RouteFileSearch                 = "/api/v1/files/search"
 	RouteAuthLogin                  = "/api/v1/auth/login"
 	RouteAuthRefresh                = "/api/v1/auth/refresh"
@@ -61,8 +62,12 @@ const (
 	RouteAdminISOCatalogProfiles    = "GET /api/v1/admin/os-install/catalog/profiles"
 	RouteAdminDashboardSummary      = "/api/v1/admin/dashboard/summary"
 	RouteAdminISOQueueProgress      = "/api/v1/admin/os-install/catalog/progress"
+	RouteAdminCacheMetrics       = "/api/v1/admin/metrics/cache"
+	// File management (admin)
 	// File management (admin)
 	RouteAdminFileRetry = "/api/v1/admin/files/{id}/retry"
+	RouteFiles = "/api/v1/admin/files"
+	RouteFileInternal  = "/api/v1/admin/files/{id}/internal"
 	RouteHealth         = "GET /health"
 	RouteMetrics        = "GET /metrics"
 	// Container management
@@ -121,4 +126,21 @@ const (
 	RouteStorageConfig        = "/api/v1/admin/config/storage"
 	RouteStorageMigrations    = "/api/v1/admin/storage/migrations"
 	RouteStorageMigrationByID = "/api/v1/admin/storage/migrations/"
+	// Share link management
+	RouteShareLinks      = "/api/v1/admin/share-links"
+	RouteShareLinkCreate  = "/api/v1/admin/share-links"
+	RouteShareLinkRevoke = "/api/v1/admin/share-links/{token}"
+	RouteShareDownload   = "GET /s/{token}"
+	// Virtual index admin (channels, views, nodes)
+	RouteChannels = "/api/v1/admin/channels"
+	RouteChannelGet = "/api/v1/admin/channels/{id}"
+	RouteViews = "/api/v1/admin/channels/{channel_id}/views"
+	RouteViewGet = "/api/v1/admin/views/{id}"
+	RouteViewTree = "/api/v1/admin/views/{view_id}/tree"
+	RouteNodes = "/api/v1/admin/views/{view_id}/nodes"
+	RouteNodeUpdate = "/api/v1/admin/nodes/{id}"
+	RouteNodeDelete = "/api/v1/admin/nodes/{id}"
+	// Tool catalog
+	RouteToolCatalog       = "/api/v1/admin/tool-catalog"
+	RouteToolCatalogEnable = "/api/v1/admin/tool-catalog/{slug}/enable"
 )

@@ -173,6 +173,7 @@ type ProjectConfig struct {
 	GitHubOwner    string     `yaml:"github_owner"`
 	GitHubRepo     string     `yaml:"github_repo"`
 	FilterPatterns []string   `yaml:"filter_patterns"`
+	StorageSubdir  string     `yaml:"storage_subdir"`
 }
 
 // DefaultConfig returns a Config populated with sensible defaults and all 13 projects.

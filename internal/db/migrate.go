@@ -40,6 +40,7 @@ func Migrate(db *sql.DB) error {
 		{"020", "migrations/020_fix_iso_catalog.sql"},
 		{"021", "migrations/021_source_type_any.sql"},
 		{"022", "migrations/022_crawl_logs_network_error.sql"},
+		{"023", "migrations/023_virtual_index.sql"},
 	}
 	tx, err := db.Begin()
 	if err != nil {

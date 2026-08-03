@@ -28,10 +28,9 @@ const DeployConfigs = (function () {
   // ── Sub-navigation ───────────────────────────────────────────────────
   var DEPLOY_TABS = [
     { hash: '/deploy', i18nKey: 'nav_deploy_configs', tooltipKey: 'tooltip_deploy' },
-    { hash: '/deploy/iso', i18nKey: 'nav_deploy_iso' },
   ];
   function _subNav(active) {
-    return Components.moduleTabs(DEPLOY_TABS, active === 'configs' ? 'nav_deploy_configs' : 'nav_deploy_iso');
+    return Components.moduleTabs(DEPLOY_TABS, 'nav_deploy_configs');
   }
 
   // ── Config Row Component ─────────────────────────────────────────────
@@ -635,7 +634,7 @@ const DeployConfigs = (function () {
         <div class="p-4 md:p-6 max-w-7xl mx-auto">
           <div dangerouslySetInnerHTML=${{ __html: _subNav('configs') }} />
           <div class="flex items-center justify-between mb-5">
-            <h2 class="text-base font-semibold" style="color:var(--color-text)">${t('osinstall_title')}</h2>
+            <h2 class="text-base font-semibold" style="color:var(--color-text)">${t('deploy.os_install')}</h2>
             <button class="btn btn-primary btn-sm" disabled>${t('osinstall_new')}</button>
           </div>
           <div dangerouslySetInnerHTML=${{ __html: Components.skeletonTable(4, 6) }} />
@@ -664,7 +663,7 @@ const DeployConfigs = (function () {
         <div class="p-4 md:p-6 max-w-7xl mx-auto">
           <div dangerouslySetInnerHTML=${{ __html: _subNav('configs') }} />
           <div class="flex items-center justify-between mb-5">
-            <h2 class="text-base font-semibold" style="color:var(--color-text)">${t('osinstall_title')}</h2>
+            <h2 class="text-base font-semibold" style="color:var(--color-text)">${t('deploy.os_install')}</h2>
             <button class="btn btn-primary btn-sm"
               onClick=${handleAdd}>${t('osinstall_new')}</button>
           </div>
@@ -682,7 +681,7 @@ const DeployConfigs = (function () {
       <div class="p-4 md:p-6 max-w-7xl mx-auto">
         <div dangerouslySetInnerHTML=${{ __html: _subNav('configs') }} />
         <div class="flex items-center justify-between mb-5">
-          <h2 class="text-base font-semibold" style="color:var(--color-text)">${t('osinstall_title')}</h2>
+          <h2 class="text-base font-semibold" style="color:var(--color-text)">${t('deploy.os_install')}</h2>
           <button class="btn btn-primary btn-sm"
             onClick=${handleAdd}>${t('osinstall_new')}</button>
         </div>

@@ -42,37 +42,47 @@
 
   // ── Route definitions ───────────────────────────────────────────
   var routes = [
-    { pattern: '/login',                          handler: function() { Login.render(); },                                          public: true  },
-    { pattern: '/',                               handler: function() { Overview.render(); }                                        },
-    { pattern: '/overview',                       handler: function() { Overview.render(); }                                        },
-    { pattern: '/dashboard',                      handler: function() { window.location.hash = '#/overview'; }                      },
-    { pattern: '/files',                          handler: function() { Files.render(); }                                           },
-    { pattern: '/files/projects/:id',             handler: function(p) { FilesProjects.render(p.id); }                              },
-    { pattern: '/files/queue',                    handler: function() { FilesQueue.render(); }                                      },
-    { pattern: '/files/crawl',                    handler: function() { FilesCrawl.render(); }                                      },
-    { pattern: '/deploy',                         handler: function() { Deploy.render(); }                                          },
-    { pattern: '/deploy/configs',                 handler: function() { DeployConfigs.render(); }                                   },
-    { pattern: '/deploy/iso',                     handler: function() { DeployISO.render(); }                                       },
-    { pattern: '/system-status',                  handler: function() { SystemStatus.render(); }                                    },
-    { pattern: '/system-status/logs',             handler: function() { SystemStatus.renderLogs(); }                                },
-    { pattern: '/system-status/tasks',            handler: function() { SystemStatus.renderTasks(); }                               },
-    { pattern: '/share',                          handler: function() { Share.render(); }                                           },
-    { pattern: '/share/files',                    handler: function() { ShareFiles.render(); }                                      },
-    { pattern: '/share/settings',                 handler: function() { Share.renderSettings(); }                                   },
-    { pattern: '/supply',                         handler: function() { Supply.render(); }                                          },
-    { pattern: '/containers/images',              handler: function() { ContainersImages.render(); }                                },
-    { pattern: '/containers/templates',           handler: function() { ContainersTemplates.render(); }                              },
-    { pattern: '/containers/registries',          handler: function() { Registries.render(); }                                      },
-    { pattern: '/containers/registries/:subtab',  handler: function(p) { Registries.render(p.subtab); }                             },
-    { pattern: '/containers/:id',                 handler: function(p) { ContainersDetail.render(p.id); }                           },
-    { pattern: '/containers',                     handler: function() { Containers.render(); }                                      },
-    // Legacy /registries* paths now live under /containers/registries; redirect
-    // for backward compatibility with old bookmarks.
-    { pattern: '/registries',                     handler: function() { window.location.hash = '#/containers/registries'; }         },
-    { pattern: '/registries/:subtab',             handler: function(p) { window.location.hash = '#/containers/registries/' + (p.subtab || ''); } },
-    { pattern: '/logs',                           handler: function() { window.location.hash = '#/system-status/logs'; }            },
-    { pattern: '/tasks',                          handler: function() { window.location.hash = '#/system-status/tasks'; }           },
-    { pattern: '/settings',                       handler: function() { Settings.render(); }                                        },
+    // Auth
+    { pattern: '/login', handler: function() { Login.render(); }, public: true },
+
+    // NEW: File Center is now the default home
+    { pattern: '/', handler: function() { FileCenter.render(); } },
+
+    // NEW: External Service Hub (/share)
+    { pattern: '/share', handler: function() { Share.render(); } },
+
+    // NEW: Foraging
+    { pattern: '/foraging', handler: function() { Files.render(); } },
+    { pattern: '/foraging/iso', handler: function() { DeployISO.render(); } },
+
+    // Ops
+    { pattern: '/deploy', handler: function() { Deploy.render(); } },
+    { pattern: '/deploy/configs', handler: function() { DeployConfigs.render(); } },
+    { pattern: '/system-status', handler: function() { SystemStatus.render(); } },
+    { pattern: '/system-status/logs', handler: function() { SystemStatus.renderLogs(); } },
+    { pattern: '/system-status/tasks', handler: function() { SystemStatus.renderTasks(); } },
+    { pattern: '/containers', handler: function() { Containers.render(); } },
+    { pattern: '/containers/images', handler: function() { ContainersImages.render(); } },
+    { pattern: '/containers/templates', handler: function() { ContainersTemplates.render(); } },
+    { pattern: '/containers/registries', handler: function() { Registries.render(); } },
+    { pattern: '/containers/registries/:subtab', handler: function(p) { Registries.render(p.subtab); } },
+    { pattern: '/containers/:id', handler: function(p) { ContainersDetail.render(p.id); } },
+    { pattern: '/settings', handler: function() { Settings.render(); } },
+
+    // Legacy redirects (preserve bookmarks)
+    { pattern: '/overview', handler: function() { window.location.hash = '#/'; } },
+    { pattern: '/dashboard', handler: function() { window.location.hash = '#/'; } },
+    { pattern: '/files', handler: function() { window.location.hash = '#/foraging'; } },
+    { pattern: '/files/projects/:id', handler: function(p) { window.location.hash = '#/foraging'; } },
+    { pattern: '/files/queue', handler: function() { window.location.hash = '#/foraging'; } },
+    { pattern: '/files/crawl', handler: function() { window.location.hash = '#/foraging'; } },
+    { pattern: '/share/files', handler: function() { window.location.hash = '#/share'; } },
+    { pattern: '/share/settings', handler: function() { window.location.hash = '#/share'; } },
+    { pattern: '/supply', handler: function() { window.location.hash = '#/'; } },
+    { pattern: '/registries', handler: function() { window.location.hash = '#/containers/registries'; } },
+    { pattern: '/registries/:subtab', handler: function(p) { window.location.hash = '#/containers/registries/' + (p.subtab || ''); } },
+    { pattern: '/logs', handler: function() { window.location.hash = '#/system-status/logs'; } },
+    { pattern: '/tasks', handler: function() { window.location.hash = '#/system-status/tasks'; } },
   ];
 
   // ── Compile routes ──────────────────────────────────────────────
@@ -93,7 +103,7 @@
 
   // ── Parse hash into route match ─────────────────────────────────
   function parseRoute(hash) {
-    var raw = (hash || '').replace(/^#/, '') || '/overview';
+    var raw = (hash || '').replace(/^#/, '') || '/';
     var qIndex = raw.indexOf('?');
     var path = qIndex >= 0 ? raw.substring(0, qIndex) : raw;
     var queryString = qIndex >= 0 ? raw.substring(qIndex + 1) : '';
@@ -166,7 +176,7 @@
       return false;
     }
     if (hasToken && parsed && parsed.routeDef && parsed.routeDef.public && parsed.path === '/login') {
-      window.location.hash = '#/overview';
+      window.location.hash = '#/';
       return false;
     }
     return true;
@@ -183,7 +193,7 @@
         '</svg>' +
         '<p class="text-lg font-medium" style="color:var(--color-text)">' + _t('not_found') + '</p>' +
         '<p class="text-sm mt-2" style="color:var(--color-text-secondary)">' + _t('not_found_desc') + '</p>' +
-        '<button class="btn btn-primary mt-4" onclick="Router.push(\'/overview\')">' + _t('back_to_dashboard') + '</button>' +
+        '<button class="btn btn-primary mt-4" onclick="Router.push(\'/\')">' + _t('back_to_dashboard') + '</button>' +
       '</div>';
   }
 
@@ -213,7 +223,7 @@
     if (!parsed) {
       _cleanup();
       current = {
-        path: window.location.hash.replace(/^#/, '') || '/overview',
+        path: window.location.hash.replace(/^#/, '') || '/',
         params: {},
         query: {},
         routeDef: null,

@@ -122,6 +122,13 @@ globalThis.Components = {
   showConfirmModal: vi.fn(() => Promise.resolve(true)),
   showFieldError: vi.fn(),
   clearFieldErrors: vi.fn(),
+  moduleTabs: vi.fn((items, activeKey) => {
+    var html_ = '<div class="module-tabs">';
+    (items || []).forEach(function (it) {
+      html_ += '<a href="#' + (it.hash || '') + '" class="module-tab' + (it.i18nKey === activeKey ? ' active' : '') + '">' + (it.i18nKey || '') + '</a>';
+    });
+    return html_ + '</div>';
+  }),
 };
 
 // showToast / showConfirmModal — global UI helpers
@@ -141,3 +148,8 @@ globalThis.App = {
 
 // t — i18n translation function (i18n.js)
 globalThis.t = vi.fn((key) => key);
+
+// Hooks — polling and lifecycle hooks (hooks.js)
+globalThis.Hooks = {
+  usePolling: vi.fn(function (url, opts, cb) { return { start: vi.fn(), stop: vi.fn() }; }),
+};

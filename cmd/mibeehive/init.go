@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -29,12 +30,17 @@ import (
 	"github.com/Mi-Bee-Studio/mibeehive/internal/service"
 	"github.com/Mi-Bee-Studio/mibeehive/internal/source"
 	"github.com/Mi-Bee-Studio/mibeehive/internal/supply"
+	"github.com/Mi-Bee-Studio/mibeehive/internal/eventbus"
 	webdavpkg "github.com/Mi-Bee-Studio/mibeehive/internal/webdav"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 // appServices holds all initialized services, repositories, and background task handles.
 type appServices struct {
+	// Database pools
+	readDB *sql.DB
+
+	// Metrics
 	// Metrics
 	appMetrics *metrics.Metrics
 
@@ -74,6 +80,10 @@ type appServices struct {
 	// Storage resolver
 	storageResolver *service.StorageResolver
 	migrationSvc    *service.MigrationService
+	// Virtual index
+	virtualIndexSvc *service.VirtualIndexService
+	// Event bus
+	eventbus       *eventbus.Bus
 	// Cancel funcs for background goroutines started during init
 	diskCancel     context.CancelFunc
 	retryCancel    context.CancelFunc
@@ -106,8 +116,15 @@ type appHandlers struct {
 	supply        *supply.Handler    // public ops-tool supply endpoints (#3)
 	aptRepo       *supply.AptHandler // public APT repository over /apt/ (deb supply)
 	pypiRepo      *supply.PyPIHandler // public PyPI Simple repository over /simple/ (#24)
-}
-
+	download      *handler.DownloadHandler // public file download by token
+	shareLink     *handler.ShareLinkHandler // share link admin and public download
+	adminInternal *handler.AdminInternalHandler // admin-only internal file details (exposes local_path)
+	fileCenter   *handler.FileCenterHandler // cross-project file listing with filtering
+	cacheMetrics  *handler.CacheMetricsHandler // admin cache metrics endpoint
+	virtualAdmin  *handler.VirtualAdminHandler // virtual index admin API
+	toolCatalog   *handler.ToolCatalogHandler // built-in tool catalog + one-click enable
+	}
+// loadConfig initializes the logger, loads or generates the config file,
 // loadConfig initializes the logger, loads or generates the config file,
 // and sets up log rotation via lumberjack.
 func loadConfig(configPath string) *config.Config {
@@ -179,8 +196,10 @@ func loadConfig(configPath string) *config.Config {
 	return cfg
 }
 
-// initDatabase opens the SQLite database and runs pending migrations.
-func initDatabase(cfg *config.Config) *sql.DB {
+// initDatabase opens the SQLite database (write + read pools) and runs pending
+// migrations. It returns the write pool for backward compatibility and the
+// read pool for concurrent read workloads.
+func initDatabase(cfg *config.Config) (*sql.DB, *sql.DB) {
 	database, err := db.Open(cfg.Database.Path)
 	if err != nil {
 		slog.Error("failed to open database", "error", err)
@@ -191,15 +210,35 @@ func initDatabase(cfg *config.Config) *sql.DB {
 		slog.Error("failed to migrate database", "error", err)
 		os.Exit(1)
 	}
+
+	// Verify WAL journal mode is active.
+	var journalMode string
+	if err := database.QueryRow("PRAGMA journal_mode").Scan(&journalMode); err != nil {
+		slog.Error("failed to verify journal_mode", "error", err)
+		os.Exit(1)
+	}
+	if journalMode != "wal" {
+		slog.Error("journal_mode is not wal", "mode", journalMode)
+		os.Exit(1)
+	}
+	slog.Info("database pragmas verified", "journal_mode", journalMode)
+
+	readDB, err := db.OpenReadDB(cfg.Database.Path)
+	if err != nil {
+		slog.Error("failed to open read database", "error", err)
+		os.Exit(1)
+	}
+
 	slog.Info("database initialized", "path", cfg.Database.Path)
 
-	return database
+	return database, readDB
 }
 
 // initServices creates all repositories, services, and starts background goroutines
 // that need to run before HTTP handlers are registered.
-func initServices(cfg *config.Config, database *sql.DB) *appServices {
+func initServices(cfg *config.Config, database *sql.DB, readDB *sql.DB) *appServices {
 	s := &appServices{}
+	s.readDB = readDB
 
 	// Initialize Prometheus metrics.
 	s.appMetrics = metrics.NewMetrics()
@@ -437,6 +476,13 @@ func initServices(cfg *config.Config, database *sql.DB) *appServices {
 		slog.Info("remote registry management disabled")
 	}
 
+	// Initialize event bus for virtual index events.
+	s.eventbus = eventbus.NewBus(100)
+	// Initialize virtual index service.
+	virtualRepo := db.NewVirtualRepo(database)
+	s.virtualIndexSvc = service.NewVirtualIndexService(virtualRepo, s.eventbus, logger)
+	slog.Info("virtual index service initialized")
+
 	return s
 }
 
@@ -482,6 +528,20 @@ func initHandlers(cfg *config.Config, svcs *appServices, database *sql.DB, confi
 		h.registry = handler.NewRegistryHandler(svcs.registrySvc, svcs.syncSvc, svcs.retentionSvc, true)
 	}
 
+	// Download handler: public file download by public_token (no auth).
+	h.download = handler.NewDownloadHandler(database, cfg.Storage.BasePath)
+	// Share link handler: admin CRUD + public download.
+	h.shareLink = handler.NewShareLinkHandler(database, svcs.readDB, cfg.Storage.BasePath)
+	// Admin-only internal file details endpoint (exposes physical local_path).
+	h.adminInternal = handler.NewAdminInternalHandler(svcs.readDB)
+	h.cacheMetrics = handler.NewCacheMetricsHandler()
+	// File center handler: cross-project file listing with filtering (requires auth).
+	h.fileCenter = handler.NewFileCenterHandler(svcs.readDB)
+	// Virtual index admin handler.
+	h.virtualAdmin = handler.NewVirtualAdminHandler(svcs.virtualIndexSvc)
+	// Tool catalog handler: built-in catalog + one-click enable.
+	h.toolCatalog = handler.NewToolCatalogHandler(service.NewToolCatalogService(), db.NewProjectRepo(database))
+
 	return h
 }
 
@@ -502,10 +562,20 @@ func buildRouter(cfg *config.Config, h *appHandlers, svcs *appServices, database
 	mux.HandleFunc(model.RouteHealth, healthHandler.ServeHTTP)
 	mux.Handle(model.RouteMetrics, svcs.appMetrics.Handler())
 
-	// File download route (public — does its own JWT validation from header or ?token= query param).
-	mux.HandleFunc("GET /api/v1/files/{id}/download", h.file.Download)
+	// File download route (public — dispatcher handles both numeric IDs and base58 tokens).
+	mux.HandleFunc("GET /api/v1/files/{id}/download", func(w http.ResponseWriter, r *http.Request) {
+		val := r.PathValue("id")
+		if _, err := strconv.ParseInt(val, 10, 64); err == nil {
+			h.file.Download(w, r)
+		} else {
+			r.SetPathValue("token", val)
+			h.download.ServeDownload(w, r)
+		}
+	})
 
-	// Public ISO endpoints (list is public, download does its own JWT validation).
+	// Public share link download (no auth — token-based access).
+	mux.HandleFunc(model.RouteShareDownload, h.shareLink.ShareDownload)
+
 	mux.HandleFunc("GET "+model.RouteISOsList, h.iso.PublicListISOs)
 	mux.HandleFunc("GET "+model.RouteISODownload, h.iso.DownloadISO)
 
@@ -599,6 +669,13 @@ func buildRouter(cfg *config.Config, h *appHandlers, svcs *appServices, database
 	apiMux.HandleFunc(model.RouteAdminISOCatalogProfiles, h.iso.ISOCatalogProfiles)
 	// File management routes (admin).
 	apiMux.HandleFunc("POST "+model.RouteAdminFileRetry, h.file.Retry)
+	apiMux.HandleFunc("GET "+model.RouteFileInternal, h.adminInternal.GetFileInternal)
+	apiMux.HandleFunc("GET "+model.RouteFiles, h.fileCenter.ServeFileCenter)
+
+	// Share link routes (admin).
+	apiMux.HandleFunc("POST "+model.RouteShareLinkCreate, h.shareLink.Create)
+	apiMux.HandleFunc("GET "+model.RouteShareLinks, h.shareLink.List)
+	apiMux.HandleFunc("DELETE "+model.RouteShareLinkRevoke, h.shareLink.Revoke)
 
 	// Container management routes (admin).
 	apiMux.HandleFunc("GET "+model.RouteAdminContainerList, h.container.HandleContainerList)
@@ -627,6 +704,25 @@ func buildRouter(cfg *config.Config, h *appHandlers, svcs *appServices, database
 	apiMux.HandleFunc("POST "+model.RouteAdminBackupRestore, h.backupH.RestoreBackup)
 	// Dashboard summary (admin).
 	apiMux.HandleFunc("GET "+model.RouteAdminDashboardSummary, h.dashboard.Summary)
+	apiMux.HandleFunc("GET "+model.RouteAdminCacheMetrics, h.cacheMetrics.CacheMetrics)
+	// Virtual index admin routes.
+	apiMux.HandleFunc("POST "+model.RouteChannels, h.virtualAdmin.CreateChannel)
+	apiMux.HandleFunc("GET "+model.RouteChannels, h.virtualAdmin.ListChannels)
+	apiMux.HandleFunc("GET "+model.RouteChannelGet, h.virtualAdmin.GetChannel)
+	apiMux.HandleFunc("PUT "+model.RouteChannelGet, h.virtualAdmin.UpdateChannel)
+	apiMux.HandleFunc("DELETE "+model.RouteChannelGet, h.virtualAdmin.DeleteChannel)
+	apiMux.HandleFunc("POST "+model.RouteViews, h.virtualAdmin.CreateView)
+	apiMux.HandleFunc("GET "+model.RouteViews, h.virtualAdmin.ListViews)
+	apiMux.HandleFunc("GET "+model.RouteViewGet, h.virtualAdmin.GetView)
+	apiMux.HandleFunc("PUT "+model.RouteViewGet, h.virtualAdmin.UpdateView)
+	apiMux.HandleFunc("DELETE "+model.RouteViewGet, h.virtualAdmin.DeleteView)
+	apiMux.HandleFunc("POST "+model.RouteNodes, h.virtualAdmin.CreateNode)
+	apiMux.HandleFunc("GET "+model.RouteViewTree, h.virtualAdmin.GetViewTree)
+	apiMux.HandleFunc("PUT "+model.RouteNodeUpdate, h.virtualAdmin.UpdateNode)
+	apiMux.HandleFunc("DELETE "+model.RouteNodeDelete, h.virtualAdmin.DeleteNode)
+	// Tool catalog routes (admin).
+	apiMux.HandleFunc("GET "+model.RouteToolCatalog, h.toolCatalog.ListCatalog)
+	apiMux.HandleFunc("POST "+model.RouteToolCatalogEnable, h.toolCatalog.EnableTool)
 
 	// Registry management routes (admin).
 	if h.registry != nil {
@@ -659,6 +755,8 @@ func buildRouter(cfg *config.Config, h *appHandlers, svcs *appServices, database
 	webdavStoragePath := filepath.Join(cfg.Storage.BasePath, "webdav")
 	webdavHandler := webdavpkg.NewHandler(webdavStoragePath, "/webdav")
 	webdavMux := middleware.BasicAuthMiddleware(cfg.Auth.PasswordHash)(http.StripPrefix("/webdav", webdavHandler))
+	// Legacy /webdav/ root redirects to the new default view; sub-paths pass through.
+	mux.Handle("GET /webdav/", handler.WebDAVRedirectHandler(webdavMux))
 	mux.Handle("/webdav/", webdavMux)
 	slog.Info("WebDAV enabled", "path", webdavStoragePath)
 

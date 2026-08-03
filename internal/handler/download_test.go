@@ -270,6 +270,8 @@ func TestDownloadByToken_ConcurrentLimit(t *testing.T) {
 		t.Fatalf("failed to open database: %v", err)
 	}
 	defer db.Close()
+	db.SetMaxOpenConns(1) // ensure shared :memory: DB across goroutines
+
 
 	if err := dbrepo.Migrate(db); err != nil {
 		t.Fatalf("failed to migrate database: %v", err)

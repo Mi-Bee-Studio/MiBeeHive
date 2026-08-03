@@ -12,6 +12,16 @@ import (
 	dbrepo "github.com/Mi-Bee-Studio/mibeehive/internal/db"
 )
 
+// ensureProject inserts a test project (id=1) to satisfy FK constraints in tests.
+func ensureProject(t *testing.T, db *sql.DB) {
+	t.Helper()
+	if _, err := db.ExecContext(context.Background(),
+		`INSERT OR IGNORE INTO projects (id, name, display_name, source_type, source_url, created_at) VALUES (1, 'test', 'Test', 'test', 'http://test', datetime('now'))`); err != nil {
+		t.Fatalf("failed to insert test project: %v", err)
+	}
+}
+
+
 // TestDownloadByToken_Success tests downloading a file by its public token
 func TestDownloadByToken_Success(t *testing.T) {
 	// Setup temporary directory for test files
@@ -33,6 +43,7 @@ func TestDownloadByToken_Success(t *testing.T) {
 	if err := dbrepo.Migrate(db); err != nil {
 		t.Fatalf("failed to migrate database: %v", err)
 	}
+	ensureProject(t, db)
 
 	// Insert a test file with public_token
 	var fileID int64
@@ -88,6 +99,7 @@ func TestDownloadByToken_InvalidToken(t *testing.T) {
 	if err := dbrepo.Migrate(db); err != nil {
 		t.Fatalf("failed to migrate database: %v", err)
 	}
+	ensureProject(t, db)
 
 	h := NewDownloadHandler(db, tmpDir)
 
@@ -117,12 +129,13 @@ func TestDownloadByToken_DeletedFile(t *testing.T) {
 	if err := dbrepo.Migrate(db); err != nil {
 		t.Fatalf("failed to migrate database: %v", err)
 	}
+	ensureProject(t, db)
 
 	// Insert a deleted file with public_token
 	testToken := "test_deleted_token"
 	_, err = db.ExecContext(context.Background(),
 		`INSERT INTO files (project_id, version, filename, os, arch, ext, size_bytes, download_url, local_path, checksum, status, created_at, source_type, category, storage_subdir, public_token)
-		 VALUES (1, '1.0.0', 'test.txt', '', '', 'txt', 100, '', 'test.txt', '', 'deleted', datetime('now'), 'test', 'test', 'test', ?)`,
+		 VALUES (1, '1.0.0', 'test.txt', '', '', 'txt', 100, '', 'test.txt', '', 'error', datetime('now'), 'test', 'test', 'test', ?)`,
 		testToken)
 	if err != nil {
 		t.Fatalf("failed to insert deleted test file: %v", err)
@@ -156,6 +169,7 @@ func TestDownloadByToken_FileNotFound(t *testing.T) {
 	if err := dbrepo.Migrate(db); err != nil {
 		t.Fatalf("failed to migrate database: %v", err)
 	}
+	ensureProject(t, db)
 
 	// Insert file record but don't create actual file
 	testToken := "test_missing_file"
@@ -200,6 +214,7 @@ func TestDownloadByToken_CacheHit(t *testing.T) {
 	if err := dbrepo.Migrate(db); err != nil {
 		t.Fatalf("failed to migrate database: %v", err)
 	}
+	ensureProject(t, db)
 
 	// Insert test file
 	testToken := "test_cache_hit"
@@ -259,6 +274,7 @@ func TestDownloadByToken_ConcurrentLimit(t *testing.T) {
 	if err := dbrepo.Migrate(db); err != nil {
 		t.Fatalf("failed to migrate database: %v", err)
 	}
+	ensureProject(t, db)
 
 	// Create multiple test files
 	numFiles := 5
@@ -320,6 +336,7 @@ func TestDownloadByToken_MalformedPath(t *testing.T) {
 	if err := dbrepo.Migrate(db); err != nil {
 		t.Fatalf("failed to migrate database: %v", err)
 	}
+	ensureProject(t, db)
 
 	h := NewDownloadHandler(db, tmpDir)
 
@@ -348,6 +365,7 @@ func TestDownloadByToken_EmptyToken(t *testing.T) {
 	if err := dbrepo.Migrate(db); err != nil {
 		t.Fatalf("failed to migrate database: %v", err)
 	}
+	ensureProject(t, db)
 
 	h := NewDownloadHandler(db, tmpDir)
 

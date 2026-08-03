@@ -48,6 +48,29 @@ func (c *sqlTokenChecker) TokenExists(ctx context.Context, token string) (bool, 
 	return true, nil
 }
 
+// txTokenChecker checks token uniqueness against an active *sql.Tx.
+// It is used within transactions to avoid pool exhaustion when
+// MaxOpenConns=1, since the transaction already holds the only connection.
+// It implements the DBChecker interface.
+type txTokenChecker struct {
+	tx *sql.Tx
+}
+
+// TokenExists reports whether the given public_token is already present
+// using the transaction's connection.
+func (c *txTokenChecker) TokenExists(ctx context.Context, token string) (bool, error) {
+	var one int
+	err := c.tx.QueryRowContext(ctx,
+		"SELECT 1 FROM files WHERE public_token = ?", token).Scan(&one)
+	if err == sql.ErrNoRows {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("checking public_token uniqueness: %w", err)
+	}
+	return true, nil
+}
+
 // GeneratePublicToken generates a cryptographically random public_token using
 // base58 encoding, 22 characters (~128 bits of entropy). It checks the database
 // for UNIQUE collisions and retries up to maxTokenRetries times.
@@ -126,7 +149,6 @@ func base58Encode(input []byte) string {
 // UPDATE statements inside a single transaction per batch, looping until no
 // NULL rows remain. Writes must go through the writeDB pool.
 func BackfillPublicTokens(db *sql.DB) error {
-	checker := &sqlTokenChecker{db: db}
 	for {
 		rows, err := db.Query(
 			"SELECT id FROM files WHERE public_token IS NULL LIMIT ?", backfillBatchSize)
@@ -156,6 +178,7 @@ func BackfillPublicTokens(db *sql.DB) error {
 		if err != nil {
 			return fmt.Errorf("beginning backfill transaction: %w", err)
 		}
+		checker := &txTokenChecker{tx: tx}
 
 		// Track tokens generated within this batch so uncommitted rows (not yet
 		// visible to the checker) cannot collide with each other.

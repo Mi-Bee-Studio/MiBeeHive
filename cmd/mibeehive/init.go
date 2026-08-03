@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -564,16 +565,20 @@ func buildRouter(cfg *config.Config, h *appHandlers, svcs *appServices, database
 	mux.HandleFunc(model.RouteHealth, healthHandler.ServeHTTP)
 	mux.Handle(model.RouteMetrics, svcs.appMetrics.Handler())
 
-	// File download route (public — does its own JWT validation from header or ?token= query param).
-	mux.HandleFunc("GET /api/v1/files/{id}/download", h.file.Download)
+	// File download route (public — dispatcher handles both numeric IDs and base58 tokens).
+	mux.HandleFunc("GET /api/v1/files/{id}/download", func(w http.ResponseWriter, r *http.Request) {
+		val := r.PathValue("id")
+		if _, err := strconv.ParseInt(val, 10, 64); err == nil {
+			h.file.Download(w, r)
+		} else {
+			r.SetPathValue("token", val)
+			h.download.ServeDownload(w, r)
+		}
+	})
 
-	// Public file download by token (no auth — token-based access).
-	mux.HandleFunc("GET "+model.RouteFileDownloadByToken, h.download.ServeDownload)
 	// Public share link download (no auth — token-based access).
 	mux.HandleFunc(model.RouteShareDownload, h.shareLink.ShareDownload)
-	// Public ISO endpoints (list is public, download does its own JWT validation).
-	mux.HandleFunc("GET "+model.RouteFileDownloadByToken, h.download.ServeDownload)
-	// Public ISO endpoints (list is public, download does its own JWT validation).
+
 	mux.HandleFunc("GET "+model.RouteISOsList, h.iso.PublicListISOs)
 	mux.HandleFunc("GET "+model.RouteISODownload, h.iso.DownloadISO)
 
@@ -669,14 +674,11 @@ func buildRouter(cfg *config.Config, h *appHandlers, svcs *appServices, database
 	apiMux.HandleFunc("POST "+model.RouteAdminFileRetry, h.file.Retry)
 	apiMux.HandleFunc("GET "+model.RouteFileInternal, h.adminInternal.GetFileInternal)
 	apiMux.HandleFunc("GET "+model.RouteFiles, h.fileCenter.ServeFileCenter)
-	// File management routes (admin).
-	apiMux.HandleFunc("POST "+model.RouteAdminFileRetry, h.file.Retry)
+
 	// Share link routes (admin).
 	apiMux.HandleFunc("POST "+model.RouteShareLinkCreate, h.shareLink.Create)
 	apiMux.HandleFunc("GET "+model.RouteShareLinks, h.shareLink.List)
 	apiMux.HandleFunc("DELETE "+model.RouteShareLinkRevoke, h.shareLink.Revoke)
-	
-	apiMux.HandleFunc("POST "+model.RouteAdminFileRetry, h.file.Retry)
 
 	// Container management routes (admin).
 	apiMux.HandleFunc("GET "+model.RouteAdminContainerList, h.container.HandleContainerList)
@@ -758,7 +760,6 @@ func buildRouter(cfg *config.Config, h *appHandlers, svcs *appServices, database
 	webdavMux := middleware.BasicAuthMiddleware(cfg.Auth.PasswordHash)(http.StripPrefix("/webdav", webdavHandler))
 	// Legacy /webdav/ root redirects to the new default view; sub-paths pass through.
 	mux.Handle("GET /webdav/", handler.WebDAVRedirectHandler(webdavMux))
-	mux.Handle("/webdav/", webdavMux)
 	mux.Handle("/webdav/", webdavMux)
 	slog.Info("WebDAV enabled", "path", webdavStoragePath)
 

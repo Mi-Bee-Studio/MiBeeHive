@@ -890,7 +890,7 @@ const I18N = {
   view_manager_add_file_ref: "添加文件引用",
   view_manager_add_rule_folder: "添加规则文件夹",
   view_manager_rule_preview: "预览结果",
-  view_manager_rule_indexing: "索引中..."
+  view_manager_rule_indexing: "索引中...",
   // Channels (T17)
   channel_title: "频道管理",
   channel_create: "创建频道",
@@ -1805,7 +1805,7 @@ const I18N = {
   view_manager_add_file_ref: "Add File Reference",
   view_manager_add_rule_folder: "Add Rule Folder",
   view_manager_rule_preview: "Preview Results",
-  view_manager_rule_indexing: "Indexing..."
+  view_manager_rule_indexing: "Indexing...",
   // Channels (T17)
   channel_title: "Channel Management",
   channel_create: "Create Channel",

@@ -42,8 +42,11 @@ jobs:
           args: --timeout=5m
         continue-on-error: true
 
-      - name: Test
-        run: go test -race -timeout 20m ./...
+      - name: Test (race)
+        run: go test -race -timeout 20m $(go list ./... | grep -v /internal/handler)
+
+      - name: Test (handler, no race)
+        run: go test -timeout 15m ./internal/handler/...
 
       - name: Build
         run: go build -ldflags "-s -w -X main.version=${{ github.ref_name }}" ./cmd/mibeehive

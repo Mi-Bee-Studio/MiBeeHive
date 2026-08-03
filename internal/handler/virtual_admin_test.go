@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"net/http"
@@ -15,7 +16,7 @@ import (
 )
 
 // setupVirtualAdminTest creates a test database and handler.
-func setupVirtualAdminTest(t *testing.T) (*sql.DB, *VirtualAdminHandler) {
+func setupVirtualAdminTest(t *testing.T) (*sql.DB, *eventbus.Bus, *VirtualAdminHandler) {
 	t.Helper()
 
 	testDB, err := db.Open(":memory:")
@@ -32,12 +33,17 @@ func setupVirtualAdminTest(t *testing.T) (*sql.DB, *VirtualAdminHandler) {
 	virtualSvc := service.NewVirtualIndexService(virtualRepo, bus, nil)
 	handler := NewVirtualAdminHandler(virtualSvc)
 
-	return testDB, handler
+	// t.Cleanup runs in LIFO order: register the DB close FIRST so the bus
+	// close runs first at cleanup time, stopping any bus workers before the
+	// DB connection pool is closed.
+	t.Cleanup(func() { testDB.Close() })
+	t.Cleanup(func() { bus.Close() })
+
+	return testDB, bus, handler
 }
 
 func TestCreateChannelAndView(t *testing.T) {
-	testDB, h := setupVirtualAdminTest(t)
-	defer testDB.Close()
+	_, _, h := setupVirtualAdminTest(t)
 
 	// Create mux with route patterns needed for this test
 	mux := http.NewServeMux()
@@ -131,9 +137,7 @@ func TestCreateChannelAndView(t *testing.T) {
 }
 
 func TestViewTree(t *testing.T) {
-	t.Skip("known deadlock: event bus + DB.Close race in test environment")
-	testDB, h := setupVirtualAdminTest(t)
-	defer testDB.Close()
+	_, _, h := setupVirtualAdminTest(t)
 
 	// Create channel and view
 	channel := &db.Channel{
@@ -141,7 +145,7 @@ func TestViewTree(t *testing.T) {
 		Name:     "Test Channel",
 		AuthMode: "public",
 	}
-	channelID, _ := h.svc.CreateChannel(nil, channel)
+	channelID, _ := h.svc.CreateChannel(context.Background(), channel)
 
 	view := &db.View{
 		Slug:      "test-view",
@@ -150,7 +154,7 @@ func TestViewTree(t *testing.T) {
 		Mode:      "curated",
 		Writable:  true,
 	}
-	viewID, _ := h.svc.CreateView(nil, view)
+	viewID, _ := h.svc.CreateView(context.Background(), view)
 
 	// Create nested folder structure
 	folder1 := &db.Node{
@@ -159,7 +163,7 @@ func TestViewTree(t *testing.T) {
 		NodeType: "folder",
 		Status:   "visible",
 	}
-	f1ID, _ := h.svc.CreateNode(nil, folder1)
+	f1ID, _ := h.svc.CreateNode(context.Background(), folder1)
 
 	subfolder := &db.Node{
 		ViewID:   viewID.ID,
@@ -168,7 +172,7 @@ func TestViewTree(t *testing.T) {
 		NodeType: "folder",
 		Status:   "visible",
 	}
-	sfID, _ := h.svc.CreateNode(nil, subfolder)
+	sfID, _ := h.svc.CreateNode(context.Background(), subfolder)
 
 	fileNode := &db.Node{
 		ViewID:   viewID.ID,
@@ -177,7 +181,7 @@ func TestViewTree(t *testing.T) {
 		NodeType: "file_ref",
 		Status:   "visible",
 	}
-	_, _ = h.svc.CreateNode(nil, fileNode)
+	_, _ = h.svc.CreateNode(context.Background(), fileNode)
 
 	// Create mux with route patterns needed for this test
 	mux := http.NewServeMux()
@@ -253,8 +257,7 @@ func TestViewTree(t *testing.T) {
 }
 
 func TestNodeCRUD(t *testing.T) {
-	testDB, h := setupVirtualAdminTest(t)
-	defer testDB.Close()
+	_, _, h := setupVirtualAdminTest(t)
 
 	// Create channel and view
 	channel := &db.Channel{
@@ -262,7 +265,7 @@ func TestNodeCRUD(t *testing.T) {
 		Name:     "Test Channel",
 		AuthMode: "public",
 	}
-	channelID, _ := h.svc.CreateChannel(nil, channel)
+	channelID, _ := h.svc.CreateChannel(context.Background(), channel)
 
 	view := &db.View{
 		Slug:      "test-view",
@@ -271,7 +274,7 @@ func TestNodeCRUD(t *testing.T) {
 		Mode:      "curated",
 		Writable:  true,
 	}
-	_, _ = h.svc.CreateView(nil, view)
+	_, _ = h.svc.CreateView(context.Background(), view)
 
 	// Create mux with route patterns needed for this test
 	mux := http.NewServeMux()
@@ -330,7 +333,7 @@ func TestNodeCRUD(t *testing.T) {
 	}
 
 	// Verify the node is soft-deleted (status=hidden)
-	deletedNode, err := h.svc.GetNode(nil, 1)
+	deletedNode, err := h.svc.GetNode(context.Background(), 1)
 	if err != nil {
 		t.Fatalf("failed to get deleted node: %v", err)
 	}
@@ -345,8 +348,7 @@ func TestNodeCRUD(t *testing.T) {
 }
 
 func TestTreeDepthLimit(t *testing.T) {
-	testDB, h := setupVirtualAdminTest(t)
-	defer testDB.Close()
+	_, _, h := setupVirtualAdminTest(t)
 
 	// Create channel and view
 	channel := &db.Channel{
@@ -354,7 +356,7 @@ func TestTreeDepthLimit(t *testing.T) {
 		Name:     "Test Channel",
 		AuthMode: "public",
 	}
-	channelID, _ := h.svc.CreateChannel(nil, channel)
+	channelID, _ := h.svc.CreateChannel(context.Background(), channel)
 
 	view := &db.View{
 		Slug:      "test-view",
@@ -363,7 +365,7 @@ func TestTreeDepthLimit(t *testing.T) {
 		Mode:      "curated",
 		Writable:  true,
 	}
-	_, _ = h.svc.CreateView(nil, view)
+	_, _ = h.svc.CreateView(context.Background(), view)
 
 	// Create a deep chain: folder1 -> folder2 -> folder3 -> ... -> folder15
 	var parentID *int64
@@ -376,7 +378,7 @@ func TestTreeDepthLimit(t *testing.T) {
 			NodeType: "folder",
 			Status:   "visible",
 		}
-		createdNode, _ := h.svc.CreateNode(nil, folder)
+		createdNode, _ := h.svc.CreateNode(context.Background(), folder)
 		parentID = &createdNode.ID
 	}
 

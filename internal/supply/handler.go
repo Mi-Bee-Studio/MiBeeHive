@@ -11,7 +11,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
-
+	"sync"
+	"time"
 	db "github.com/Mi-Bee-Studio/mibeehive/internal/db"
 	"github.com/Mi-Bee-Studio/mibeehive/internal/middleware"
 	"github.com/Mi-Bee-Studio/mibeehive/internal/model"
@@ -37,6 +38,12 @@ type ListedFile struct {
 type Handler struct {
 	fileRepo *db.FileRepo
 	svc      *service.FileService
+
+	// Response cache for /repo/index — avoids loading all 2729+ files on
+	// every request. Same double-checked locking pattern as PyPI/APT caches.
+	indexMu       sync.RWMutex
+	indexCache    []byte
+	indexCachedAt time.Time
 }
 
 // NewHandler builds a supply Handler backed by the existing FileRepo and
@@ -54,6 +61,21 @@ type indexResponse struct {
 // ServeIndex handles GET /repo/index — a JSON manifest of servable artifacts.
 // Public (no auth): external servers must be able to discover tools.
 func (h *Handler) ServeIndex(w http.ResponseWriter, r *http.Request) {
+	const indexTTL = 30 * time.Second
+
+	// Fast path: serve cached response.
+	h.indexMu.RLock()
+	cached := h.indexCache
+	age := time.Since(h.indexCachedAt)
+	h.indexMu.RUnlock()
+	if cached != nil && age < indexTTL {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Cache-Control", "public, max-age=30")
+		_, _ = w.Write(cached)
+		return
+	}
+
+	// Slow path: rebuild index.
 	files, err := h.fileRepo.ListComplete(r.Context(), 0)
 	if err != nil {
 		middleware.WriteError(w, http.StatusInternalServerError, model.ERR_INTERNAL, "list servable files", err)
@@ -74,8 +96,16 @@ func (h *Handler) ServeIndex(w http.ResponseWriter, r *http.Request) {
 			DownloadURL: "/repo/files/" + strconv.FormatInt(f.ID, 10),
 		})
 	}
+	payload, _ := json.Marshal(indexResponse{Count: len(items), Items: items})
+
+	h.indexMu.Lock()
+	h.indexCache = payload
+	h.indexCachedAt = time.Now()
+	h.indexMu.Unlock()
+
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(indexResponse{Count: len(items), Items: items})
+	w.Header().Set("Cache-Control", "public, max-age=30")
+	_, _ = w.Write(payload)
 }
 
 // ServeFile handles GET /repo/files/{id} — streams an artifact, reusing the

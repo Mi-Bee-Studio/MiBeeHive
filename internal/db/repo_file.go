@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
+	"time"
 )
 
 const fileColumns = `id, project_id, version, filename, os, arch, ext, size_bytes, download_url, local_path, checksum, status, error_message, retry_count, last_attempt_at, created_at`
@@ -16,11 +18,40 @@ const fileColumns = `id, project_id, version, filename, os, arch, ext, size_byte
 // FileRepo provides CRUD operations for files.
 type FileRepo struct {
 	db *sql.DB
+
+	// Cached total file count (unfiltered). Updated on a 30s TTL to avoid
+	// COUNT(*) scanning all rows on every list request.
+	countMu       sync.RWMutex
+	countCached   int
+	countCachedAt time.Time
 }
 
 // NewFileRepo creates a new FileRepo.
 func NewFileRepo(db *sql.DB) *FileRepo {
 	return &FileRepo{db: db}
+}
+
+// cachedFileCount returns a cached total file count, refreshing if older than 30s.
+func (r *FileRepo) cachedFileCount(ctx context.Context) (int, error) {
+	const ttl = 30 * time.Second
+	r.countMu.RLock()
+	if time.Since(r.countCachedAt) < ttl {
+		c := r.countCached
+		r.countMu.RUnlock()
+		return c, nil
+	}
+	r.countMu.RUnlock()
+
+	var count int
+	err := r.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM files").Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+	r.countMu.Lock()
+	r.countCached = count
+	r.countCachedAt = time.Now()
+	r.countMu.Unlock()
+	return count, nil
 }
 
 // Create inserts a new file and returns the generated ID.
@@ -561,13 +592,15 @@ func (r *FileRepo) ListFilesCrossProject(ctx context.Context, filters FileFilter
 	}
 	query += fmt.Sprintf(" ORDER BY %s %s", sortField, sortOrder)
 
-	// Count total matching rows.
-	countQuery := "SELECT COUNT(*) FROM files"
-	if len(whereClauses) > 0 {
-		countQuery += " WHERE " + strings.Join(whereClauses, " AND ")
-	}
+	// Count total matching rows. Use cached count for unfiltered queries.
 	var total int
-	err := r.db.QueryRowContext(ctx, countQuery, args...).Scan(&total)
+	var err error
+	if len(whereClauses) == 0 {
+		total, err = r.cachedFileCount(ctx)
+	} else {
+		countQuery := "SELECT COUNT(*) FROM files WHERE " + strings.Join(whereClauses, " AND ")
+		err = r.db.QueryRowContext(ctx, countQuery, args...).Scan(&total)
+	}
 	if err != nil {
 		return nil, 0, fmt.Errorf("counting files: %w", err)
 	}

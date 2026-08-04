@@ -65,8 +65,6 @@ func (s *VirtualIndexService) CreateChannel(ctx context.Context, c *db.Channel) 
 	s.auditLog(ctx, "create", "channel", id, c.Name, fmt.Sprintf("{\"slug\":\"%s\"}", c.Slug))
 	s.emitChannelChanged(ctx, id)
 	return c, nil
-	s.emitChannelChanged(ctx, id)
-	return c, nil
 }
 
 // UpdateChannel updates a channel and emits a ChannelChanged event.
@@ -76,7 +74,6 @@ func (s *VirtualIndexService) UpdateChannel(ctx context.Context, c *db.Channel) 
 	}
 	s.emitChannelChanged(ctx, c.ID)
 	s.auditLog(ctx, "update", "channel", c.ID, c.Name, fmt.Sprintf("{\"slug\":\"%s\"}", c.Slug))
-	return nil
 	return nil
 }
 
@@ -109,7 +106,6 @@ func (s *VirtualIndexService) CreateView(ctx context.Context, v *db.View) (*db.V
 	}
 	v.ID = id
 	s.auditLog(ctx, "create", "view", id, v.Name, fmt.Sprintf("{\"slug\":\"%s\",\"channel\":%d}", v.Slug, v.ChannelID))
-	return v, nil
 	return v, nil
 }
 
@@ -169,7 +165,6 @@ func (s *VirtualIndexService) UpdateNode(ctx context.Context, n *db.Node) error 
 	s.emitNodeTreeChanged(ctx, n.ViewID)
 	s.auditLog(ctx, "update", "node", n.ID, n.Name, "{}")
 	return nil
-	return nil
 }
 
 // MoveNode reparents a node. It rejects moves that would create a cycle by
@@ -210,7 +205,6 @@ func (s *VirtualIndexService) SoftDeleteNode(ctx context.Context, nodeID int64) 
 	}
 	s.emitNodeTreeChanged(ctx, node.ViewID)
 	s.auditLog(ctx, "delete", "node", nodeID, node.Name, "{}")
-	return nil
 	return nil
 }
 

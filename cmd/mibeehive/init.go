@@ -481,24 +481,41 @@ func initServices(cfg *config.Config, database *sql.DB, readDB *sql.DB) *appServ
 	slog.Info("virtual index service initialized")
 
 	// Seed default channel and view if they don't exist.
-	if ch, err := virtualRepo.GetChannelBySlug(context.Background(), "public"); err != nil || ch == nil {
-		chID, chErr := virtualRepo.CreateChannel(context.Background(), &db.Channel{
+	ctx := context.Background()
+	ch, _ := virtualRepo.GetChannelBySlug(ctx, "public")
+	if ch == nil {
+		chID, chErr := virtualRepo.CreateChannel(ctx, &db.Channel{
 			Slug:     "public",
 			Name:     "Public",
 			AuthMode: "anonymous_read",
 		})
 		if chErr != nil {
 			slog.Warn("seed default channel failed", "error", chErr)
-		} else if _, vErr := virtualRepo.CreateView(context.Background(), &db.View{
-			Slug:      "default",
-			Name:      "Default",
-			ChannelID: chID,
-			Mode:      "manual",
-			Writable:  true,
-		}); vErr != nil {
-			slog.Warn("seed default view failed", "error", vErr)
 		} else {
-			slog.Info("seeded default virtual channel/view", "channel", "public", "view", "default")
+			ch = &db.Channel{ID: chID}
+		}
+	}
+	if ch != nil {
+		views, _ := virtualRepo.ListViewsByChannel(ctx, ch.ID)
+		viewExists := false
+		for _, v := range views {
+			if v.Slug == "default" {
+				viewExists = true
+				break
+			}
+		}
+		if !viewExists {
+			if _, vErr := virtualRepo.CreateView(ctx, &db.View{
+				Slug:      "default",
+				Name:      "Default",
+				ChannelID: ch.ID,
+				Mode:      "curated",
+				Writable:  true,
+			}); vErr != nil {
+				slog.Warn("seed default view failed", "error", vErr)
+			} else {
+				slog.Info("seeded default virtual channel/view", "channel", "public", "view", "default")
+			}
 		}
 	}
 

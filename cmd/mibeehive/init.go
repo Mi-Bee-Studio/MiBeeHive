@@ -300,6 +300,7 @@ func initServices(cfg *config.Config, database *sql.DB, readDB *sql.DB) *appServ
 
 	// Ensure storage directories exist.
 	os.MkdirAll(filepath.Join(cfg.Storage.BasePath, "webdav"), 0o755)
+	os.MkdirAll(filepath.Join(cfg.Storage.BasePath, "webdav", "manual_uploads"), 0o755)
 	os.MkdirAll(filepath.Join(cfg.Storage.BasePath, "os-install"), 0o755)
 	s.storageResolver = service.NewStorageResolver(cfg)
 	s.fileService = service.NewFileService(database, s.storageResolver, cfg.Crawler.MaxConcurrent, s.appMetrics)
@@ -797,7 +798,7 @@ func buildRouter(cfg *config.Config, h *appHandlers, svcs *appServices, database
 	legacyHandler := webdavpkg.NewHandler(webdavStoragePath, "/webdav")
 
 	// Create virtual WebDAV handler (virtual index VFS).
-	virtualFS := webdavpkg.NewVirtualFS(database, database, webdavStoragePath,
+	virtualFS := webdavpkg.NewVirtualFS(database, database, cfg.Storage.BasePath,
 		svcs.vpathSvc, svcs.virtualRepo, svcs.eventbus, slog.Default())
 	virtualHandler := webdavpkg.NewVirtualHandler(virtualFS)
 

@@ -75,7 +75,7 @@ func setupVPathTest(t *testing.T) (*sql.DB, *VirtualIndexService, *VPathIndexSer
 	bus := eventbus.NewBus(10)
 	t.Cleanup(bus.Close)
 	repo := db.NewVirtualRepo(testDB)
-	vsvc := NewVirtualIndexService(repo, bus, slog.Default())
+	vsvc := NewVirtualIndexService(repo, nil, bus, slog.Default())
 	vpath := NewVPathIndexService(testDB, testDB, slog.Default())
 
 	cache.PathCache.Purge()

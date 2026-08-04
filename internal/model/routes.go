@@ -139,7 +139,8 @@ const (
 	RouteViewTree = "/api/v1/admin/views/{view_id}/tree"
 	RouteNodes = "/api/v1/admin/views/{view_id}/nodes"
 	RouteNodeUpdate = "/api/v1/admin/nodes/{id}"
-	RouteNodeDelete = "/api/v1/admin/nodes/{id}"
+	RouteNodeDelete   = "/api/v1/admin/nodes/{id}"
+	RouteVirtualAudit = "/api/v1/admin/virtual-audit"
 	// Tool catalog
 	RouteToolCatalog       = "/api/v1/admin/tool-catalog"
 	RouteToolCatalogEnable = "/api/v1/admin/tool-catalog/{slug}/enable"

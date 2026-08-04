@@ -66,7 +66,7 @@ func setupVirtualIndexTest(t *testing.T) (*sql.DB, *eventbus.Bus, *VirtualIndexS
 	bus := eventbus.NewBus(10)
 	t.Cleanup(bus.Close)
 	repo := db.NewVirtualRepo(testDB)
-	svc := NewVirtualIndexService(repo, bus, slog.Default())
+	svc := NewVirtualIndexService(repo, nil, bus, slog.Default())
 	return testDB, bus, svc
 }
 

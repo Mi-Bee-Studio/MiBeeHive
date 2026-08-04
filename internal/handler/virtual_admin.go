@@ -15,16 +15,17 @@ import (
 	"github.com/Mi-Bee-Studio/mibeehive/internal/service"
 )
 
-// VirtualAdminHandler handles admin virtual index API endpoints.
 type VirtualAdminHandler struct {
 	svc    *service.VirtualIndexService
+	audit  *db.AuditRepo
 	logger *slog.Logger
 }
 
 // NewVirtualAdminHandler creates a new VirtualAdminHandler.
-func NewVirtualAdminHandler(svc *service.VirtualIndexService) *VirtualAdminHandler {
+func NewVirtualAdminHandler(svc *service.VirtualIndexService, audit *db.AuditRepo) *VirtualAdminHandler {
 	return &VirtualAdminHandler{
 		svc:    svc,
+		audit:  audit,
 		logger: slog.Default(),
 	}
 }
@@ -692,4 +693,42 @@ func (h *VirtualAdminHandler) buildTree(ctx context.Context, viewID int64, paren
 	}
 
 	return result, nil
+}
+
+// ListAudit handles GET /api/v1/admin/virtual-audit — returns recent virtual
+// index mutations (channel/view/node CRUD) for operational visibility (#58).
+func (h *VirtualAdminHandler) ListAudit(w http.ResponseWriter, r *http.Request) {
+	entityType := r.URL.Query().Get("entity")
+	limit := 50
+	if l := r.URL.Query().Get("limit"); l != "" {
+		if n, err := strconv.Atoi(l); err == nil {
+			limit = n
+		}
+	}
+	entries, err := h.audit.List(r.Context(), entityType, limit)
+	if err != nil {
+		middleware.WriteError(w, http.StatusInternalServerError, model.ERR_INTERNAL, "list audit", err)
+		return
+	}
+	type auditItem struct {
+		ID         int64     `json:"id"`
+		AdminUser  string    `json:"admin_user"`
+		Action     string    `json:"action"`
+		EntityType string    `json:"entity_type"`
+		EntityID   int64     `json:"entity_id"`
+		EntityName string    `json:"entity_name"`
+		DiffJSON   string    `json:"diff_json"`
+		CreatedAt  time.Time `json:"created_at"`
+	}
+	items := make([]auditItem, 0, len(entries))
+	for _, e := range entries {
+		items = append(items, auditItem{
+			ID: e.ID, AdminUser: e.AdminUser, Action: e.Action,
+			EntityType: e.EntityType, EntityID: e.EntityID,
+			EntityName: e.EntityName, DiffJSON: e.DiffJSON,
+			CreatedAt: e.CreatedAt,
+		})
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(model.ApiResponse[[]auditItem]{Success: true, Data: items})
 }

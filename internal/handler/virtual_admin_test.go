@@ -30,8 +30,8 @@ func setupVirtualAdminTest(t *testing.T) (*sql.DB, *eventbus.Bus, *VirtualAdminH
 
 	virtualRepo := db.NewVirtualRepo(testDB)
 	bus := eventbus.NewBus(100)
-	virtualSvc := service.NewVirtualIndexService(virtualRepo, bus, nil)
-	handler := NewVirtualAdminHandler(virtualSvc)
+	virtualSvc := service.NewVirtualIndexService(virtualRepo, nil, bus, nil)
+	handler := NewVirtualAdminHandler(virtualSvc, nil)
 
 	// t.Cleanup runs in LIFO order: register the DB close FIRST so the bus
 	// close runs first at cleanup time, stopping any bus workers before the

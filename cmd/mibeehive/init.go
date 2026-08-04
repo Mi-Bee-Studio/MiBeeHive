@@ -477,7 +477,7 @@ func initServices(cfg *config.Config, database *sql.DB, readDB *sql.DB) *appServ
 	// Initialize virtual index service.
 	virtualRepo := db.NewVirtualRepo(database)
 	s.virtualRepo = virtualRepo
-	s.virtualIndexSvc = service.NewVirtualIndexService(virtualRepo, s.eventbus, logger)
+	s.virtualIndexSvc = service.NewVirtualIndexService(virtualRepo, db.NewAuditRepo(database), s.eventbus, logger)
 	s.vpathSvc = service.NewVPathIndexService(database, database, logger)
 	slog.Info("virtual index service initialized")
 
@@ -580,7 +580,7 @@ func initHandlers(cfg *config.Config, svcs *appServices, database *sql.DB, confi
 	// File center handler: cross-project file listing with filtering (requires auth).
 	h.fileCenter = handler.NewFileCenterHandler(svcs.readDB)
 	// Virtual index admin handler.
-	h.virtualAdmin = handler.NewVirtualAdminHandler(svcs.virtualIndexSvc)
+	h.virtualAdmin = handler.NewVirtualAdminHandler(svcs.virtualIndexSvc, db.NewAuditRepo(database))
 	// Tool catalog handler: built-in catalog + one-click enable.
 	h.toolCatalog = handler.NewToolCatalogHandler(service.NewToolCatalogService(), db.NewProjectRepo(database))
 
@@ -762,6 +762,7 @@ func buildRouter(cfg *config.Config, h *appHandlers, svcs *appServices, database
 	apiMux.HandleFunc("GET "+model.RouteViewTree, h.virtualAdmin.GetViewTree)
 	apiMux.HandleFunc("PUT "+model.RouteNodeUpdate, h.virtualAdmin.UpdateNode)
 	apiMux.HandleFunc("DELETE "+model.RouteNodeDelete, h.virtualAdmin.DeleteNode)
+	apiMux.HandleFunc("GET "+model.RouteVirtualAudit, h.virtualAdmin.ListAudit)
 	// Tool catalog routes (admin).
 	apiMux.HandleFunc("GET "+model.RouteToolCatalog, h.toolCatalog.ListCatalog)
 	apiMux.HandleFunc("POST "+model.RouteToolCatalogEnable, h.toolCatalog.EnableTool)

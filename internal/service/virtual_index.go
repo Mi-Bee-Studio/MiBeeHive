@@ -23,13 +23,34 @@ const maxTreeDepth = 50
 // delegated to the VirtualRepo.
 type VirtualIndexService struct {
 	repo   *db.VirtualRepo
+	audit  *db.AuditRepo
 	bus    *eventbus.Bus
 	logger *slog.Logger
 }
 
 // NewVirtualIndexService creates a new VirtualIndexService.
-func NewVirtualIndexService(repo *db.VirtualRepo, bus *eventbus.Bus, logger *slog.Logger) *VirtualIndexService {
-	return &VirtualIndexService{repo: repo, bus: bus, logger: logger}
+func NewVirtualIndexService(repo *db.VirtualRepo, audit *db.AuditRepo, bus *eventbus.Bus, logger *slog.Logger) *VirtualIndexService {
+	if logger == nil {
+		logger = slog.Default()
+	}
+	return &VirtualIndexService{repo: repo, audit: audit, bus: bus, logger: logger}
+}
+
+// auditLog writes a structured log entry and persists to the audit table.
+func (s *VirtualIndexService) auditLog(ctx context.Context, action, entityType string, id int64, name, diff string) {
+	s.logger.Info("virtual index audit",
+		"action", action, "entity_type", entityType,
+		"entity_id", id, "entity_name", name)
+	if s.audit != nil {
+		_ = s.audit.Log(ctx, &db.AuditEntry{
+			AdminUser:  "admin", // TODO: extract from context when auth metadata is threaded through
+			Action:     action,
+			EntityType: entityType,
+			EntityID:   id,
+			EntityName: name,
+			DiffJSON:   diff,
+		})
+	}
 }
 
 // --- Channels ---
@@ -41,6 +62,9 @@ func (s *VirtualIndexService) CreateChannel(ctx context.Context, c *db.Channel) 
 		return nil, err
 	}
 	c.ID = id
+	s.auditLog(ctx, "create", "channel", id, c.Name, fmt.Sprintf("{\"slug\":\"%s\"}", c.Slug))
+	s.emitChannelChanged(ctx, id)
+	return c, nil
 	s.emitChannelChanged(ctx, id)
 	return c, nil
 }
@@ -51,12 +75,18 @@ func (s *VirtualIndexService) UpdateChannel(ctx context.Context, c *db.Channel) 
 		return err
 	}
 	s.emitChannelChanged(ctx, c.ID)
+	s.auditLog(ctx, "update", "channel", c.ID, c.Name, fmt.Sprintf("{\"slug\":\"%s\"}", c.Slug))
+	return nil
 	return nil
 }
 
 // DeleteChannel removes a channel.
 func (s *VirtualIndexService) DeleteChannel(ctx context.Context, id int64) error {
-	return s.repo.DeleteChannel(ctx, id)
+	if err := s.repo.DeleteChannel(ctx, id); err != nil {
+		return err
+	}
+	s.auditLog(ctx, "delete", "channel", id, "", "{}")
+	return nil
 }
 
 // ListChannels returns all channels.
@@ -78,17 +108,27 @@ func (s *VirtualIndexService) CreateView(ctx context.Context, v *db.View) (*db.V
 		return nil, err
 	}
 	v.ID = id
+	s.auditLog(ctx, "create", "view", id, v.Name, fmt.Sprintf("{\"slug\":\"%s\",\"channel\":%d}", v.Slug, v.ChannelID))
+	return v, nil
 	return v, nil
 }
 
 // UpdateView updates a view.
 func (s *VirtualIndexService) UpdateView(ctx context.Context, v *db.View) error {
-	return s.repo.UpdateView(ctx, v)
+	if err := s.repo.UpdateView(ctx, v); err != nil {
+		return err
+	}
+	s.auditLog(ctx, "update", "view", v.ID, v.Name, "{}")
+	return nil
 }
 
 // DeleteView removes a view.
 func (s *VirtualIndexService) DeleteView(ctx context.Context, id int64) error {
-	return s.repo.DeleteView(ctx, id)
+	if err := s.repo.DeleteView(ctx, id); err != nil {
+		return err
+	}
+	s.auditLog(ctx, "delete", "view", id, "", "{}")
+	return nil
 }
 
 // ListViewsByChannel returns all views for a channel.
@@ -112,6 +152,7 @@ func (s *VirtualIndexService) CreateNode(ctx context.Context, n *db.Node) (*db.N
 		return nil, err
 	}
 	n.ID = id
+	s.auditLog(ctx, "create", "node", id, n.Name, fmt.Sprintf("{\"type\":\"%s\",\"view\":%d}", n.NodeType, n.ViewID))
 	s.emitNodeTreeChanged(ctx, n.ViewID)
 	if n.NodeType == "rule_folder" {
 		s.emitRuleFolderCreated(ctx, id)
@@ -126,6 +167,8 @@ func (s *VirtualIndexService) UpdateNode(ctx context.Context, n *db.Node) error 
 		return err
 	}
 	s.emitNodeTreeChanged(ctx, n.ViewID)
+	s.auditLog(ctx, "update", "node", n.ID, n.Name, "{}")
+	return nil
 	return nil
 }
 
@@ -166,6 +209,8 @@ func (s *VirtualIndexService) SoftDeleteNode(ctx context.Context, nodeID int64) 
 		return err
 	}
 	s.emitNodeTreeChanged(ctx, node.ViewID)
+	s.auditLog(ctx, "delete", "node", nodeID, node.Name, "{}")
+	return nil
 	return nil
 }
 

@@ -43,6 +43,7 @@ func Migrate(db *sql.DB) error {
 		{"023", "migrations/023_virtual_index.sql"},
 		{"024", "migrations/024_perf_indexes.sql"},
 		{"025", "migrations/025_files_created_index.sql"},
+		{"026", "migrations/026_virtual_audit.sql"},
 	}
 	tx, err := db.Begin()
 	if err != nil {

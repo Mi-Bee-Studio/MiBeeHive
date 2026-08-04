@@ -66,6 +66,28 @@ func NewVirtualFS(
 	}
 }
 
+
+// getOrCreateManualProject returns the ID of the "Manual Uploads" project,
+// creating it if necessary. Used as the project_id for WebDAV uploads.
+func (fs *VirtualFS) getOrCreateManualProject() (int64, error) {
+	var id int64
+	err := fs.writeDB.QueryRow(
+		`SELECT id FROM projects WHERE source_type = 'manual_upload' LIMIT 1`).Scan(&id)
+	if err == nil {
+		return id, nil
+	}
+	if err != sql.ErrNoRows {
+		return 0, fmt.Errorf("querying manual project: %w", err)
+	}
+	res, err := fs.writeDB.Exec(`
+		INSERT INTO projects (name, display_name, source_type, source_url, config, enabled)
+		VALUES ('manual_uploads', 'Manual Uploads', 'manual_upload', '', '{}', 1)`)
+	if err != nil {
+		return 0, fmt.Errorf("creating manual project: %w", err)
+	}
+	return res.LastInsertId()
+}
+
 // --- Path resolution -------------------------------------------------------
 
 // resolveView parses /{channel_slug}/{view_slug}/{rest...} and returns the
@@ -638,10 +660,15 @@ func (f *manualUploadFile) Close() error {
 		f.fs.logger.Warn("vfs: stat manual upload failed", "path", f.localPath, "error", serr)
 		return err
 	}
+	projectID, perr := f.fs.getOrCreateManualProject()
+	if perr != nil {
+		f.fs.logger.Warn("vfs: manual project lookup failed", "error", perr)
+		return err
+	}
 	fileID, rerr := service.RegisterFile(
 		f.ctx, f.fs.writeDB, f.fs.bus,
 		"manual_upload", "manual", "webdav", f.localPath,
-		0, filepath.Base(f.localPath), "", info.Size(), "",
+		projectID, filepath.Base(f.localPath), "", info.Size(), "",
 	)
 	if rerr != nil {
 		f.fs.logger.Warn("vfs: registering manual upload failed", "path", f.localPath, "error", rerr)

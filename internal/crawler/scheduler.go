@@ -4,14 +4,11 @@ import (
 	"context"
 	"sync"
 	"time"
-
-	"github.com/Mi-Bee-Studio/mibeehive/internal/model"
 )
 
 // Scheduler manages per-project crawl timers using stdlib time.Ticker.
 type Scheduler struct {
 	mu          sync.Mutex
-	crawlers    map[string]Crawler       // sourceType -> Crawler
 	timers      map[string]*time.Timer   // projectName -> timer
 	intervals   map[string]time.Duration // projectName -> interval
 	cancelFuncs map[string]context.CancelFunc
@@ -30,28 +27,12 @@ type Logger interface {
 // NewScheduler creates a new Scheduler.
 func NewScheduler(logger Logger) *Scheduler {
 	return &Scheduler{
-		crawlers:    make(map[string]Crawler),
 		timers:      make(map[string]*time.Timer),
 		intervals:   make(map[string]time.Duration),
 		cancelFuncs: make(map[string]context.CancelFunc),
 		doneChans:   make(map[string]chan struct{}),
 		logger:      logger,
 	}
-}
-
-// Register adds a crawler to the scheduler, keyed by its SourceType.
-func (s *Scheduler) Register(c Crawler) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.crawlers[string(c.SourceType())] = c
-}
-
-// GetCrawler returns the crawler registered for the given source type.
-func (s *Scheduler) GetCrawler(sourceType model.SourceType) (Crawler, bool) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	c, ok := s.crawlers[string(sourceType)]
-	return c, ok
 }
 
 // StartProject begins periodic crawling for a project at the given interval.

@@ -6,8 +6,6 @@ import (
 	"sync"
 	"testing"
 	"time"
-
-	"github.com/Mi-Bee-Studio/mibeehive/internal/model"
 )
 
 // TestScheduler_Running tests the Running() method returns correct state.
@@ -149,9 +147,6 @@ func TestScheduler_CrawlErrorLogged(t *testing.T) {
 func TestScheduler_StopAllCleansState(t *testing.T) {
 	logger := &mockLogger{}
 	s := NewScheduler(logger)
-
-	mc := &MockCrawler{name: "gh", sourceType: model.SourceTypeGitHub}
-	s.Register(mc)
 
 	s.StartProject("p1", 1*time.Hour, func(ctx context.Context) error { return nil })
 	s.StartProject("p2", 1*time.Hour, func(ctx context.Context) error { return nil })

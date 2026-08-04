@@ -37,8 +37,7 @@ var ErrCrawlInProgress = errors.New("crawl already in progress")
 // through the new abstraction WITHOUT importing internal/source (which imports
 // this package via LegacyAdapter — avoiding an import cycle).
 //
-// When set (SetFetchFunc), the manager prefers it; otherwise it falls back to
-// the legacy Scheduler.GetCrawler path. This enables incremental migration.
+// When set (SetFetchFunc), the manager always routes fetches through it.
 type FetchFunc func(ctx context.Context, name, sourceType string, params map[string]string) ([]model.ReleaseAsset, error)
 
 // CrawlManager orchestrates fetching releases, filtering new ones, and
@@ -54,8 +53,8 @@ type CrawlManager struct {
 	logger      *slog.Logger
 	metrics     *metrics.Metrics
 
-	// fetchFunc is the new two-track fetch entry point (optional). When nil, the
-	// manager uses the legacy Scheduler.GetCrawler path.
+	// fetchFunc is the fetch entry point wired via SetFetchFunc (always set in
+	// production; the legacy Scheduler crawler fallback was removed).
 	fetchFunc FetchFunc
 
 	// retryCfg is the resolved per-crawl retry/timeout policy (built from config
@@ -191,9 +190,9 @@ func (m *CrawlManager) TriggerCrawl(ctx context.Context, projectName string) (*m
 	return m.finalizeCrawl(ctx, proj, logID, releases, newAssets, downloaded, projectName), nil
 }
 
-// resolveCrawlSetup looks up the project, resolves its crawler, and creates a crawl log entry.
-// When the new fetchFunc is set, a legacy crawler is not required (the Registry
-// handles routing); otherwise the legacy Scheduler crawler must be registered.
+// resolveCrawlSetup looks up the project and creates a crawl log entry. Fetching
+// is routed entirely through the fetchFunc (the source.Registry); no legacy
+// crawler is resolved here.
 func (m *CrawlManager) resolveCrawlSetup(ctx context.Context, projectName string) (*dbrepo.Project, Crawler, int64, error) {
 	proj, err := m.projectRepo.GetByName(ctx, projectName)
 	if err != nil {
@@ -204,14 +203,6 @@ func (m *CrawlManager) resolveCrawlSetup(ctx context.Context, projectName string
 	}
 
 	var crawler Crawler
-	if m.fetchFunc == nil {
-		// Legacy path requires a registered crawler.
-		var ok bool
-		crawler, ok = m.scheduler.GetCrawler(model.SourceType(proj.SourceType))
-		if !ok {
-			return nil, nil, 0, fmt.Errorf("no crawler registered for source type %q", proj.SourceType)
-		}
-	}
 
 	crawlLog := &dbrepo.CrawlLog{
 		ProjectID: proj.ID,
@@ -229,9 +220,8 @@ func (m *CrawlManager) resolveCrawlSetup(ctx context.Context, projectName string
 // fetchReleases fetches releases from the upstream source.
 // On failure it returns a CrawlResult with error details for the caller to return.
 //
-// Routing: when the new two-track fetchFunc is set (SetFetchFunc), it is used;
-// otherwise the legacy Scheduler crawler (crwl) is used. This is the incremental
-// migration seam (design Step 3).
+// Routing: the fetchFunc (source.Registry) is always used. crwl is retained only
+// for the never-reached legacy branch in fetchOnce.
 //
 // The fetch is run through fetchWithRetry so transient errors (timeout,
 // connection reset, 5xx) are retried with bounded backoff, the whole fetch is

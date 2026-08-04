@@ -16,19 +16,6 @@ import (
 	"github.com/Mi-Bee-Studio/mibeehive/internal/service"
 )
 
-// mockCrawler is a simple mock for testing crawl handler.
-type mockCrawler struct {
-	name       string
-	sourceType model.SourceType
-	err        error
-}
-
-func (m *mockCrawler) Name() string                 { return m.name }
-func (m *mockCrawler) SourceType() model.SourceType { return m.sourceType }
-func (m *mockCrawler) FetchReleases(ctx context.Context, owner, repo string) ([]model.ReleaseAsset, error) {
-	return nil, m.err
-}
-
 func TestCrawlTrigger_RateLimited(t *testing.T) {
 	database := setupTestDB(t)
 	defer database.Close()
@@ -44,14 +31,10 @@ func TestCrawlTrigger_RateLimited(t *testing.T) {
 
 	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
 
-	mc := &mockCrawler{
-		name:       "github",
-		sourceType: model.SourceTypeGitHub,
-		err:        crawler.ErrRateLimited,
-	}
-
 	mgr := crawler.NewCrawlManager(database, fileService, cfg, logger, nil)
-	mgr.Scheduler().Register(mc)
+	mgr.SetFetchFunc(func(ctx context.Context, name, sourceType string, params map[string]string) ([]model.ReleaseAsset, error) {
+		return nil, crawler.ErrRateLimited
+	})
 
 	crawlLogRepo := dbrepo.NewCrawlLogRepo(database)
 	projectRepo := dbrepo.NewProjectRepo(database)

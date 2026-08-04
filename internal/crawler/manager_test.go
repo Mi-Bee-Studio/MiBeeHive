@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Mi-Bee-Studio/mibeehive/internal/model"
 	"github.com/Mi-Bee-Studio/mibeehive/internal/config"
+	"github.com/Mi-Bee-Studio/mibeehive/internal/model"
 	"github.com/Mi-Bee-Studio/mibeehive/internal/service"
 
 	_ "modernc.org/sqlite"
@@ -25,37 +25,25 @@ type mockLogger struct {
 	msgs []string
 }
 
-func (l *mockLogger) Info(msg string, args ...any)  { l.mu.Lock(); l.msgs = append(l.msgs, "INFO: "+msg); l.mu.Unlock() }
-func (l *mockLogger) Error(msg string, args ...any) { l.mu.Lock(); l.msgs = append(l.msgs, "ERROR: "+msg); l.mu.Unlock() }
-func (l *mockLogger) Warn(msg string, args ...any)  { l.mu.Lock(); l.msgs = append(l.msgs, "WARN: "+msg); l.mu.Unlock() }
-func (l *mockLogger) Debug(msg string, args ...any) { l.mu.Lock(); l.msgs = append(l.msgs, "DEBUG: "+msg); l.mu.Unlock() }
-
-// --- Mock Crawler ---
-
-type MockCrawler struct {
-	name       string
-	sourceType model.SourceType
-	releases   []model.ReleaseAsset
-	err        error
-	callCount  int
-	mu         sync.Mutex
+func (l *mockLogger) Info(msg string, args ...any) {
+	l.mu.Lock()
+	l.msgs = append(l.msgs, "INFO: "+msg)
+	l.mu.Unlock()
 }
-
-func (m *MockCrawler) Name() string { return m.name }
-func (m *MockCrawler) SourceType() model.SourceType { return m.sourceType }
-func (m *MockCrawler) FetchReleases(ctx context.Context, owner, repo string) ([]model.ReleaseAsset, error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.callCount++
-	if m.err != nil {
-		return nil, m.err
-	}
-	return m.releases, nil
+func (l *mockLogger) Error(msg string, args ...any) {
+	l.mu.Lock()
+	l.msgs = append(l.msgs, "ERROR: "+msg)
+	l.mu.Unlock()
 }
-func (m *MockCrawler) CallCount() int {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	return m.callCount
+func (l *mockLogger) Warn(msg string, args ...any) {
+	l.mu.Lock()
+	l.msgs = append(l.msgs, "WARN: "+msg)
+	l.mu.Unlock()
+}
+func (l *mockLogger) Debug(msg string, args ...any) {
+	l.mu.Lock()
+	l.msgs = append(l.msgs, "DEBUG: "+msg)
+	l.mu.Unlock()
 }
 
 // --- Test Helpers ---
@@ -138,9 +126,9 @@ func setupTestProject(t *testing.T, db *sql.DB, name, sourceType string) int64 {
 
 func makeTestConfig() *config.Config {
 	return &config.Config{
-		Server:  config.ServerConfig{Port: 9090, BindAddr: "0.0.0.0"},
-		Storage: config.StorageConfig{BasePath: "/tmp/mibeehive-test-storage"},
-		Crawler: config.CrawlerConfig{MaxConcurrent: 2, DefaultInterval: "1h"},
+		Server:   config.ServerConfig{Port: 9090, BindAddr: "0.0.0.0"},
+		Storage:  config.StorageConfig{BasePath: "/tmp/mibeehive-test-storage"},
+		Crawler:  config.CrawlerConfig{MaxConcurrent: 2, DefaultInterval: "1h"},
 		Projects: []config.ProjectConfig{},
 	}
 }
@@ -176,13 +164,6 @@ func TestSchedulerStartStop(t *testing.T) {
 	logger := &mockLogger{}
 	s := NewScheduler(logger)
 
-	mc := &MockCrawler{
-		name:       "test",
-		sourceType: model.SourceTypeGitHub,
-		releases:   makeMockReleases(),
-	}
-	s.Register(mc)
-
 	var mu sync.Mutex
 	crawlCount := 0
 
@@ -214,30 +195,6 @@ func TestSchedulerStartStop(t *testing.T) {
 	s.mu.Unlock()
 	if running {
 		t.Error("expected project to be stopped")
-	}
-}
-
-func TestSchedulerRegisterAndGet(t *testing.T) {
-	logger := &mockLogger{}
-	s := NewScheduler(logger)
-
-	mc := &MockCrawler{
-		name:       "gh",
-		sourceType: model.SourceTypeGitHub,
-	}
-	s.Register(mc)
-
-	c, ok := s.GetCrawler(model.SourceTypeGitHub)
-	if !ok {
-		t.Fatal("expected to find github crawler")
-	}
-	if c.Name() != "gh" {
-		t.Errorf("expected crawler name 'gh', got %q", c.Name())
-	}
-
-	_, ok = s.GetCrawler(model.SourceTypeHashiCorp)
-	if ok {
-		t.Error("expected no hashicorp crawler")
 	}
 }
 
@@ -277,14 +234,12 @@ func TestTriggerCrawl_NewReleases(t *testing.T) {
 
 	fileService := service.NewFileService(db, service.NewStorageResolver(&config.Config{Storage: config.StorageConfig{BasePath: tmpDir}}), 2, nil)
 
-	mc := &MockCrawler{
-		name:       "github",
-		sourceType: model.SourceTypeGitHub,
-		releases:   makeMockReleases(),
-	}
-
+	calls := 0
 	mgr := NewCrawlManager(db, fileService, cfg, logger, nil)
-	mgr.Scheduler().Register(mc)
+	mgr.SetFetchFunc(func(ctx context.Context, name, sourceType string, params map[string]string) ([]model.ReleaseAsset, error) {
+		calls++
+		return makeMockReleases(), nil
+	})
 
 	// Note: DownloadFile will fail because the URL doesn't exist.
 	// We test the flow logic — the file entry is created, download is attempted.
@@ -302,8 +257,8 @@ func TestTriggerCrawl_NewReleases(t *testing.T) {
 	// v1.0.0 already exists, so only v2.0.0 is new.
 	// But download will fail, so FilesDownloaded may be 0.
 	// That's fine — we're testing the filtering logic.
-	if mc.CallCount() != 1 {
-		t.Errorf("expected 1 crawl call, got %d", mc.CallCount())
+	if calls != 1 {
+		t.Errorf("expected 1 crawl call, got %d", calls)
 	}
 }
 
@@ -320,16 +275,14 @@ func TestConcurrentCrawlLock(t *testing.T) {
 
 	fileService := service.NewFileService(db, service.NewStorageResolver(&config.Config{Storage: config.StorageConfig{BasePath: tmpDir}}), 2, nil)
 
-	// Crawler that blocks until signaled.
+	// Fetch func that blocks until signaled.
 	unblock := make(chan struct{})
-	blockingFetch := func(ctx context.Context, owner, repo string) ([]model.ReleaseAsset, error) {
-		<-unblock
-		return []model.ReleaseAsset{}, nil
-	}
 
 	mgr := NewCrawlManager(db, fileService, cfg, logger, nil)
-	// Register a custom crawler that blocks.
-	mgr.scheduler.Register(&blockingCrawler{fetch: blockingFetch})
+	mgr.SetFetchFunc(func(ctx context.Context, name, sourceType string, params map[string]string) ([]model.ReleaseAsset, error) {
+		<-unblock
+		return []model.ReleaseAsset{}, nil
+	})
 
 	var wg sync.WaitGroup
 	wg.Add(2)
@@ -396,14 +349,10 @@ func TestTriggerCrawl_FetchError(t *testing.T) {
 
 	fileService := service.NewFileService(db, service.NewStorageResolver(&config.Config{Storage: config.StorageConfig{BasePath: tmpDir}}), 2, nil)
 
-	mc := &MockCrawler{
-		name:       "github",
-		sourceType: model.SourceTypeGitHub,
-		err:        fmt.Errorf("API server unreachable"),
-	}
-
 	mgr := NewCrawlManager(db, fileService, cfg, logger, nil)
-	mgr.Scheduler().Register(mc)
+	mgr.SetFetchFunc(func(ctx context.Context, name, sourceType string, params map[string]string) ([]model.ReleaseAsset, error) {
+		return nil, fmt.Errorf("API server unreachable")
+	})
 
 	result, err := mgr.TriggerCrawl(context.Background(), "errproject")
 	if err == nil {
@@ -437,14 +386,10 @@ func TestTriggerCrawl_RateLimited(t *testing.T) {
 
 	fileService := service.NewFileService(db, service.NewStorageResolver(&config.Config{Storage: config.StorageConfig{BasePath: tmpDir}}), 2, nil)
 
-	mc := &MockCrawler{
-		name:       "github",
-		sourceType: model.SourceTypeGitHub,
-		err:        ErrRateLimited,
-	}
-
 	mgr := NewCrawlManager(db, fileService, cfg, logger, nil)
-	mgr.Scheduler().Register(mc)
+	mgr.SetFetchFunc(func(ctx context.Context, name, sourceType string, params map[string]string) ([]model.ReleaseAsset, error) {
+		return nil, ErrRateLimited
+	})
 
 	result, err := mgr.TriggerCrawl(context.Background(), "ratelimited")
 	if err == nil {
@@ -488,18 +433,6 @@ func TestGetCrawlStatus(t *testing.T) {
 	}
 }
 
-// --- Helper for blocking crawler test ---
-
-type blockingCrawler struct {
-	fetch func(ctx context.Context, owner, repo string) ([]model.ReleaseAsset, error)
-}
-
-func (b *blockingCrawler) Name() string                                              { return "blocking" }
-func (b *blockingCrawler) SourceType() model.SourceType                              { return model.SourceTypeGitHub }
-func (b *blockingCrawler) FetchReleases(ctx context.Context, owner, repo string) ([]model.ReleaseAsset, error) {
-	return b.fetch(ctx, owner, repo)
-}
-
 // TestScheduler_ConcurrentStart verifies that calling StartProject for the same
 // project rapidly does not result in multiple goroutines running simultaneously.
 // We track the max concurrent goroutines inside crawlFunc — it must never exceed 1.
@@ -508,9 +441,9 @@ func TestScheduler_ConcurrentStart(t *testing.T) {
 	s := NewScheduler(logger)
 
 	var (
-		activeMu   sync.Mutex
-		active     int32
-		maxActive  int32
+		activeMu  sync.Mutex
+		active    int32
+		maxActive int32
 	)
 
 	crawlFunc := func(ctx context.Context) error {

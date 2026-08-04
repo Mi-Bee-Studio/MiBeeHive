@@ -21,6 +21,7 @@ import (
 	"github.com/Mi-Bee-Studio/mibeehive/internal/crawler"
 	"github.com/Mi-Bee-Studio/mibeehive/internal/db"
 	"github.com/Mi-Bee-Studio/mibeehive/internal/docker"
+	"github.com/Mi-Bee-Studio/mibeehive/internal/eventbus"
 	"github.com/Mi-Bee-Studio/mibeehive/internal/handler"
 	"github.com/Mi-Bee-Studio/mibeehive/internal/health"
 	"github.com/Mi-Bee-Studio/mibeehive/internal/metrics"
@@ -30,7 +31,6 @@ import (
 	"github.com/Mi-Bee-Studio/mibeehive/internal/service"
 	"github.com/Mi-Bee-Studio/mibeehive/internal/source"
 	"github.com/Mi-Bee-Studio/mibeehive/internal/supply"
-	"github.com/Mi-Bee-Studio/mibeehive/internal/eventbus"
 	webdavpkg "github.com/Mi-Bee-Studio/mibeehive/internal/webdav"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
@@ -83,7 +83,7 @@ type appServices struct {
 	// Virtual index
 	virtualIndexSvc *service.VirtualIndexService
 	// Event bus
-	eventbus       *eventbus.Bus
+	eventbus *eventbus.Bus
 	// Cancel funcs for background goroutines started during init
 	diskCancel     context.CancelFunc
 	retryCancel    context.CancelFunc
@@ -113,17 +113,18 @@ type appHandlers struct {
 	container     *handler.ContainerHandler
 	registry      *handler.RegistryHandler // nil if remote registry disabled
 	storageConfig *handler.StorageConfigHandler
-	supply        *supply.Handler    // public ops-tool supply endpoints (#3)
-	aptRepo       *supply.AptHandler // public APT repository over /apt/ (deb supply)
-	pypiRepo      *supply.PyPIHandler // public PyPI Simple repository over /simple/ (#24)
-	download      *handler.DownloadHandler // public file download by token
-	shareLink     *handler.ShareLinkHandler // share link admin and public download
+	supply        *supply.Handler               // public ops-tool supply endpoints (#3)
+	aptRepo       *supply.AptHandler            // public APT repository over /apt/ (deb supply)
+	pypiRepo      *supply.PyPIHandler           // public PyPI Simple repository over /simple/ (#24)
+	download      *handler.DownloadHandler      // public file download by token
+	shareLink     *handler.ShareLinkHandler     // share link admin and public download
 	adminInternal *handler.AdminInternalHandler // admin-only internal file details (exposes local_path)
-	fileCenter   *handler.FileCenterHandler // cross-project file listing with filtering
-	cacheMetrics  *handler.CacheMetricsHandler // admin cache metrics endpoint
-	virtualAdmin  *handler.VirtualAdminHandler // virtual index admin API
-	toolCatalog   *handler.ToolCatalogHandler // built-in tool catalog + one-click enable
-	}
+	fileCenter    *handler.FileCenterHandler    // cross-project file listing with filtering
+	cacheMetrics  *handler.CacheMetricsHandler  // admin cache metrics endpoint
+	virtualAdmin  *handler.VirtualAdminHandler  // virtual index admin API
+	toolCatalog   *handler.ToolCatalogHandler   // built-in tool catalog + one-click enable
+}
+
 // loadConfig initializes the logger, loads or generates the config file,
 // loadConfig initializes the logger, loads or generates the config file,
 // and sets up log rotation via lumberjack.
@@ -316,13 +317,9 @@ func initServices(cfg *config.Config, database *sql.DB, readDB *sql.DB) *appServ
 		hashicorpToken = cred.Token
 	}
 
-	// Initialize crawl manager with registered crawlers.
+	// Initialize crawl manager.
 	logger := slog.Default()
 	s.crawlManager = crawler.NewCrawlManager(database, s.fileService, cfg, logger, s.appMetrics)
-	s.crawlManager.Scheduler().Register(crawler.NewGitHubCrawler(githubToken, logger))
-	s.crawlManager.Scheduler().Register(crawler.NewGoCrawler(logger))
-	s.crawlManager.Scheduler().Register(crawler.NewHashiCorpCrawler(hashicorpToken, logger))
-	s.crawlManager.Scheduler().Register(crawler.NewGrafanaCrawler(logger))
 
 	// Read NPM token if available.
 	npmToken := ""
@@ -339,16 +336,11 @@ func initServices(cfg *config.Config, database *sql.DB, readDB *sql.DB) *appServ
 		pypiToken = cred.Token
 	}
 
-	// Register new crawlers.
-	s.crawlManager.Scheduler().Register(crawler.NewNPMCrawler(npmToken, logger))
-	s.crawlManager.Scheduler().Register(crawler.NewPyPICrawler(pypiToken, logger))
-	s.crawlManager.Scheduler().Register(crawler.NewCratesCrawler("", logger))
-
 	// Wire the two-track source.Registry (design Step 3). GitHub is served by a
 	// YAML fingerprint (RuleFetcher); the rest are wrapped as LegacyAdapters so
 	// their behavior is unchanged. The Registry.Fetch matches CrawlManager's
-	// FetchFunc signature. When set, the manager prefers the Registry and falls
-	// back to the Scheduler crawlers above only if fetchFunc were nil.
+	// FetchFunc signature. The manager always routes fetches through it — the
+	// legacy Scheduler-registered crawler fallback was removed.
 	reg := source.NewRegistry()
 	ruleFetcher, err := source.NewRuleFetcher()
 	if err != nil {

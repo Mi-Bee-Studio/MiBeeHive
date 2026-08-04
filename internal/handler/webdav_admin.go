@@ -51,7 +51,6 @@ func (h *WebDAVAdminHandler) WebDAVStatus(w http.ResponseWriter, r *http.Request
 	resp := model.WebDAVStatusResponse{
 		Enabled:     true,
 		HTTPURL:     httpURL,
-		StoragePath: h.resolver.ResolveWebDAV(),
 	}
 	if h.config.Server.HTTPSPort > 0 {
 		resp.HTTPSURL = fmt.Sprintf("https://%s:%d/webdav/", host, h.config.Server.HTTPSPort)

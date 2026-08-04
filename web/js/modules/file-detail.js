@@ -131,11 +131,6 @@ const FileDetail = (function () {
     if (f.checksum) _ct.appendChild(_copyRow(_t('detail_drawer_checksum'), f.checksum, 'detail_drawer_checksum_copied'));
     if (f.created_at) _ct.appendChild(_labelRow(_t('detail_drawer_created'), Helpers.formatTime(f.created_at)));
 
-    // Internal (admin only) — physical path
-    if (f.local_path) {
-      _ct.appendChild(_sectionTitle(_t('detail_drawer_internal_section')));
-      _ct.appendChild(_labelRow(_t('detail_drawer_internal_path'), f.local_path));
-    }
 
     // Dual action buttons
     var actions = document.createElement('div');
@@ -164,16 +159,6 @@ const FileDetail = (function () {
     _open = true;
     _ov.style.opacity = '1'; _ov.style.pointerEvents = 'auto'; _pn.style.transform = 'translateX(0)';
     _render();
-    // Fetch admin-only internal details (local_path) if not already present.
-    if (_file && _file.id && !_file.local_path) {
-      Api.get('/admin/files/' + _file.id + '/internal', { silent: true }).then(function (res) {
-        if (!_open) return;
-        if (res && res.success && res.data && res.data.local_path) {
-          _file.local_path = res.data.local_path;
-          _render();
-        }
-      });
-    }
   }
 
   function close() {

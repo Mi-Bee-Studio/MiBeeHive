@@ -166,7 +166,6 @@ type WebDAVStatusResponse struct {
 	Enabled     bool   `json:"enabled"`
 	HTTPURL     string `json:"http_url"`
 	HTTPSURL    string `json:"https_url,omitempty"`
-	StoragePath string `json:"storage_path"`
 }
 
 // DashboardSummaryResponse aggregates all module statistics for the dashboard.

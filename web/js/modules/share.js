@@ -122,7 +122,6 @@ const Share = (function () {
             <div class="flex items-center justify-between py-2 border-b" style="border-color:var(--color-border)">
               <span class="text-xs" style="color:var(--color-warning)">${t('webdav_https_only')}</span>
             </div>` : null}
-          ${d.storage_path ? html`<${InfoRow} label=${t('webdav_storage_path')}><${CodeVal} value=${d.storage_path} /><//>` : null}
           <div class="py-2">
             <span class="text-sm" style="${_S}">${t('webdav_auth_note')}</span>
           </div>
@@ -150,7 +149,6 @@ const Share = (function () {
             <div class="flex items-center justify-between py-2 border-b" style="border-color:var(--color-border)">
               <span style="color:var(--color-warning);font-size:0.8125rem">${t('webdav_https_only')}</span>
             </div>` : null}
-          <${InfoRow} label=${t('webdav_storage_path')}><${CodeVal} value=${d.storage_path || '-'} /><//>
         </div>
         <div class="card" style="padding:1.25rem;margin-top:1rem">
           <h3 class="text-base font-semibold mb-4" style="color:var(--color-text)">${t('webdav_https_cert')}</h3>

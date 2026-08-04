@@ -383,10 +383,6 @@ const FileCenter = (function () {
               <span class="truncate" style="color:var(--color-text);max-width:60%">${url || '-'}</span>
             </div>
             <div class="flex items-center justify-between gap-2">
-              <span>${t('file_center_webdav_storage')}</span>
-              <span class="truncate" style="color:var(--color-text);max-width:60%">${webdav ? webdav.storage_path : '-'}</span>
-            </div>
-            <div class="flex items-center justify-between gap-2">
               <span>${t('file_center_channel')}</span>
               <select class="select" style="width:auto;font-size:0.75rem;padding:0.25rem 0.5rem"
                       value=${selectedChannel}

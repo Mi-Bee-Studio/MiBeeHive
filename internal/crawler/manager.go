@@ -3,6 +3,7 @@ package crawler
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -175,12 +176,12 @@ func (m *CrawlManager) TriggerCrawl(ctx context.Context, projectName string) (*m
 	}
 	defer mu.Unlock()
 
-	proj, crwl, logID, err := m.resolveCrawlSetup(ctx, projectName)
+	proj, logID, err := m.resolveCrawlSetup(ctx, projectName)
 	if err != nil {
 		return nil, err
 	}
 
-	releases, errResult, err := m.fetchReleases(ctx, proj, crwl, logID, projectName)
+	releases, errResult, err := m.fetchReleases(ctx, proj, logID, projectName)
 	if err != nil {
 		return errResult, err
 	}
@@ -192,17 +193,14 @@ func (m *CrawlManager) TriggerCrawl(ctx context.Context, projectName string) (*m
 
 // resolveCrawlSetup looks up the project and creates a crawl log entry. Fetching
 // is routed entirely through the fetchFunc (the source.Registry); no legacy
-// crawler is resolved here.
-func (m *CrawlManager) resolveCrawlSetup(ctx context.Context, projectName string) (*dbrepo.Project, Crawler, int64, error) {
+func (m *CrawlManager) resolveCrawlSetup(ctx context.Context, projectName string) (*dbrepo.Project, int64, error) {
 	proj, err := m.projectRepo.GetByName(ctx, projectName)
 	if err != nil {
-		return nil, nil, 0, fmt.Errorf("finding project %q: %w", projectName, err)
+		return nil, 0, fmt.Errorf("finding project %q: %w", projectName, err)
 	}
 	if proj == nil {
-		return nil, nil, 0, fmt.Errorf("project %q not found", projectName)
+		return nil, 0, fmt.Errorf("project %q not found", projectName)
 	}
-
-	var crawler Crawler
 
 	crawlLog := &dbrepo.CrawlLog{
 		ProjectID: proj.ID,
@@ -211,10 +209,10 @@ func (m *CrawlManager) resolveCrawlSetup(ctx context.Context, projectName string
 	}
 	logID, err := m.crawlRepo.Create(ctx, crawlLog)
 	if err != nil {
-		return nil, nil, 0, fmt.Errorf("creating crawl log: %w", err)
+		return nil, 0, fmt.Errorf("creating crawl log: %w", err)
 	}
 
-	return proj, crawler, logID, nil
+	return proj, logID, nil
 }
 
 // fetchReleases fetches releases from the upstream source.
@@ -229,22 +227,14 @@ func (m *CrawlManager) resolveCrawlSetup(ctx context.Context, projectName string
 // of: rate_limited, network_error (transient, after retries), or error
 // (permanent upstream/config problem). This lets operators distinguish a
 // flaky-network moment from a genuinely broken source (#23).
-func (m *CrawlManager) fetchReleases(ctx context.Context, proj *dbrepo.Project, crwl Crawler, logID int64, projectName string) ([]model.ReleaseAsset, *model.CrawlResult, error) {
-	crawlerName := ""
-	if crwl != nil {
-		crawlerName = crwl.Name()
-	}
+func (m *CrawlManager) fetchReleases(ctx context.Context, proj *dbrepo.Project, logID int64, projectName string) ([]model.ReleaseAsset, *model.CrawlResult, error) {
+	crawlerName := "registry:" + proj.SourceType
 
-	// fetchOnce is the single-attempt fetch for either routing path. It closes
-	// over which path is active so fetchWithRetry can retry it uniformly.
+	// fetchOnce is the single-attempt fetch. Routing is always through
+	// the source.Registry (m.fetchFunc), which dispatches to rule
+	// fingerprints or legacy adapters as appropriate.
 	fetchOnce := func(fctx context.Context) ([]model.ReleaseAsset, error) {
-		if m.fetchFunc != nil {
-			crawlerName = "registry:" + proj.SourceType
-			return m.fetchFunc(fctx, projectName, proj.SourceType, m.getParams(proj))
-		}
-		// Legacy path.
-		owner, repo := m.getOwnerRepo(proj)
-		return crwl.FetchReleases(fctx, owner, repo)
+		return m.fetchFunc(fctx, projectName, proj.SourceType, m.getParams(proj))
 	}
 
 	releases, err, class := fetchWithRetry(ctx, m.retryCfg, fetchOnce)
@@ -444,14 +434,32 @@ func (m *CrawlManager) getOwnerRepo(proj *dbrepo.Project) (string, string) {
 // owner/repo (matching the legacy overloading), and can grow new keys as
 // sources are migrated to fingerprints (e.g. {"fingerprint":"github"}).
 func (m *CrawlManager) getParams(proj *dbrepo.Project) map[string]string {
+	params := map[string]string{}
 	settings, err := m.projectRepo.GetSettings(context.Background(), proj.ID)
-	if err != nil || settings == nil {
-		return map[string]string{}
+	if err == nil && settings != nil {
+		params["owner"] = settings.GitHubOwner
+		params["repo"] = settings.GitHubRepo
 	}
-	return map[string]string{
-		"owner": settings.GitHubOwner,
-		"repo":  settings.GitHubRepo,
+	// Pass through project config fields that may contain a runtime
+	// fingerprint (enables adding sources without recompiling — issue #2).
+	if proj.Config != "" {
+		var cfg map[string]any
+		if json.Unmarshal([]byte(proj.Config), &cfg) == nil {
+			if fp, ok := cfg["fingerprint_yaml"].(string); ok && fp != "" {
+				params["fingerprint_yaml"] = fp
+			}
+			if ft, ok := cfg["fingerprint"].(string); ok && ft != "" {
+				params["fingerprint"] = ft
+			}
+			// Also forward any custom URL template params.
+			for k, v := range cfg {
+				if s, ok := v.(string); ok && k != "fingerprint_yaml" && k != "fingerprint" {
+					params[k] = s
+				}
+			}
+		}
 	}
+	return params
 }
 
 // isRateLimitError checks if an error indicates rate limiting.

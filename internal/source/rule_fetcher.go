@@ -99,24 +99,40 @@ func (r *RuleFetcher) Fetch(ctx context.Context, src Source) ([]model.ReleaseAss
 	if name == "" {
 		name = src.Type // builtin type name == fingerprint name
 	}
+
+	// Inline YAML: if the caller provides a full fingerprint in
+	// Params["fingerprint_yaml"], parse and use it directly (bypassing
+	// builtins). This enables adding new sources at runtime without
+	// recompiling — the YAML lives in the project config (DB).
+	if inlineYAML := src.Params["fingerprint_yaml"]; inlineYAML != "" {
+		spec, err := rulesrc.ParseSpec([]byte(inlineYAML))
+		if err != nil {
+			return nil, fmt.Errorf("rule source %q: invalid inline fingerprint: %w", src.Name, err)
+		}
+		return r.fetchWithSpec(ctx, spec, src, name)
+	}
+
 	spec, ok := r.builtins[name]
 	if !ok {
 		return nil, fmt.Errorf("rule source %q: no fingerprint named %q registered", src.Name, name)
 	}
+	return r.fetchWithSpec(ctx, spec, src, name)
+}
 
+// fetchWithSpec runs a resolved spec through the rulesrc engine with token
+// injection and URL template substitution.
+func (r *RuleFetcher) fetchWithSpec(ctx context.Context, spec *rulesrc.Spec, src Source, tokenKey string) ([]model.ReleaseAsset, error) {
 	// Inject an auth token if a resolver is wired and yields one for this type.
-	// Clone the spec's request so the shared builtin is never mutated across
-	// concurrent fetches; secrets stay out of the YAML.
 	if r.tokens != nil {
-		if tok := r.tokens(name); tok != "" {
+		if tok := r.tokens(tokenKey); tok != "" {
 			spec = withAuthHeader(spec, "token "+tok)
 		}
 	}
 
-	// Params other than "fingerprint" are forwarded as URL template values.
+	// Params other than "fingerprint" and "fingerprint_yaml" are forwarded as URL template values.
 	params := make(map[string]string, len(src.Params))
 	for k, v := range src.Params {
-		if k != "fingerprint" {
+		if k != "fingerprint" && k != "fingerprint_yaml" {
 			params[k] = v
 		}
 	}

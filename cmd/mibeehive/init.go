@@ -82,6 +82,8 @@ type appServices struct {
 	migrationSvc    *service.MigrationService
 	// Virtual index
 	virtualIndexSvc *service.VirtualIndexService
+	vpathSvc       *service.VPathIndexService
+	virtualRepo    *db.VirtualRepo
 	// Event bus
 	eventbus *eventbus.Bus
 	// Cancel funcs for background goroutines started during init
@@ -89,6 +91,7 @@ type appServices struct {
 	retryCancel    context.CancelFunc
 	registryCancel context.CancelFunc
 	globalCancel   context.CancelFunc
+	vpathCancel    context.CancelFunc
 }
 
 // appHandlers holds all initialized HTTP handlers.
@@ -472,8 +475,37 @@ func initServices(cfg *config.Config, database *sql.DB, readDB *sql.DB) *appServ
 	s.eventbus = eventbus.NewBus(100)
 	// Initialize virtual index service.
 	virtualRepo := db.NewVirtualRepo(database)
+	s.virtualRepo = virtualRepo
 	s.virtualIndexSvc = service.NewVirtualIndexService(virtualRepo, s.eventbus, logger)
+	s.vpathSvc = service.NewVPathIndexService(database, database, logger)
 	slog.Info("virtual index service initialized")
+
+	// Seed default channel and view if they don't exist.
+	if ch, err := virtualRepo.GetChannelBySlug(context.Background(), "public"); err != nil || ch == nil {
+		chID, chErr := virtualRepo.CreateChannel(context.Background(), &db.Channel{
+			Slug:     "public",
+			Name:     "Public",
+			AuthMode: "anonymous_read",
+		})
+		if chErr != nil {
+			slog.Warn("seed default channel failed", "error", chErr)
+		} else if _, vErr := virtualRepo.CreateView(context.Background(), &db.View{
+			Slug:      "default",
+			Name:      "Default",
+			ChannelID: chID,
+			Mode:      "manual",
+			Writable:  true,
+		}); vErr != nil {
+			slog.Warn("seed default view failed", "error", vErr)
+		} else {
+			slog.Info("seeded default virtual channel/view", "channel", "public", "view", "default")
+		}
+	}
+
+	// Start vpath index service as background goroutine.
+	vpathCtx, vpathCancel := context.WithCancel(context.Background())
+	s.vpathCancel = vpathCancel
+	go s.vpathSvc.Run(vpathCtx, s.eventbus)
 
 	return s
 }
@@ -745,12 +777,20 @@ func buildRouter(cfg *config.Config, h *appHandlers, svcs *appServices, database
 
 	// Create WebDAV handler with Basic Auth.
 	webdavStoragePath := filepath.Join(cfg.Storage.BasePath, "webdav")
-	webdavHandler := webdavpkg.NewHandler(webdavStoragePath, "/webdav")
-	webdavMux := middleware.BasicAuthMiddleware(cfg.Auth.PasswordHash)(http.StripPrefix("/webdav", webdavHandler))
+	legacyHandler := webdavpkg.NewHandler(webdavStoragePath, "/webdav")
+
+	// Create virtual WebDAV handler (virtual index VFS).
+	virtualFS := webdavpkg.NewVirtualFS(database, database, webdavStoragePath,
+		svcs.vpathSvc, svcs.virtualRepo, svcs.eventbus, slog.Default())
+	virtualHandler := webdavpkg.NewVirtualHandler(virtualFS)
+
+	// Composite: try virtual first, fall back to legacy on 404.
+	composite := webdavpkg.NewCompositeHandler(virtualHandler, legacyHandler)
+	webdavMux := middleware.BasicAuthMiddleware(cfg.Auth.PasswordHash)(http.StripPrefix("/webdav", composite))
 	// Legacy /webdav/ root redirects to the new default view; sub-paths pass through.
 	mux.Handle("GET /webdav/", handler.WebDAVRedirectHandler(webdavMux))
 	mux.Handle("/webdav/", webdavMux)
-	slog.Info("WebDAV enabled", "path", webdavStoragePath)
+	slog.Info("WebDAV enabled (virtual+legacy)", "path", webdavStoragePath)
 
 	// Serve embedded frontend for all other routes.
 	webSub, err := webpkg.FS()
@@ -945,6 +985,7 @@ func runServers(cfg *config.Config, httpHandler, httpsHandler http.Handler, svcs
 
 	// Cancel global context to abort active downloads.
 	svcs.globalCancel()
+	svcs.vpathCancel()
 
 	// Wait for active downloads to finish (bounded by 10s shutdown timeout).
 	downloadDone := make(chan struct{})

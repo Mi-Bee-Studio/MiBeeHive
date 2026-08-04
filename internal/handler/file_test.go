@@ -163,6 +163,47 @@ func TestListQueue(t *testing.T) {
 	}
 }
 
+// TestListQueueNoPathLeak verifies that the queue response does not include
+// local_path — physical paths must only appear on the admin-internal endpoint.
+func TestListQueueNoPathLeak(t *testing.T) {
+	database := setupTestDB(t)
+	defer database.Close()
+
+	h := NewFileHandler(database, nil, testJWTSecret)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET "+model.RouteFileQueue, h.ListQueue)
+	handler := wrapWithAuth(mux)
+
+	req := authedRequest(http.MethodGet, model.RouteFileQueue, nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var rawResp map[string]any
+	if err := json.NewDecoder(rec.Body).Decode(&rawResp); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	data, ok := rawResp["data"].([]any)
+	if !ok {
+		t.Fatal("expected data to be an array")
+	}
+
+	for i, fileData := range data {
+		fileMap, ok := fileData.(map[string]any)
+		if !ok {
+			t.Fatalf("expected file %d to be an object", i)
+		}
+		if _, exists := fileMap["local_path"]; exists {
+			t.Fatalf("file %d should not contain local_path field", i)
+		}
+	}
+}
+
 func TestQueueStats(t *testing.T) {
 	database := setupTestDB(t)
 	defer database.Close()

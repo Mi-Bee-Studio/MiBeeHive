@@ -48,7 +48,6 @@ type FileResponse struct {
 	Ext          string     `json:"ext"`
 	SizeBytes    int64      `json:"size_bytes"`
 	DownloadURL  string     `json:"download_url"`
-	LocalPath    string     `json:"local_path"`
 	Checksum     string     `json:"checksum"`
 	Status       FileStatus `json:"status"`
 	ErrorMessage string     `json:"error_message"`

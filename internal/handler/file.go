@@ -187,7 +187,6 @@ func toFileResponse(f *dbrepo.File) model.FileResponse {
 		Ext:          f.Ext,
 		SizeBytes:    f.SizeBytes,
 		DownloadURL:  f.DownloadURL,
-		LocalPath:    f.LocalPath,
 		Checksum:     f.Checksum,
 		Status:       model.FileStatus(f.Status),
 		ErrorMessage: f.ErrorMessage,

@@ -31,6 +31,7 @@ func TestMigrationCountMatchesFiles(t *testing.T) {
 		{"021", "migrations/021_source_type_any.sql"},
 		{"022", "migrations/022_crawl_logs_network_error.sql"},
 		{"023", "migrations/023_virtual_index.sql"},
+		{"024", "migrations/024_perf_indexes.sql"},
 	}
 
 	// Read all files in the embedded migrations directory.

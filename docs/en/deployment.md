@@ -46,10 +46,12 @@ go vet ./...                                        # Static analysis
 └── backups/
 
 /var/lib/mibeehive/
-├── oss/            # Phase 1: Downloaded binary releases (Foraging)
-├── os-install/     # Phase 2: OS installation files (Provisioning)
-└── webdav/         # Phase 3: WebDAV shared files (Sharing)
+├── oss/            # Foraging: downloaded binary releases (.deb, wheels, tarballs, …)
+├── os-install/     # Provisioning: OS installation files
+└── webdav/         # Sharing: WebDAV shared files
 ```
+
+> **Supply layer has no storage directory of its own.** APT (`/apt/`) and PyPI Simple (`/simple/`) generate their protocol indexes on demand over the artifacts Foraging collected in `oss/`, so the same collected files are served both as a generic repo and via native protocols.
 
 ## Deploy & Restart
 
@@ -96,9 +98,13 @@ sudo systemctl status mibeehive
 
 ### Health Checks
 ```bash
-curl -s http://localhost:9090/ | head -5              # Health check
+curl -s http://localhost:9090/ | head -5              # Health check (web UI)
 curl -s -X PROPFIND http://localhost:9090/webdav/     # WebDAV check
 curl -sk https://localhost:9443/ | head -5            # HTTPS check
+# Supply layer (public, no auth) — external servers consume from these:
+curl -s http://localhost:9090/repo/index | head -c 120        # Generic file manifest (JSON)
+curl -s -o /dev/null -w "%{http_code}\n" http://localhost:9090/apt/dists/stable/Release   # APT repo (200 = OK)
+curl -s http://localhost:9090/simple/ | head -c 120           # PyPI Simple index (PEP 503)
 ```
 
 ### Log Monitoring

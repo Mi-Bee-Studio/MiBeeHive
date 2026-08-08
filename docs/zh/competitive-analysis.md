@@ -254,7 +254,7 @@ NAS 操作系统管理本地存储并通过标准协议暴露。它们在文件�
 
 | 创意 | 来源 | 理由 |
 |---|---|---|
-| **虚拟仓库/索引抽象** | JFrog 虚拟仓库，devpi 索引继承 | 将物理存储与逻辑制品视图解耦。直接映射到 MiBeeHive 的"项目"概念和计划中的供应层虚拟索引。 |
+| **虚拟仓库/索引抽象** | JFrog 虚拟仓库，devpi 索引继承 | 将物理存储与逻辑制品视图解耦。MiBeeHive 的"项目"概念及其已上线的供应层（APT + PyPI Simple 索引按需在 `oss/` 采集制品之上生成）正是这一点的实现。 |
 | **多源文件浏览** | FileBrowser Quantum 源 | 将每个模块的存储（oss、os-install、webdav）暴露为可配置的源，具有按源权限。适用于 WebDAV 文件浏览器重设计。 |
 | **网络回退模式** | Athens `fallback` 网络模式 | 存储优先、VCS 失败时回退的模式非常适合具有间歇性连接的边缘部署。应用于爬虫重试逻辑。 |
 | **SingleFlight 去重** | Athens SingleFlight 包装器 | 防止同一制品的重复并发爬取。Go 的 `golang.org/x/sync/singleflight` 已部分实现。 |

@@ -1,6 +1,8 @@
 # 方向 7：供应层 — 把运维工具供应给外部服务器
 
-## 状态：❌ 未开始
+## 状态：✅ 已交付（部分）
+
+APT 仓库与 PyPI Simple（`/simple/`）已上线，按各自的原生协议对外供应采集到的制品。爬取层已迁到双轨模型（YAML 指纹 + Go 适配器）。其余协议（Go module proxy、YUM/DNF、NPM registry、Helm、OCI）仍在规划中。
 
 [English](./supply-layer.md)
 
@@ -36,10 +38,10 @@
 
 | 批次 | 协议 | 杠杆 | 工作量 | 备注 |
 |------|------|------|--------|------|
-| **1** | 软件工具仓库 + ISO 仓库 + Helm 仓库（`index.yaml`） | 极高 | **极低** | 现有采蜜的自然延伸（文件已存储；只需新增索引/协议布局）。优先交付。 |
+| **1** | 软件工具仓库 + ISO 仓库 + Helm 仓库（`index.yaml`） | 极高 | **极低** | **通用 `/repo/index` + `/repo/files/{id}` 已交付**（文件清单 + 单文件下载）。ISO 仓库 + Helm 仍在规划中。 |
 | **2** | Go module proxy（`/goproxy/`） | 中高 | 中 | `GOPROXY` 协议清晰；已采集 `golang`。 |
-| **2** | PyPI `/simple` / NPM registry | 中 | 中 | SOHO IT 常见；二选一先做。 |
-| **3** | APT / YUM 仓库布局 | 高 | 中高 | 需生成 `Packages.gz`/`repomd.xml` 元数据；装机场景刚需但更重。 |
+| **2** | PyPI `/simple` / NPM registry | 中 | 中 | **PyPI `/simple/` 已交付（#24）**——基于采集到的 wheel/sdist 的 PEP 503 索引，已用 `pip`/`uv` 验证。NPM registry 仍在规划中。 |
+| **3** | APT / YUM 仓库布局 | 高 | 中高 | **APT `/apt/` 已交付**——基于采集到的 `.deb` 生成 `dists/.../Packages[.gz]` + `Release`，按 mtime 失效的缓存、按文件缓存。YUM/DNF 仍在规划中。 |
 | **4** | OCI 镜像仓库 | 极高 | **极重** | OCI distribution spec（blob/manifest/内容寻址）复杂。评估转发到现成 registry vs 自建。 |
 
 > `/metrics` 作为供应协议**不在范围内**——它仅保留用于 MiBeeHive 自身健康。MiBeeHive 把 `node_exporter`/`prometheus` **供应给**外部服务器；它不变成 TSDB。
@@ -58,10 +60,10 @@
 
 ## 验收标准
 
-- [ ] 规则引擎原型能用指纹成功覆盖单页源（JSON + HTML）；对多步源有明确结论。
-- [ ] 指纹采集的制品能不经改动地流经现有下载/存储管线。
-- [ ] 至少一个公开供应端点能按标准协议把采集制品供应给外部客户端。
-- [ ] 记录决策：渐进重构 vs 重写，并附证据。
+- [x] 规则引擎原型能用指纹成功覆盖单页源（JSON + HTML）；对多步源有明确结论。*(Issue #1——验证已落地；为双轨决策提供了依据。)*
+- [x] 指纹采集的制品能不经改动地流经现有下载/存储管线。*(双轨重构已落地——`internal/source/` 内嵌 YAML 指纹；commit 5d2d077。)*
+- [x] 至少一个公开供应端点能按标准协议把采集制品供应给外部客户端。*(通用仓库、APT、PyPI Simple 均已交付并端到端验证。)*
+- [x] 记录决策：渐进重构 vs 重写，并附证据。*(选择渐进重构——保留 `CrawlManager`/`Scheduler` 编排层；只替换源的描述与加载方式。)*
 
 ## 不在范围内
 

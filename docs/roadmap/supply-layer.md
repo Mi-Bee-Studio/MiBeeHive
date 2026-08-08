@@ -1,6 +1,8 @@
 # Direction 7: Supply Layer — Serve Ops Tools to External Servers
 
-## Status: ❌ Not Started
+## Status: ✅ Shipped (Partial)
+
+APT repository and PyPI Simple (`/simple/`) are live and serving collected artifacts over their native protocols. The crawl layer moved to the two-track model (YAML fingerprints + Go adapters). Remaining protocols (Go module proxy, YUM/DNF, NPM registry, Helm, OCI) are still planned.
 
 [中文](./supply-layer_zh.md)
 
@@ -36,10 +38,10 @@ Collected artifacts should be served to external servers over standard protocols
 
 | Batch | Protocol | Leverage | Effort | Notes |
 |-------|----------|----------|--------|-------|
-| **1** | Software tool repo + ISO repo + Helm repo (`index.yaml`) | Very high | **Low** | Natural extension of current Foraging (files already stored; only index/protocol layout is new). Ship first. |
+| **1** | Software tool repo + ISO repo + Helm repo (`index.yaml`) | Very high | **Low** | **Generic `/repo/index` + `/repo/files/{id}` shipped** (file manifest + per-file download). ISO repo + Helm still planned. |
 | **2** | Go module proxy (`/goproxy/`) | Med-high | Med | `GOPROXY` protocol is clear; `golang` already collected. |
-| **2** | PyPI `/simple` / NPM registry | Med | Med | Common in SOHO IT; pick one first. **PyPI `/simple/` shipped (#24)** — PEP 503 index over collected wheels/sdists, verified with `pip`/`uv`. |
-| **3** | APT / YUM repo layout | High | Med-high | Needs `Packages.gz`/`repomd.xml` metadata; install-scenario-critical but heavier. |
+| **2** | PyPI `/simple` / NPM registry | Med | Med | **PyPI `/simple/` shipped (#24)** — PEP 503 index over collected wheels/sdsts, verified with `pip`/`uv`. NPM registry still planned. |
+| **3** | APT / YUM repo layout | High | Med-high | **APT `/apt/` shipped** — `dists/.../Packages[.gz]` + `Release` over collected `.deb`, mtime-invalidated cache, per-file memoization. YUM/DNF still planned. |
 | **4** | OCI image registry | Very high | **Very heavy** | OCI distribution spec (blob/manifest/content addressing) is complex. Evaluate forwarding to an existing registry vs self-hosting. |
 
 > `/metrics` is **out of scope** as a supply protocol — it stays for MiBeeHive's own health only. MiBeeHive supplies `node_exporter`/`prometheus` *to* external servers; it does not become a TSDB.
@@ -58,10 +60,10 @@ Collected artifacts should be served to external servers over standard protocols
 
 ## Acceptance Criteria
 
-- [ ] Rule engine prototype successfully covers single-page sources (JSON + HTML) with fingerprints; clear finding on multi-step sources.
-- [ ] Fingerprint-collected artifacts flow through the existing download/store pipeline unchanged.
-- [ ] At least one public supply endpoint serves collected artifacts to an external client over a standard protocol.
-- [ ] Decision recorded: incremental refactor vs rewrite, with evidence.
+- [x] Rule engine prototype successfully covers single-page sources (JSON + HTML) with fingerprints; clear finding on multi-step sources. *(Issue #1 — validation landed; informed the two-track decision.)*
+- [x] Fingerprint-collected artifacts flow through the existing download/store pipeline unchanged. *(Two-track refactor landed — `internal/source/` with embedded YAML fingerprints; commit 5d2d077.)*
+- [x] At least one public supply endpoint serves collected artifacts to an external client over a standard protocol. *(Generic repo, APT, and PyPI Simple all shipped and verified end-to-end.)*
+- [x] Decision recorded: incremental refactor vs rewrite, with evidence. *(Incremental refactor chosen — `CrawlManager`/`Scheduler` orchestration kept; only source description/loading replaced.)*
 
 ## Out of Scope
 

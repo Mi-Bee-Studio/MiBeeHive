@@ -1,9 +1,11 @@
 # Design: Two-Track Crawl Layer (Source / Fetcher / Index)
 
 **Issue:** #2 — Crawl-layer two-track refactor
-**Status:** Design (not yet implemented)
+**Status:** ✅ Implemented (commit 5d2d077 — `feat(crawler): DB-sourced fingerprints + dead code cleanup (#2)`)
 **Depends on:** #1 (validated, merged) — see `prototype/REPORT.md`
 **Scope:** incremental refactor of the crawl *head*; the pipeline *tail* (download/store/verify) is unchanged.
+
+> The design below is the record of what shipped. The `internal/source/` package implements `Source`/`Fetcher`/`Registry` with embedded YAML fingerprints (`github.yaml`, `grafana.yaml`); classic stateful crawlers are wrapped as `LegacyAdapter`s. The orchestrating `CrawlManager`/`Scheduler` was kept, only the source description/loading layer was replaced, exactly as this design proposed.
 
 ## Problem
 

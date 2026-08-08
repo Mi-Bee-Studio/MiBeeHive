@@ -6,22 +6,25 @@
 
 MiBeeHive 是**面向外部服务器的运维工具供应链平台**。蜂巢是最贴切的隐喻：蜂巢不产花蜜，它**采集、酿造、分发**花蜜。MiBeeHive 不发明协议——它从公共源采集运维工具、持续更新，并按已有的标准协议对外供应给外部服务器。产品的本质是一条供应链，而下面两项自给自足的 provisioning 能力，是任何其他运维面板都没有的核心差异点：
 
-- **采蜜 (Foraging)**: 供应引擎——从公共源抓取和下载运维工具（二进制发行版），再按标准协议对外供应给外部服务器
+- **采蜜 (Foraging)**: 供应引擎——从公共源抓取和下载运维工具（二进制发行版）
+- **供应 (Supply)**: 把采集到的制品按外部服务器**原生**的标准协议对外供应（APT 仓库、PyPI Simple、通用仓库索引），让集群用自己现成的工具拉取——无需安装 agent
 - **哺育 (Provisioning)**: 纳入新的外部服务器——通过 PXE 提供无人值守操作系统安装，让裸机能从零装机并被纳入供应
 - **分享 (Sharing)**: 对外提供文件——基本的 WebDAV 能力，可通过 Web UI 配置
 
 > **vs 一般运维面板：** 那些面板管理**本机**（应用商店、建站）。MiBeeHive 面向**外部**那些服务器——它是喂饱整个集群的供应链。
 
-每个模块都在可配置的父路径下有独立的存储路径：`{base_path}/{oss,os-install,webdav}`
+每个模块都在可配置的父路径下有独立的存储路径：`{base_path}/{oss,os-install,webdav}`。供应层不新增存储目录，而是按需在采蜜收集到 `oss/` 的制品之上生成各协议索引。
 
 ### 阶段路线图
 - 第一阶段（已完成）：采蜜 — Web 管理爬取源、API 令牌、爬取控制、密码更改
 - 第二阶段（已完成）：哺育 — 操作系统安装配置管理、PXE 端点、ISO 下载
 - 第三阶段（已完成）：分享 — WebDAV 服务器、基础认证、HTTPS 支持
+- 第四阶段（已完成）：供应 — 原生协议端点：APT 仓库（`/apt/`）、PyPI Simple（`/simple/`）、通用 `/repo/index` + `/repo/files/{id}`。爬取层也迁到了双轨模型（YAML 指纹 + Go 适配器）。
+
 
 ## 系统架构
 
-MiBeeHive 是一个单体 Go 二进制文件，运行在资源受限的 ARM64 NAS/存储设备（469MB RAM）上，充当**外部服务器的供应中枢**：它爬取、下载并对外提供运维工具（GitHub、Go、HashiCorp、Grafana、NPM、PyPI），让外部服务器能从它这里取料。它通过 `go:embed` 嵌入一个 **Preact + HTM** SPA 前端，并包含一个 Web 管理面板，具有仪表板概览和标签式导航，用于管理所有三个模块以及容器、搜索、日志、任务和备份。前进方向是**供应层**（见[供应层路线图](../roadmap/supply-layer_zh.md)）：将采集到的制品按标准协议对外暴露给外部服务器。
+MiBeeHive 是一个单体 Go 二进制文件，运行在资源受限的 ARM64 NAS/存储设备（469MB RAM）上，充当**外部服务器的供应中枢**：它爬取、下载并对外提供运维工具（GitHub、Go、HashiCorp、Grafana、NPM、PyPI），让外部服务器能从它这里取料。它通过 `go:embed` 嵌入一个 **Preact + HTM** SPA 前端，并包含一个 Web 管理面板，具有仪表板概览和标签式导航，用于管理全部四个模块（采蜜、供应、哺育、分享）以及容器、搜索、日志、任务和备份。**供应层**把采集到的制品按其原生标准协议对外暴露给外部服务器——协议路线图（APT、PyPI Simple 已上线；Go proxy / YUM / Helm / OCI 规划中）见[供应层](../roadmap/supply-layer_zh.md)。
 
 ### 定位边界
 
@@ -37,7 +40,9 @@ MiBeeHive 是一个单体 Go 二进制文件，运行在资源受限的 ARM64 NA
 ├─────────────────────────────────────────────────────────────┤
 │  Go 后端 (cmd/mibeehive)                                  │
 │  ├── HTTP 处理器 (internal/handler/)                      │
+│  ├── 供应层 (internal/supply/)  APT · PyPI · 通用仓库     │
 │  ├── 业务逻辑 (internal/service/)                         │
+│  ├── 爬取层 (internal/crawler/ + internal/source/)        │
 │  ├── 数据层 (internal/db/)                                │
 │  ├── 配置 (internal/config/)                              │
 │  ├── 中间件 (internal/middleware/)                        │
@@ -142,23 +147,29 @@ HTTP 请求 → 处理器 → 服务 → 仓库 → 数据库
 - `repo_container.go` - 容器配置存储
 - `repo_crawl_log.go` - 爬取日志存储和查询
 
-## 三大模块概览
+## 模块概览
 
 ### 1. 采蜜（二进制发行版管理）
 **用途**：从公共源爬取和下载二进制发行版
 **存储**：`{base_path}/oss/`
 **功能**：
-- GitHub 发行版
-- Go 二进制下载
-- HashiCorp 产品发行版
-- Grafana 发行版
-- NPM 包下载
-- PyPI 包下载
+- GitHub、Go、HashiCorp、Grafana、NPM、PyPI、Crates 等源
+- 双轨源模型：单页源用 YAML 指纹（`internal/source/fingerprints/`），有状态协议用 Go 适配器
+- 带上限的指数退避重试、单次爬取 context 超时、分类的错误状态（`network_error` / `rate_limited` / `error`），让瞬时失败与真正的上游问题可区分
 - 源管理的 Web UI
 - API 令牌认证
 - 下载调度和重试逻辑
 
-### 2. 哺育（操作系统安装）
+### 2. 供应（原生协议端点）
+**用途**：把采集到的制品按外部服务器原生工具会说的协议对外供应——无需安装客户端。
+**存储**：无独立存储；按需在采蜜收集到 `{base_path}/oss/` 的制品之上生成各协议索引。
+**端点**（公开、无需认证，便于外部服务器无人值守拉取）：
+- `GET /apt/{rest...}` —— 基于采集到的 `.deb` 构建 APT 仓库：按需生成 `dists/.../Packages[.gz]` + `Release`（按 mtime 失效的缓存、按文件缓存控制元数据）。客户端：`deb http://<host>:9090/apt stable main`。
+- `GET /simple/{rest...}` —— 基于采集到的 wheel/sdist 构建 PyPI Simple 仓库（PEP 503）。客户端：`pip install --index-url http://<host>:9090/simple/ <pkg>`。
+- `GET /repo/index` —— 全部可供应文件的通用 JSON 清单；`GET /repo/files/{id}` —— 单文件下载（暂无原生协议的产物的兜底）。
+**规划中**（见[供应层](../roadmap/supply-layer_zh.md)）：Go module proxy、YUM/DNF、NPM registry、Helm 仓库、OCI registry。
+
+### 3. 哺育（操作系统安装）
 **用途**：提供无人值守的操作系统安装配置
 **存储**：`{base_path}/os-install/`
 **功能**：
@@ -171,7 +182,7 @@ HTTP 请求 → 处理器 → 服务 → 仓库 → 数据库
 - 配置预览功能
 - ISO 下载的后台队列处理器
 
-### 3. 分享（WebDAV 文件共享）
+### 4. 分享（WebDAV 文件共享）
 **用途**：用于文件共享的基本 WebDAV 功能
 **存储**：`{base_path}/webdav/`
 **功能**：
@@ -240,7 +251,7 @@ PXE 客户端 → 公共端点 → 配置生成 → 引导文件 → 安装
 - **Preact + HTM**：无框架，最小依赖（约 950KB 总量）
 - **仅使用标准库**：无外部 Web 框架或 cron 库
 - **资源高效**：针对 469MB ARM64 设备优化
-- **模块化设计**：三个功能模块之间的清晰分离
+- **模块化设计**：四个功能模块之间的清晰分离
 - **队列处理**：用于下载队列管理的后台协程
 - **增量 DOM 更新**：定期刷新使用目标 DOM 补丁，从不使用 innerHTML
 - **单一仪表板 API**：单个聚合端点减少仪表板上的请求数量

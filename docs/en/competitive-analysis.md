@@ -254,7 +254,7 @@ Proprietary Linux NAS OS. Custom parity array (not RAID). 4 GB RAM minimum, x86_
 
 | Idea | Source | Rationale |
 |---|---|---|
-| **Virtual repository / index abstraction** | JFrog Virtual Repositories, devpi Index Inheritance | Decouple physical storage from logical artifact views. Map directly to MiBeeHive's "projects" concept and the planned supply-layer virtual index. |
+| **Virtual repository / index abstraction** | JFrog Virtual Repositories, devpi Index Inheritance | Decouple physical storage from logical artifact views. MiBeeHive's "projects" concept and its live supply layer (APT + PyPI Simple indexes generated on demand over collected artifacts in `oss/`) implement exactly this. |
 | **Multiple-source file browsing** | FileBrowser Quantum sources | Expose each module's storage (oss, os-install, webdav) as a configurable source with per-source permissions. Applicable to the WebDAV file browser redesign. |
 | **Network fallback mode** | Athens `fallback` network mode | Storage-first, VCS-on-failure pattern ideal for edge deployments with intermittent connectivity. Apply to crawler retry logic. |
 | **SingleFlight deduplication** | Athens SingleFlight wrapper | Prevent duplicate concurrent crawls for the same artifact. Already partially implemented in Go's `golang.org/x/sync/singleflight`. |

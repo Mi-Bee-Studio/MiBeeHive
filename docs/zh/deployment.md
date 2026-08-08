@@ -46,10 +46,12 @@ go vet ./...                                        # 静态分析
 └── backups/
 
 /var/lib/mibeehive/
-├── oss/            # 第一阶段：下载的二进制文件（采蜜）
-├── os-install/     # 第二阶段：操作系统安装文件（哺育）
-└── webdav/         # 第三阶段：WebDAV 共享文件（分享）
+├── oss/            # 采蜜：下载的二进制文件（.deb、wheel、tarball 等）
+├── os-install/     # 哺育：操作系统安装文件
+└── webdav/         # 分享：WebDAV 共享文件
 ```
+
+> **供应层没有独立的存储目录。** APT（`/apt/`）和 PyPI Simple（`/simple/`）按需在采蜜收集到 `oss/` 的制品之上生成各协议索引，因此同一批采集到的文件既作为通用仓库供应，也通过原生协议对外供应。
 
 ## 部署与重启
 
@@ -96,9 +98,13 @@ sudo systemctl status mibeehive
 
 ### 健康检查
 ```bash
-curl -s http://localhost:9090/ | head -5              # 健康检查
+curl -s http://localhost:9090/ | head -5              # 健康检查（Web 界面）
 curl -s -X PROPFIND http://localhost:9090/webdav/     # WebDAV 检查
 curl -sk https://localhost:9443/ | head -5            # HTTPS 检查
+# 供应层（公开、无需认证）——外部服务器从这些端点消费：
+curl -s http://localhost:9090/repo/index | head -c 120        # 通用文件清单（JSON）
+curl -s -o /dev/null -w "%{http_code}\n" http://localhost:9090/apt/dists/stable/Release   # APT 仓库（200 = 正常）
+curl -s http://localhost:9090/simple/ | head -c 120           # PyPI Simple 索引（PEP 503）
 ```
 
 ### 日志监控

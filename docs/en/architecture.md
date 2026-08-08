@@ -7,22 +7,25 @@
 
 MiBeeHive is an **operations tooling supply platform for external servers**. The bee-hive is the right metaphor: the hive does not produce honey, it **collects, ages, and distributes** it. MiBeeHive does not invent protocols — it collects ops tools from public sources, keeps them up to date, and serves them to external servers over existing standard protocols. The product is a supply chain, and the two self-sufficient provisioning capabilities below are the core differentiators that no other ops panel offers:
 
-- **Foraging** (采蜜): The supply engine — crawl and download ops tools (binary releases) from public sources, then serve them to external servers over standard protocols
+- **Foraging** (采蜜): The supply engine — crawl and download ops tools (binary releases) from public sources
+- **Supply** (供应): Serve the collected artifacts to external servers over their **native standard protocols** (APT repository, PyPI Simple, generic repo index) so the fleet pulls with its own tooling — no agent required
 - **Provisioning** (哺育): Bring new external servers online — provide unattended OS installation via PXE so bare-metal machines can be enrolled and stocked from scratch
 - **Sharing** (分享): Serve collected files out — basic WebDAV capabilities, configurable via web UI
 
 > **vs typical ops panels:** those manage the *local* machine (app store, site building). MiBeeHive targets the *other* servers — it is the supply chain that stocks the fleet.
 
-Each module has isolated storage paths under a configurable parent: `{base_path}/{oss,os-install,webdav}`
+Each module has isolated storage paths under a configurable parent: `{base_path}/{oss,os-install,webdav}`. The Supply layer generates its protocol indexes on demand over the artifacts Foraging collected in `oss/` (it adds no new storage directory of its own).
 
 ### Phase Roadmap
 - Phase 1 (Complete): Foraging — Web management for crawl sources, API tokens, crawl control, password change
 - Phase 2 (Complete): Provisioning — OS install config management, PXE endpoints, ISO downloading
 - Phase 3 (Complete): Sharing — WebDAV server, Basic Auth, HTTPS support
+- Phase 4 (Complete): Supply — native-protocol endpoints: APT repository (`/apt/`), PyPI Simple (`/simple/`), generic `/repo/index` + `/repo/files/{id}`. The crawl layer also moved to a two-track model (YAML fingerprints + Go adapters).
+
 
 ## System Architecture
 
-MiBeeHive is a monolithic Go binary that runs on a resource-constrained ARM64 NAS/storage device (469MB RAM) and acts as a **supply hub for external servers**: it crawls, downloads, and serves ops tools (GitHub, Go, HashiCorp, Grafana, NPM, PyPI) so external servers can pull their materials from it. It embeds a **Preact + HTM** SPA frontend via `go:embed` and includes a web admin panel with dashboard overview and tabbed navigation for managing all three modules plus containers, search, logs, tasks, and backup. The forward direction is the **supply layer** (see [Supply Layer Roadmap](../roadmap/supply-layer.md)): expose collected artifacts to external servers over standard protocols.
+MiBeeHive is a monolithic Go binary that runs on a resource-constrained ARM64 NAS/storage device (469MB RAM) and acts as a **supply hub for external servers**: it crawls, downloads, and serves ops tools (GitHub, Go, HashiCorp, Grafana, NPM, PyPI) so external servers can pull their materials from it. It embeds a **Preact + HTM** SPA frontend via `go:embed` and includes a web admin panel with dashboard overview and tabbed navigation for managing all four modules (Foraging, Supply, Provisioning, Sharing) plus containers, search, logs, tasks, and backup. The **supply layer** exposes the collected artifacts to external servers over their native standard protocols — see [Supply Layer](../roadmap/supply-layer.md) for the protocol roadmap (APT and PyPI Simple shipped; Go proxy / YUM / Helm / OCI planned).
 
 ### Scope Boundary
 
@@ -38,11 +41,13 @@ MiBeeHive is a monolithic Go binary that runs on a resource-constrained ARM64 NA
 ├─────────────────────────────────────────────────────────────┤
 │  Go Backend (cmd/mibeehive)                                │
 │  ├── HTTP Handlers (internal/handler/)                     │
+│  ├── Supply Layer (internal/supply/)  APT · PyPI · repo    │
 │  ├── Business Logic (internal/service/)                    │
+│  ├── Crawl Layer (internal/crawler/ + internal/source/)    │
 │  ├── Data Layer (internal/db/)                             │
 │  ├── Configuration (internal/config/)                       │
 │  ├── Middleware (internal/middleware/)                     │
-│  ├── Docker Client (internal/docker/)                      │
+│  ├── Docker Client (internal/docker/)                     │
 │  ├── Monitor (internal/monitor/)                           │
 │  └── WebDAV (internal/webdav/)                             │
 │                                                             │
@@ -122,6 +127,10 @@ HTTP Request → Handler → Service → Repository → Database
 - `app_template.go` - Application template management
 - `stats.go` - System stats fetching (scrapes node_exporter)
 
+> **Supply layer handlers** (`internal/supply/`, mounted on the public/unauthenticated `mux` so external servers can reach them): `handler.go` (`/repo/index`, `/repo/files/{id}`), `apt.go` (`/apt/{rest...}` — APT repository over collected `.deb`), `pypi.go` (`/simple/{rest...}` — PyPI Simple / PEP 503 over collected wheels).
+
+> **Crawl layer** (`internal/crawler/` + `internal/source/`): the orchestrating `CrawlManager`/`Scheduler` plus a two-track source model — `internal/source/` defines `Source`/`Fetcher`/`Registry` and ships embedded YAML fingerprints (`fingerprints/*.yaml`) for single-page sources; classic stateful sources are wrapped as Go adapters. See [crawl-two-track-design](../roadmap/crawl-two-track-design.md).
+
 ### Service Layer (internal/service/)
 - `file_service.go` - File download with retry, integrity checks
 - `os_template.go` - OS template generation (preseed/kickstart/autoinstall)
@@ -143,21 +152,36 @@ HTTP Request → Handler → Service → Repository → Database
 - `repo_container.go` - Container configuration storage
 - `repo_crawl_log.go` - Crawl log storage and querying
 
-## Three Modules Overview
+## Modules Overview
 
 ### 1. Foraging (Binary Release Management)
 **Purpose**: Crawl and download binary releases from public sources
 **Storage**: `{base_path}/oss/`
 **Features**:
-- GitHub releases
-- Go binary downloads
-- HashiCorp product releases
-- Grafana releases
-- NPM package downloads
-- PyPI package downloads
+- GitHub, Go, HashiCorp, Grafana, NPM, PyPI, and Crates sources
+- Two-track source model: YAML fingerprints for single-page sources (`internal/source/fingerprints/`) + Go adapters for stateful protocols
+- Retry with bounded exponential backoff, per-crawl context timeout, and classified error status (`network_error` vs `rate_limited` vs `error`) so transient failures are distinguishable from genuine upstream problems
 - Web UI for source management
 - API token authentication
 - Download scheduling and retry logic
+
+### 2. Supply (Native-Protocol Endpoints)
+**Purpose**: Serve collected artifacts to external servers over the protocols their tooling already speaks — no client to install.
+**Storage**: none of its own; generates protocol indexes on demand over artifacts Foraging collected in `{base_path}/oss/`.
+**Endpoints** (public, no auth, so external servers reach them unattended):
+- `GET /apt/{rest...}` — APT repository over collected `.deb` files: generates `dists/.../Packages[.gz]` + `Release` on demand (mtime-invalidated cache, per-file control-metadata memoization). Client: `deb http://<host>:9090/apt stable main`.
+- `GET /simple/{rest...}` — PyPI Simple repository (PEP 503) over collected wheels/sdists. Client: `pip install --index-url http://<host>:9090/simple/ <pkg>`.
+- `GET /repo/index` — generic JSON manifest of all servable files; `GET /repo/files/{id}` — per-file download (the fallback for artifacts that have no native protocol yet).
+**Planned** (see [Supply Layer](../roadmap/supply-layer.md)): Go module proxy, YUM/DNF, NPM registry, Helm repo, OCI registry.
+
+### 3. Provisioning (OS Installation)
+**Purpose**: Provide unattended OS installation configuration
+**Storage**: `{base_path}/os-install/`
+**Features**:
+- PXE configuration serving
+- OS template generation (preseed/kickstart/autoinstall)
+- ISO download management
+- ISO catalog auto-discovery with queue management
 
 ### 2. Provisioning (OS Installation)
 **Purpose**: Provide unattended OS installation configuration
@@ -172,7 +196,7 @@ HTTP Request → Handler → Service → Repository → Database
 - Config preview functionality
 - Background queue processor for ISO downloads
 
-### 3. Sharing (WebDAV File Sharing)
+### 4. Sharing (WebDAV File Sharing)
 **Purpose**: Basic WebDAV capabilities for file sharing
 **Storage**: `{base_path}/webdav/`
 **Features**:
@@ -223,6 +247,11 @@ User Request → Admin UI → Crawl Trigger → Crawler → Download Service →
 Client Request → File Search → File Service → Download Stream → Client
 ```
 
+### Supply (Native-Protocol) Flow
+```
+External server → apt/pip/webdav → Supply handler → on-demand index over oss/ → File Service → Client
+```
+
 ### WebDAV Flow
 ```
 WebDAV Client → Basic Auth → File System → File Operations
@@ -241,7 +270,7 @@ PXE Client → Public Endpoint → Config Generation → Boot Files → Installa
 - **Preact + HTM**: No frameworks, minimal dependencies (~950KB total)
 - **Stdlib Only**: No external web frameworks or cron libraries
 - **Resource Efficient**: Optimized for 469MB ARM64 device
-- **Modular Design**: Clear separation between the three functional modules
+- **Modular Design**: Clear separation between the four functional modules
 - **Queue Processing**: Background goroutines for download queue management
 - **Incremental DOM Updates**: Periodic refresh uses targeted DOM patching, never innerHTML
 - **Single Dashboard API**: One aggregated endpoint reduces request count on dashboard

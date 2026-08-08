@@ -123,6 +123,9 @@ var Overview = (function () {
     var activity = data.activity || [];
     var aptLine = 'deb [trusted=yes] ' + hostOrigin() + '/apt stable main';
     var webdavUrl = hostOrigin().replace('9090', '9090') + '/webdav/';
+    // PyPI Simple index (#24): external Python hosts consume collected wheels
+    // with `pip install --index-url <this> <pkg>`.
+    var pypiIndex = hostOrigin() + '/simple/';
 
     return html`
       <div class="p-4 md:p-6 max-w-7xl mx-auto">
@@ -158,10 +161,14 @@ var Overview = (function () {
         <!-- Supply endpoints quick-copy -->
         <div class="card mb-6" style="padding:1.25rem">
           <h2 class="text-base font-semibold mb-3" style="color:var(--color-text)">${t('overview_endpoints')}</h2>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <div class="text-xs mb-1" style="color:var(--color-text-secondary)">APT ${t('supply_repository')}</div>
               <${Copyable} value=${aptLine} />
+            </div>
+            <div>
+              <div class="text-xs mb-1" style="color:var(--color-text-secondary)">PyPI ${t('supply_repository')}</div>
+              <${Copyable} value=${'pip install --index-url ' + pypiIndex + ' <pkg>'} />
             </div>
             <div>
               <div class="text-xs mb-1" style="color:var(--color-text-secondary)">WebDAV</div>

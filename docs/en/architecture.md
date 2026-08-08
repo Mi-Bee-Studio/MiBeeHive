@@ -25,7 +25,7 @@ Each module has isolated storage paths under a configurable parent: `{base_path}
 
 ## System Architecture
 
-MiBeeHive is a monolithic Go binary that runs on a resource-constrained ARM64 NAS/storage device (469MB RAM) and acts as a **supply hub for external servers**: it crawls, downloads, and serves ops tools (GitHub, Go, HashiCorp, Grafana, NPM, PyPI) so external servers can pull their materials from it. It embeds a **Preact + HTM** SPA frontend via `go:embed` and includes a web admin panel with dashboard overview and tabbed navigation for managing all four modules (Foraging, Supply, Provisioning, Sharing) plus containers, search, logs, tasks, and backup. The **supply layer** exposes the collected artifacts to external servers over their native standard protocols — see [Supply Layer](../roadmap/supply-layer.md) for the protocol roadmap (APT and PyPI Simple shipped; Go proxy / YUM / Helm / OCI planned).
+MiBeeHive is a lightweight monolithic Go binary that acts as a **supply hub for external servers**: it crawls, downloads, and serves ops tools (GitHub, Go, HashiCorp, Grafana, NPM, PyPI) so external servers can pull their materials from it. It runs on any Linux host (amd64 or arm64) and is resource-efficient enough for a 469MB RAM NAS or mini PC, though it scales up to a full server. It embeds a **Preact + HTM** SPA frontend via `go:embed` and includes a web admin panel with dashboard overview and tabbed navigation for managing all four modules (Foraging, Supply, Provisioning, Sharing) plus containers, search, logs, tasks, and backup. The **supply layer** exposes the collected artifacts to external servers over their native standard protocols — see [Supply Layer](../roadmap/supply-layer.md) for the protocol roadmap (APT and PyPI Simple shipped; Go proxy / YUM / Helm / OCI planned).
 
 ### Scope Boundary
 
@@ -269,7 +269,7 @@ PXE Client → Public Endpoint → Config Generation → Boot Files → Installa
 - **SQLite Database**: Lightweight, file-based storage (pure-Go driver)
 - **Preact + HTM**: No frameworks, minimal dependencies (~950KB total)
 - **Stdlib Only**: No external web frameworks or cron libraries
-- **Resource Efficient**: Optimized for 469MB ARM64 device
+- **Resource Efficient**: Optimized for as little as 469MB RAM (e.g. a NAS or mini PC); multi-arch (amd64/arm64)
 - **Modular Design**: Clear separation between the four functional modules
 - **Queue Processing**: Background goroutines for download queue management
 - **Incremental DOM Updates**: Periodic refresh uses targeted DOM patching, never innerHTML

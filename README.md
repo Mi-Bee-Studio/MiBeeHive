@@ -2,8 +2,8 @@
 
 [中文](README.zh.md) · [Docs](docs/en/architecture.md) · [API](docs/en/api-reference.md)
 
-> **Turn a cheap ARM64 box into an ops-tooling supply hub for your whole fleet.**
-> MiBeeHive auto-collects the binaries, packages, and ISOs your servers need — and serves them back out over the protocols those servers already speak: `apt`, `pip`, WebDAV. They run the box; MiBeeHive keeps the fleet stocked.
+> **A lightweight, self-hosted ops-tooling supply hub for your whole fleet.**
+> MiBeeHive auto-collects the binaries, packages, and ISOs your servers need — and serves them back out over the protocols those servers already speak: `apt`, `pip`, WebDAV. One static Go binary, an embedded UI, runs anywhere Linux does (amd64 / arm64 — a mini PC, a NAS, a VM, an old laptop). They run the box; MiBeeHive keeps the fleet stocked.
 
 <p>
   <a href="https://github.com/Mi-Bee-Studio/MiBeeHive/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Mi-Bee-Studio/MiBeeHive/actions/workflows/ci.yml/badge.svg"></a>
@@ -20,7 +20,7 @@
 
 ## Why
 
-- **Runs on a tiny box.** Single Go binary, pure stdlib HTTP, embedded SPA — happy on a 469 MB RAM ARM64 NAS.
+- **Lightweight & multi-arch.** A single static Go binary, pure stdlib HTTP, embedded SPA — runs on amd64 or arm64 Linux, from a 469 MB RAM NAS to a beefy server. Pure-Go SQLite driver, no CGO, no external dependencies.
 - **Fleet-native supply.** Your servers pull with their own tooling (`apt`, `pip`, WebDAV). No agent, no client to install.
 - **Collect → store → serve.** Crawl sources stay up to date automatically; served artifacts are always current.
 
@@ -29,7 +29,7 @@
 ```
    ┌──────────────┐   crawl + download   ┌──────────────┐   serve over native protocols
    │ GitHub / Go / │ ───────────────────▶ │  MiBeeHive   │ ─────────────────────────────▶  your servers
-   │ PyPI / NPM /  │   auto, on schedule  │  (ARM64 box) │   apt  ·  pip  ·  WebDAV  ·  PXE
+   │ PyPI / NPM /  │   auto, on schedule  │  (any Linux) │   apt  ·  pip  ·  WebDAV  ·  PXE
    │ HashiCorp …   │                      │              │
    └──────────────┘                       └──────────────┘
 ```
@@ -70,13 +70,13 @@ cp configs/config.yaml config.yaml   # edit storage path, ports, secrets
 ./mibeehive                           # UI at http://localhost:9090  ·  admin / admin
 ```
 
-Cross-compile for an ARM64 device:
+Or cross-compile for another architecture (e.g. arm64) — MiBeeHive builds for any Linux/Go-supported arch:
 
 ```bash
 GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o mibeehive-arm64 ./cmd/mibeehive
 ```
 
-> Target device: ≥1 GB RAM, ≥32 GB storage, Linux + systemd. See the [deployment guide](docs/en/deployment.md).
+> Runs on any Linux + systemd host (amd64 or arm64). Lightweight: comfortable from ~1 GB RAM / 32 GB storage up. See the [deployment guide](docs/en/deployment.md). A prebuilt multi-arch Docker image (`linux/amd64`, `linux/arm64`) is published on release tags.
 
 ## Supply endpoints (copy-paste for your fleet)
 
@@ -90,7 +90,7 @@ GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o mibeehive-arm64 ./cmd/mibeehiv
 ## Documentation
 
 - [Architecture](docs/en/architecture.md) — modules, layers, supply protocols
-- [Deployment](docs/en/deployment.md) — ARM64 install, systemd, health checks
+- [Deployment](docs/en/deployment.md) — Linux install (amd64/arm64), systemd, health checks
 - [API Reference](docs/en/api-reference.md) — all HTTP endpoints
 - [Supply Layer](docs/roadmap/supply-layer.md) — protocol roadmap (APT ✅, PyPI ✅, more coming)
 

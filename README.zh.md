@@ -2,8 +2,8 @@
 
 [English](README.md) · [文档](docs/zh/architecture.md) · [API](docs/zh/api-reference.md)
 
-> **把一台便宜的 ARM64 小盒子，变成整个服务器集群的运维工具供应中枢。**
-> MiBeeHive 自动采集你的服务器所需的二进制、安装包和 ISO,再按它们本来就会说的协议对外供应:`apt`、`pip`、WebDAV。盒子它们自己跑;集群由 MiBeeHive 喂饱。
+> **一个轻量、自托管的运维工具供应中枢,喂饱你的整个服务器集群。**
+> MiBeeHive 自动采集你的服务器所需的二进制、安装包和 ISO,再按它们本来就会说的协议对外供应:`apt`、`pip`、WebDAV。单个静态 Go 二进制 + 内嵌界面,Linux 哪里都能跑(amd64 / arm64 —— 迷你主机、NAS、虚拟机、旧笔记本都行)。盒子它们自己跑;集群由 MiBeeHive 喂饱。
 
 <p>
   <a href="https://github.com/Mi-Bee-Studio/MiBeeHive/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Mi-Bee-Studio/MiBeeHive/actions/workflows/ci.yml/badge.svg"></a>
@@ -20,7 +20,7 @@
 
 ## 为什么用它
 
-- **跑在小盒子上。** 单个 Go 二进制,纯标准库 HTTP,内嵌 SPA —— 在 469MB 内存的 ARM64 NAS 上也能跑。
+- **轻量、多架构。** 单个静态 Go 二进制,纯标准库 HTTP,内嵌 SPA —— amd64 或 arm64 Linux 都能跑,从 469MB 内存的 NAS 到高性能服务器都行。纯 Go 的 SQLite 驱动,无 CGO,无外部依赖。
 - **对集群原生供应。** 你的服务器用自己现成的工具拉取(`apt`、`pip`、WebDAV),无需安装任何 agent 或客户端。
 - **采集 → 存储 → 供应。** 抓取源自动保持最新;对外供应的产物永远是当前版本。
 
@@ -29,7 +29,7 @@
 ```
    ┌──────────────┐   爬取 + 下载          ┌──────────────┐   按原生协议对外供应
    │ GitHub / Go / │ ───────────────────▶ │  MiBeeHive   │ ─────────────────────────────▶  你的服务器
-   │ PyPI / NPM /  │   自动、按计划         │  (ARM64盒子) │   apt  ·  pip  ·  WebDAV  ·  PXE
+   │ PyPI / NPM /  │   自动、按计划         │  (任意Linux) │   apt  ·  pip  ·  WebDAV  ·  PXE
    │ HashiCorp …   │                      │              │
    └──────────────┘                       └──────────────┘
 ```
@@ -70,13 +70,13 @@ cp configs/config.yaml config.yaml   # 编辑存储路径、端口、密钥
 ./mibeehive                           # 界面:http://localhost:9090  ·  admin / admin
 ```
 
-交叉编译到 ARM64 设备:
+或交叉编译到其他架构(例如 arm64)——MiBeeHive 可编译到任意 Linux/Go 支持的架构:
 
 ```bash
 GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o mibeehive-arm64 ./cmd/mibeehive
 ```
 
-> 目标设备:≥1GB 内存、≥32GB 存储、Linux + systemd。详见[部署指南](docs/zh/deployment.md)。
+> 可跑在任意 Linux + systemd 主机上(amd64 或 arm64)。轻量:从约 1GB 内存 / 32GB 存储起即可舒适运行。详见[部署指南](docs/zh/deployment.md)。release 标签会发布预构建的多架构 Docker 镜像(`linux/amd64`、`linux/arm64`)。
 
 ## 供应端点(直接复制给你的集群用)
 
@@ -90,7 +90,7 @@ GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o mibeehive-arm64 ./cmd/mibeehiv
 ## 文档
 
 - [架构](docs/zh/architecture.md) —— 模块、分层、供应协议
-- [部署](docs/zh/deployment.md) —— ARM64 安装、systemd、健康检查
+- [部署](docs/zh/deployment.md) —— Linux 安装(amd64/arm64)、systemd、健康检查
 - [API 参考](docs/zh/api-reference.md) —— 全部 HTTP 端点
 - [供应层](docs/roadmap/supply-layer_zh.md) —— 协议路线图(APT ✅、PyPI ✅,更多规划中)
 

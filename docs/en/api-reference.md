@@ -1,12 +1,19 @@
 # MiBeeHive API Reference
 
-[中文](../zh/api-reference.md)
+All HTTP endpoints. **Auth model**: apart from the **public endpoints** listed below, every `/api/v1/*` endpoint requires a JWT (`Authorization: Bearer <token>`):
 
+- `POST /api/v1/auth/login` (the login itself)
+- `GET /api/v1/files/{id|token}/download`, `GET /s/{token}` (token downloads)
+- `GET /api/v1/isos` (public ISO listing)
+- Supply layer: `/repo/*`, `/apt/*`, `/simple/*`
+- `GET /pxe/{format}/{name}` (PXE clients can't authenticate)
+- `GET /health`, `GET /metrics`
+- `/webdav/*` (separate Basic Auth: anonymous read, admin write)
 
 ## Authentication Endpoints
 
 ### POST /api/v1/auth/login
-**Description**: User authentication and JWT token generation
+**Description**: Authenticate and obtain a JWT
 **Authentication**: None
 **Request Body**:
 ```json
@@ -23,8 +30,12 @@
 }
 ```
 
+### POST /api/v1/auth/refresh
+**Description**: Renew a token before it expires; returns a fresh JWT
+**Authentication**: JWT required
+
 ### GET /api/v1/auth/password-status
-**Description**: Check if password needs to be changed
+**Description**: Check whether the password must be changed (e.g. still default)
 **Authentication**: JWT required
 **Response**:
 ```json
@@ -36,22 +47,22 @@
 }
 ```
 
-## File Management Endpoints
+## File Endpoints
 
 ### GET /api/v1/files/{id}/download
-**Description**: Download a specific file
+**Description**: Download a file. `{id}` may be either the numeric ID or a **share token** (base58) — the token form is the share-link download channel and needs no login
 **Authentication**: None
-**Parameters**: 
-- `id` (path): File ID
-**Response**: File download stream
+**Parameters**:
+- `id` (path): file ID or share token
+**Response**: file download stream
 
 ### GET /api/v1/files/search
-**Description**: Search for files
-**Authentication**: None
+**Description**: Search files
+**Authentication**: JWT required
 **Query Parameters**:
-- `query` (string): Search query
-- `type` (string): File type filter (optional)
-- `limit` (int): Result limit (optional, default 50)
+- `query` (string): search query
+- `type` (string): file type filter (optional)
+- `limit` (int): result limit (optional, default 50)
 **Response**:
 ```json
 {
@@ -69,7 +80,7 @@
 
 ### GET /api/v1/files/queue
 **Description**: Get download queue status
-**Authentication**: None
+**Authentication**: JWT required
 **Response**:
 ```json
 {
@@ -84,7 +95,7 @@
 
 ### GET /api/v1/files/queue/stats
 **Description**: Get download queue statistics
-**Authentication**: None
+**Authentication**: JWT required
 **Response**:
 ```json
 {
@@ -97,11 +108,17 @@
 }
 ```
 
-## Project Management Endpoints
+### GET /api/v1/files/queue/progress
+**Description**: Live progress of the download queue (for polling)
+**Authentication**: JWT required
+
+## Project Endpoints (read-only)
+
+`/api/v1/projects` is a read-only view; project writes go through `/api/v1/admin/projects` below.
 
 ### GET /api/v1/projects
 **Description**: List all projects
-**Authentication**: None
+**Authentication**: JWT required
 **Response**:
 ```json
 {
@@ -117,48 +134,23 @@
 }
 ```
 
-### POST /api/v1/projects
-**Description**: Create a new project
-**Authentication**: None
-**Request Body**:
-```json
-{
-  "name": "New Project",
-  "enabled": true,
-  "config": {...}
-}
-```
-
 ### GET /api/v1/projects/{id}
 **Description**: Get project details
-**Authentication**: None
-**Parameters**: 
-- `id` (path): Project ID
-
-### PUT /api/v1/projects/{id}
-**Description**: Update project
-**Authentication**: None
-**Parameters**: 
-- `id` (path): Project ID
-**Request Body**: Same as create
-
-### DELETE /api/v1/projects/{id}
-**Description**: Delete project (soft delete)
-**Authentication**: None
-**Parameters**: 
-- `id` (path): Project ID
+**Authentication**: JWT required
+**Parameters**:
+- `id` (path): project ID
 
 ### GET /api/v1/projects/{id}/files
-**Description**: List project files
-**Authentication**: None
-**Parameters**: 
-- `id` (path): Project ID
+**Description**: List a project's files
+**Authentication**: JWT required
+**Parameters**:
+- `id` (path): project ID
 
-## Crawl Management Endpoints
+## Crawl Endpoints
 
 ### GET /api/v1/crawl/status
 **Description**: Get crawl status
-**Authentication**: None
+**Authentication**: JWT required
 **Response**:
 ```json
 {
@@ -176,8 +168,8 @@
 ```
 
 ### POST /api/v1/crawl/trigger
-**Description**: Trigger crawl manually
-**Authentication**: None
+**Description**: Trigger a crawl manually
+**Authentication**: JWT required
 **Request Body**:
 ```json
 {
@@ -188,10 +180,10 @@
 
 ### GET /api/v1/crawl/logs
 **Description**: Get crawl logs
-**Authentication**: None
+**Authentication**: JWT required
 **Query Parameters**:
-- `project` (string): Project filter (optional)
-- `limit` (int): Log limit (optional)
+- `project` (string): project filter (optional)
+- `limit` (int): log limit (optional)
 **Response**:
 ```json
 {
@@ -206,11 +198,11 @@
 }
 ```
 
-## System Information Endpoints
+## System Info Endpoints
 
 ### GET /api/v1/system/info
-**Description**: Get system information
-**Authentication**: None
+**Description**: Get system info
+**Authentication**: JWT required
 **Response**:
 ```json
 {
@@ -225,8 +217,8 @@
 ```
 
 ### GET /api/v1/system/stats
-**Description**: Get current system statistics (CPU, memory, network)
-**Authentication**: None
+**Description**: Get current system stats (CPU, memory, network)
+**Authentication**: JWT required
 **Response**:
 ```json
 {
@@ -241,10 +233,10 @@
 ```
 
 ### GET /api/v1/system/stats/history
-**Description**: Get system statistics history
-**Authentication**: None
+**Description**: Get system stats history
+**Authentication**: JWT required
 **Query Parameters**:
-- `hours` (int): Hours of history (optional, default 24)
+- `hours` (int): hours of history (optional, default 24)
 **Response**:
 ```json
 {
@@ -258,11 +250,11 @@
 }
 ```
 
-## OS Installation Endpoints
+## OS Install Endpoints
 
 ### GET /api/v1/os-install/configs
-**Description**: List OS installation configurations
-**Authentication**: None
+**Description**: List OS install configs
+**Authentication**: JWT required
 **Response**:
 ```json
 {
@@ -278,10 +270,10 @@
 }
 ```
 
-## Dashboard Endpoints (JWT Required)
+## Dashboard Endpoints (JWT required)
 
 ### GET /api/v1/admin/dashboard/summary
-**Description**: Get aggregated dashboard summary with stats from all modules
+**Description**: Aggregated dashboard summary with stats from every module
 **Authentication**: JWT required
 **Response**:
 ```json
@@ -332,33 +324,38 @@
 }
 ```
 
-## Admin Panel Endpoints (JWT Required)
+### GET /api/v1/admin/metrics/cache
+**Description**: Internal cache metrics (supply-layer index/count cache hits)
+**Authentication**: JWT required
 
-### Project Management
-- **GET** `/api/v1/admin/projects` - List projects
-- **POST** `/api/v1/admin/projects` - Create project
-- **PUT** `/api/v1/admin/projects/{id}` - Update project
-- **DELETE** `/api/v1/admin/projects/{id}` - Delete project
-- **PUT** `/api/v1/admin/projects/{id}/toggle` - Enable/disable project
+## Admin Panel Endpoints (JWT required)
 
-### Crawl Management
-- **GET** `/api/v1/admin/crawl/status` - Get admin crawl status
-- **POST** `/api/v1/admin/crawl/trigger/{name}` - Trigger specific project
-- **POST** `/api/v1/admin/crawl/trigger-all` - Trigger all projects
-- **PUT** `/api/v1/admin/crawl/pause/{name}` - Pause project
-- **PUT** `/api/v1/admin/crawl/resume/{name}` - Resume project
+### Project management
+- **GET** `/api/v1/admin/projects` - list projects
+- **POST** `/api/v1/admin/projects` - create project
+- **GET** `/api/v1/admin/projects/{id}` - get project
+- **PUT** `/api/v1/admin/projects/{id}` - update project
+- **DELETE** `/api/v1/admin/projects/{id}` - delete project
+- **PATCH** `/api/v1/admin/projects/{id}/toggle` - enable/disable project
 
-### Token Management
-- **GET** `/api/v1/admin/credentials` - List API tokens
-- **POST** `/api/v1/admin/credentials` - Create/update token
+### Crawl management
+- **GET** `/api/v1/admin/crawl/status` - admin crawl status
+- **POST** `/api/v1/admin/crawl/trigger/{name}` - trigger a specific project
+- **POST** `/api/v1/admin/crawl/trigger-all` - trigger all projects
+- **POST** `/api/v1/admin/crawl/pause/{name}` - pause a project
+- **POST** `/api/v1/admin/crawl/resume/{name}` - resume a project
 
-### Security Management
-- **PUT** `/api/v1/admin/password` - Change admin password
+### Token management
+- **GET** `/api/v1/admin/credentials` - list API tokens
+- **PUT** `/api/v1/admin/credentials` - create/update a token
 
-### Monitor Configuration
-- **GET** `/api/v1/admin/config/monitor` - Get disk warning/critical thresholds
-- **PUT** `/api/v1/admin/config/monitor` - Update disk thresholds
-**PUT Request Body**:
+### Security
+- **PUT** `/api/v1/admin/password` - change the admin password
+
+### Monitor config
+- **GET** `/api/v1/admin/config/monitor` - get disk warning/critical thresholds
+- **PUT** `/api/v1/admin/config/monitor` - update disk thresholds
+**PUT body**:
 ```json
 {
   "disk_warning_percent": 80,
@@ -366,80 +363,135 @@
 }
 ```
 
-### OS Installation Management
-- **GET** `/api/v1/admin/os-install/configs` - List configs
-- **POST** `/api/v1/admin/os-install/configs` - Create config
-- **PUT** `/api/v1/admin/os-install/configs/{id}` - Update config
-- **DELETE** `/api/v1/admin/os-install/configs/{id}` - Delete config
-- **GET** `/api/v1/admin/os-install/configs/{id}` - Get config
-- **POST** `/api/v1/admin/os-install/configs/preview` - Preview config
+### Storage config & migrations
+- **GET** `/api/v1/admin/config/storage` - get storage path config
+- **PUT** `/api/v1/admin/config/storage` - update storage paths (spawns background migration tasks)
+- **GET** `/api/v1/admin/storage/migrations` - list storage migration tasks
+- **GET** `/api/v1/admin/storage/migrations/{id}` - get migration task detail
+- **POST** `/api/v1/admin/storage/migrations/{id}/cancel` - cancel a migration task
 
-### ISO Management
-- **GET** `/api/v1/admin/os-install/isos` - List ISOs
-- **POST** `/api/v1/admin/os-install/iso/download` - Download ISO
-- **DELETE** `/api/v1/admin/os-install/isos/{name}` - Delete ISO
-- **GET** `/api/v1/admin/os-install/catalog` - List ISO catalog entries
-- **POST** `/api/v1/admin/os-install/catalog` - Create catalog entry
-- **PUT** `/api/v1/admin/os-install/catalog/{id}` - Update catalog entry
-- **DELETE** `/api/v1/admin/os-install/catalog/{id}` - Delete catalog entry
-- **POST** `/api/v1/admin/os-install/catalog/{id}/check` - Check latest version
-- **POST** `/api/v1/admin/os-install/catalog/{id}/download` - Trigger catalog download
-- **POST** `/api/v1/admin/os-install/catalog/check-all` - Check all versions
-- **GET** `/api/v1/admin/os-install/catalog/queue` - Get ISO download queue stats
-- **POST** `/api/v1/admin/os-install/catalog/download-all` - Queue all available ISOs
-- **GET** `/api/v1/admin/os-install/catalog/progress` - Get ISO download progress
+### File center & file management
+- **GET** `/api/v1/admin/files` - cross-project file listing (filters, paging)
+- **POST** `/api/v1/admin/files/{id}/retry` - requeue a failed download
+- **GET** `/api/v1/admin/files/{id}/internal` - internal file metadata (paths, checksums — diagnostics)
 
-### Container Management
-- **GET** `/api/v1/admin/containers` - List containers
-- **POST** `/api/v1/admin/containers` - Create container
-- **GET** `/api/v1/admin/containers/{id}` - Get container details
-- **PUT** `/api/v1/admin/containers/{id}` - Update container
-- **DELETE** `/api/v1/admin/containers/{id}` - Delete container
-- **POST** `/api/v1/admin/containers/{id}/start` - Start container
-- **POST** `/api/v1/admin/containers/{id}/stop` - Stop container
-- **POST** `/api/v1/admin/containers/{id}/restart` - Restart container
-- **GET** `/api/v1/admin/containers/{id}/logs` - Get container logs
-- **GET** `/api/v1/admin/containers/{id}/stats` - Get container stats
+### Share-link management
+- **GET** `/api/v1/admin/share-links` - list share links
+- **POST** `/api/v1/admin/share-links` - create a share link (mints a download token)
+- **DELETE** `/api/v1/admin/share-links/{token}` - revoke a share link
 
-### Image Management
-- **GET** `/api/v1/admin/images` - List Docker images
-- **POST** `/api/v1/admin/images/pull` - Pull Docker image
-- **DELETE** `/api/v1/admin/images/{id}` - Delete Docker image
+### OS install management
+- **GET** `/api/v1/admin/os-install/configs` - list configs
+- **POST** `/api/v1/admin/os-install/configs` - create config
+- **PUT** `/api/v1/admin/os-install/configs/{id}` - update config
+- **DELETE** `/api/v1/admin/os-install/configs/{id}` - delete config
+- **GET** `/api/v1/admin/os-install/configs/{id}` - get config
+- **POST** `/api/v1/admin/os-install/configs/preview` - preview the generated config
 
-### Application Templates
-- **GET** `/api/v1/admin/templates` - List app templates
-- **POST** `/api/v1/admin/templates` - Create app template
-- **GET** `/api/v1/admin/templates/{id}` - Get app template
-- **DELETE** `/api/v1/admin/templates/{id}` - Delete app template
+### ISO management
+- **GET** `/api/v1/admin/os-install/isos` - list ISOs
+- **POST** `/api/v1/admin/os-install/iso/download` - download an ISO
+- **DELETE** `/api/v1/admin/os-install/isos/{name}` - delete an ISO
+- **GET** `/api/v1/admin/os-install/catalog` - list ISO catalog entries
+- **POST** `/api/v1/admin/os-install/catalog` - create catalog entry
+- **PUT** `/api/v1/admin/os-install/catalog/{id}` - update catalog entry
+- **DELETE** `/api/v1/admin/os-install/catalog/{id}` - delete catalog entry
+- **POST** `/api/v1/admin/os-install/catalog/{id}/check` - check for the latest version
+- **POST** `/api/v1/admin/os-install/catalog/{id}/download` - trigger a catalog download
+- **POST** `/api/v1/admin/os-install/catalog/{id}/retry` - retry a failed download
+- **POST** `/api/v1/admin/os-install/catalog/{id}/cancel` - cancel a download
+- **POST** `/api/v1/admin/os-install/catalog/check-all` - check all versions
+- **GET** `/api/v1/admin/os-install/catalog/profiles` - distro profiles (two-level scraping templates)
+- **GET** `/api/v1/admin/os-install/catalog/queue` - ISO download queue stats
+- **POST** `/api/v1/admin/os-install/catalog/download-all` - queue all available ISOs
+- **GET** `/api/v1/admin/os-install/catalog/progress` - ISO download progress
 
-### WebDAV Management
-- **GET** `/api/v1/admin/webdav/status` - Get WebDAV status
-- **GET** `/api/v1/admin/webdav/files` - List WebDAV files
+### Container management
+- **GET** `/api/v1/admin/containers` - list containers
+- **POST** `/api/v1/admin/containers` - create container
+- **GET** `/api/v1/admin/containers/{id}` - get container detail
+- **PUT** `/api/v1/admin/containers/{id}` - update container
+- **DELETE** `/api/v1/admin/containers/{id}` - delete container
+- **POST** `/api/v1/admin/containers/{id}/start` - start container
+- **POST** `/api/v1/admin/containers/{id}/stop` - stop container
+- **POST** `/api/v1/admin/containers/{id}/restart` - restart container
+- **GET** `/api/v1/admin/containers/{id}/logs` - container logs
+- **GET** `/api/v1/admin/containers/{id}/stats` - container stats
+
+### Image management
+- **GET** `/api/v1/admin/images` - list Docker images
+- **POST** `/api/v1/admin/images/pull` - pull a Docker image
+- **DELETE** `/api/v1/admin/images/{id}` - delete a Docker image
+
+### App templates
+- **GET** `/api/v1/admin/templates` - list app templates
+- **POST** `/api/v1/admin/templates` - create app template
+- **GET** `/api/v1/admin/templates/{id}` - get app template
+- **DELETE** `/api/v1/admin/templates/{id}` - delete app template
+
+### Registry management (remote image registries)
+- **GET** `/api/v1/admin/registries` - list registries
+- **POST** `/api/v1/admin/registries` - create registry
+- **GET** `/api/v1/admin/registries/{id}` - get registry
+- **PUT** `/api/v1/admin/registries/{id}` - update registry
+- **DELETE** `/api/v1/admin/registries/{id}` - delete registry
+- **POST** `/api/v1/admin/registries/test-connection` - test the connection
+- **GET** `/api/v1/admin/registries/{id}/catalog` - browse the repository catalog
+- **GET** `/api/v1/admin/registries/{id}/tags` - list a repository's tags
+- **GET** `/api/v1/admin/registries/{id}/tags/{tag}` - tag detail
+- **DELETE** `/api/v1/admin/registries/{id}/tags/{tag}` - delete a tag
+
+### Sync tasks
+- **POST** `/api/v1/admin/sync` - create a registry sync task
+- **GET** `/api/v1/admin/sync` - list sync tasks
+- **GET** `/api/v1/admin/sync/{id}` - get sync task
+- **POST** `/api/v1/admin/sync/{id}/cancel` - cancel a sync task
+
+### Retention policies
+- **GET** `/api/v1/admin/retention` - list retention policies
+- **POST** `/api/v1/admin/retention` - create retention policy
+- **PUT** `/api/v1/admin/retention/{id}` - update retention policy
+- **DELETE** `/api/v1/admin/retention/{id}` - delete retention policy
+- **POST** `/api/v1/admin/retention/{id}/execute` - run a cleanup immediately
+
+### Virtual index (WebDAV directory tree)
+- **GET/POST** `/api/v1/admin/channels` - list/create channels
+- **GET/PUT/DELETE** `/api/v1/admin/channels/{id}` - get/update/delete channel
+- **GET/POST** `/api/v1/admin/channels/{channel_id}/views` - list/create views
+- **GET/PUT/DELETE** `/api/v1/admin/views/{id}` - get/update/delete view
+- **GET** `/api/v1/admin/views/{view_id}/tree` - full node tree of a view
+- **GET/POST** `/api/v1/admin/views/{view_id}/nodes` - list/create nodes
+- **PUT/DELETE** `/api/v1/admin/nodes/{id}` - update/delete node
+- **GET** `/api/v1/admin/virtual-audit` - virtual-index change audit log
+
+### Tool catalog
+- **GET** `/api/v1/admin/tool-catalog` - curated built-in tool catalog
+- **POST** `/api/v1/admin/tool-catalog/{slug}/enable` - enable a tool with one click (creates the project)
 
 ### Search
-- **GET** `/api/v1/admin/search` - Full-text search across files and configs
+- **GET** `/api/v1/admin/search` - full-text search across files and configs
 **Query Parameters**:
-- `q` (string): Search query
-- `type` (string): Filter type (files, configs, all)
+- `q` (string): search query
+- `type` (string): type filter (files, configs, all)
 
 ### Logs
-- **GET** `/api/v1/admin/logs` - Get system logs
+- **GET** `/api/v1/admin/logs` - get system logs
 **Query Parameters**:
-- `level` (string): Log level filter (optional)
-- `limit` (int): Result limit (optional)
-- `source` (string): Source filter (optional)
+- `level` (string): log level filter (optional)
+- `limit` (int): result limit (optional)
+- `source` (string): source filter (optional)
 
 ### Tasks
-- **GET** `/api/v1/admin/tasks` - List background tasks
+- **GET** `/api/v1/admin/tasks` - list background tasks
 
 ### Backup
-- **GET** `/api/v1/admin/backups` - List available backups
-- **POST** `/api/v1/admin/backups/restore` - Restore from backup archive
+- **GET** `/api/v1/admin/backups` - list available backups
+- **POST** `/api/v1/admin/backups/restore` - restore from a backup archive
 
-## ISO Public Endpoints
+## Public ISO Endpoints
 
 ### GET /api/v1/isos
-**Description**: List available ISO files (public, no authentication)
+**Description**: List available ISO files (public, no auth — lets PXE/install scripts discover images)
 **Authentication**: None
 **Response**:
 ```json
@@ -459,43 +511,40 @@
 ```
 
 ### GET /api/v1/isos/{name}/download
-**Description**: Download ISO file (JWT required)
-**Authentication**: JWT via Authorization header or ?token= query parameter
-**Parameters**: 
+**Description**: Download an ISO file (JWT required)
+**Authentication**: JWT via the Authorization header or a `?token=` query parameter
+**Parameters**:
 - `name` (path): ISO name
-**Response**: File download stream
-**Example Request Headers**:
+**Response**: file download stream
+**Example header**:
 ```
 Authorization: Bearer <jwt-token>
 ```
-**Example Request URL**:
+**Example URL**:
 ```
 /api/v1/isos/ubuntu-22.04/download?token=<jwt-token>
 ```
 
-## Supply Endpoints (Public, No Authentication)
+## Supply Endpoints (public, no auth)
 
-MiBeeHive serves the artifacts it collects (the "Foraging" → "Supply" pipeline)
-to external servers over their **native** protocols, so a fleet can consume
-collected tools without bespoke clients. These endpoints are public (no JWT) so
-external hosts can reach them unattended.
+MiBeeHive serves what Foraging collected over the **native protocols** of external servers, so the whole fleet consumes collected ops tooling with its own tools — no dedicated client. These endpoints are public (no JWT) so external hosts can pull unattended.
 
 ### GET /repo/index
-**Description**: Generic JSON manifest of all servable (status=complete) files.
+**Description**: Generic JSON manifest of all suppliable (status=complete) files.
 **Authentication**: None
 **Response**: `{ "count": N, "items": [ { "id", "filename", "version", "size_bytes", "checksum", "download_url": "/repo/files/{id}", ... } ] }`
 
 ### GET /repo/files/{id}
-**Description**: Stream a single collected artifact by id (the generic fallback download).
+**Description**: Stream a single collected artifact by id (generic fallback download).
 **Authentication**: None
 **Parameters**: `id` (path): file id
-**Response**: File download stream
+**Response**: file download stream
 
 ### GET /apt/{rest...}
-**Description**: APT repository over collected `.deb` files. Generates
-`dists/{suite}/main/binary-{arch}/Packages[.gz]` + `Release` on demand (cached,
-mtime-invalidated) and serves pool downloads. External Debian/Ubuntu hosts add
-this as an apt source:
+**Description**: An APT repository built over collected `.deb` files. It generates
+`dists/{suite}/main/binary-{arch}/Packages[.gz]` and `Release` on demand (cached,
+invalidated by mtime) and serves pool downloads. External Debian/Ubuntu hosts add
+it as an apt source:
 ```
 echo "deb http://<host>:9090/apt stable main" | tee /etc/apt/sources.list.d/mibeehive.list
 apt update && apt install <pkg>
@@ -503,11 +552,11 @@ apt update && apt install <pkg>
 **Authentication**: None
 
 ### GET /simple/{rest...}
-**Description**: PyPI "Simple Repository API" (PEP 503) over collected Python
-wheels/sdists. `GET /simple/` lists served projects; `GET /simple/<project>/`
-lists that project's distributions with `#sha256=...` verification fragments.
-Project names are normalized per PEP 503 (`My_Pkg`, `my-pkg`, `my.pkg` all match).
-External Python hosts install from it with native tooling:
+**Description**: A PyPI "Simple Repository API" (PEP 503) built over collected
+Python wheels/sdists. `GET /simple/` lists supplied projects; `GET /simple/<project>/`
+lists the project's distributions with `#sha256=...` fragments. Project names are
+PEP 503-normalized (`My_Pkg`, `my-pkg`, and `my.pkg` all match). External Python
+hosts install with their native tools:
 ```
 pip install --index-url http://<host>:9090/simple/ <pkg>
 # or
@@ -515,16 +564,28 @@ uv pip install --index-url http://<host>:9090/simple/ <pkg>
 ```
 **Authentication**: None
 
+## Share-Link Endpoints (public — the token is the credential)
 
-## Public PXE Endpoints (No Authentication)
+### GET /s/{token}
+**Description**: Download a file via a share token. Tokens are minted by the admin endpoint `/api/v1/admin/share-links` and can be revoked at any time; the same token also works as `GET /api/v1/files/{token}/download`.
+**Authentication**: None (the token itself is the credential)
+**Parameters**: `token` (path): share token
+
+## WebDAV Endpoint
+
+### /webdav/ (and subpaths)
+**Description**: WebDAV file service (`PROPFIND`, `GET`, `PUT`, `MKCOL`, `DELETE`, `MOVE`, `COPY`). **Served on the HTTPS port only** (the HTTP port redirects). The directory tree is organized by the virtual index (channels/views/nodes); manual uploads land in the Manual Uploads project.
+**Authentication**: Basic Auth — anonymous read; admin credentials (same as the admin panel) grant read/write.
+
+## Public PXE Endpoints (no auth)
 
 ### GET /pxe/{format}/{name}
-**Description**: Serve PXE configuration files
+**Description**: Serve a PXE config file
 **Authentication**: None
 **Parameters**:
-- `format` (path): Configuration format (preseed, kickstart, autoinstall)
-- `name` (path): Configuration name
-**Response**: Configuration file content
+- `format` (path): config format (preseed, kickstart, autoinstall)
+- `name` (path): config name
+**Response**: config file contents
 
 ## Health & Metrics Endpoints
 
@@ -536,13 +597,13 @@ uv pip install --index-url http://<host>:9090/simple/ <pkg>
 ### GET /metrics
 **Description**: Prometheus metrics endpoint
 **Authentication**: None
-**Response**: Prometheus-formatted metrics
+**Response**: Prometheus-format metrics
 
 ## Response Format
 
 All API endpoints use a consistent response format:
 
-### Success Response
+### Success
 ```json
 {
   "success": true,
@@ -550,30 +611,34 @@ All API endpoints use a consistent response format:
 }
 ```
 
-### Error Response
+### Error
 ```json
 {
   "success": false,
-  "message": "Error description"
+  "message": "error description"
 }
 ```
 
-### Common Error Codes
-- `400 Bad Request`: Malformed request
-- `401 Unauthorized`: Invalid or missing JWT token
-- `404 Not Found`: Resource not found
-- `500 Internal Server Error`: Server error
+### Common error codes
+- `400 Bad Request`: malformed request
+- `401 Unauthorized`: invalid or missing JWT
+- `404 Not Found`: resource not found
+- `500 Internal Server Error`: server error
 
 ## Authentication
 
-### JWT Tokens
-- Admin endpoints require valid JWT token in `Authorization` header
+### JWT tokens
+- Admin endpoints require a valid JWT in the `Authorization` header
 - Token format: `Authorization: Bearer <token>`
-- Token expiration: 1 hour (3600 seconds)
-- Token provided by `/api/v1/auth/login` endpoint
+- Token expiry: 1 hour (3600 seconds)
+- Tokens are issued by `/api/v1/auth/login` and renewed via `/api/v1/auth/refresh`
 
-### WebDAV Authentication
-- Basic Authentication required
-- Anonymous users: Read-only access
-- Admin users: Read-write access
-- Credentials same as web admin panel
+### WebDAV auth
+- Basic Auth required
+- Anonymous: read-only access
+- Admin: read/write access
+- Credentials are shared with the web admin panel
+
+### Share tokens
+- `GET /s/{token}` and `GET /api/v1/files/{token}/download` replace login with a token
+- Tokens can be revoked by an admin at any time

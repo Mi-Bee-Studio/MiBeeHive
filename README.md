@@ -89,9 +89,14 @@ GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o mibeehive-arm64 ./cmd/mibeehiv
 
 ## Documentation
 
+- [Introduction](docs/en/introduction.md) — what MiBeeHive is and who it's for
+- [Quick Start](docs/en/quick-start.md) — build, launch, first crawl, first pull
 - [Architecture](docs/en/architecture.md) — modules, layers, supply protocols
 - [Deployment](docs/en/deployment.md) — Linux install (amd64/arm64), systemd, health checks
+- [Configuration](docs/en/configuration.md) — every `config.yaml` option
 - [API Reference](docs/en/api-reference.md) — all HTTP endpoints
+- [Development](docs/en/development.md) — building, testing, and contributing
+- [Changelog](docs/en/changelog.md) — release history
 - [Supply Layer](docs/roadmap/supply-layer.md) — protocol roadmap (APT ✅, PyPI ✅, more coming)
 
 ## Scope

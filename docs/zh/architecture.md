@@ -1,7 +1,5 @@
 # MiBeeHive 架构文档
 
-[English](../en/architecture.md)
-
 ## 蜂巢哲学
 
 MiBeeHive 是**面向外部服务器的运维工具供应链平台**。蜂巢是最贴切的隐喻：蜂巢不产花蜜，它**采集、酿造、分发**花蜜。MiBeeHive 不发明协议——它从公共源采集运维工具、持续更新，并按已有的标准协议对外供应给外部服务器。产品的本质是一条供应链，而下面两项自给自足的 provisioning 能力，是任何其他运维面板都没有的核心差异点：
@@ -52,54 +50,49 @@ MiBeeHive 是一个轻量的单体 Go 二进制文件，充当**外部服务器�
 │                                                             │
 │  嵌入式前端 (web/)                                         │
 │  ├── HTML/CSS (CSS 变量、响应式)                          │
-│  └── JavaScript 模块 (31 个文件、3 层架构)                 │
+│  └── JavaScript 模块 (49 个文件、3 层架构)                 │
 │                                                             │
 │  SQLite 数据库                                             │
-│  └── 14 个嵌入式迁移文件                                   │
+│  └── 26 个嵌入式迁移文件                                   │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ## 前端模块结构
 
-前端是一个 **Preact + HTM** SPA，按 3 层架构组织成 38 个模块。详细文档请参见 `web/js/AGENTS.md`。
+前端是一个 **Preact + HTM** SPA，按 3 层架构组织（core 12 个文件 + layout 3 个 + modules 33 个，共 49 个）。
 
 ### 核心层 (web/js/core/)
-- `api.js` - HTTP 客户端包装器（fetch + JWT 头注入）
+- `api.js` - HTTP 客户端包装器（fetch + JWT 头注入 + 401 刷新 + AbortSignal 透传）
 - `auth.js` - 登录/登出、令牌管理、localStorage
-- `components.js` - 可重用 UI 组件（toast、modal、table、tabs、skeletonCard）
+- `cache.js` - 客户端缓存工具
+- `components.js` - 可重用 UI 组件（toast、modal、table、moduleTabs、FilterBar、ActionMenu）
 - `drawer.js` - 滑出式抽屉面板
-- `helpers.js` - 工具函数（formatDate、formatSize、debounce 等）
-- `router.js` - 基于 SPA 的哈希路由，带有路由守卫
+- `helpers.js` - 工具函数（formatDate、formatSize、debounce、statusBadge 等）
+- `hooks.js` - 组合式 hooks（含绑定了 AbortSignal 与作用域定时器的 `Hooks.usePolling`）
+- `preact.js` - **Preact 桥接**（`PreactBridge` 全局），提供 h、html、render、Component、Fragment + 全部 hooks
+- `router.js` - 基于 SPA 的哈希路由（`:id`/`:subtab` 参数、每路由 AbortController、路由守卫）
 - `search.js` - 全局搜索功能
-- `state.js` - 全局 App 单例，具有事件总线和定时器管理
-- `preact.js` - **Preact 桥接**，提供 h、html、render、Component、Fragment + 所有 hooks
+- `state.js` - 全局 App 单例，具有事件总线和作用域定时器管理
+- `tooltips.js` - 提示组件
 - `i18n.js` - i18n 系统（zh/en），带有 `t('key')` 函数和 `{count}` 插值
 
 ### 布局层 (web/js/layout/)
-- `sidebar.js` - 桌面侧边栏导航（带有六边形品牌图标）
-- `shell.js` - 应用外壳（渲染侧边栏 + 主内容区域）
-- `bottom-tab.js` - 移动端底部标签导航
+- `shell.js` - 应用外壳（AppProvider + I18nProvider 包裹侧边栏/底部标签/主内容区）
+- `sidebar.js` - 桌面侧边栏导航（按「采蜜→供应→哺育→运维」分组，带六边形品牌图标）
+- `bottom-tab.js` - 移动端底部标签导航（与侧边栏同序）
 
 ### 模块层 (web/js/modules/)
-- `dashboard.js` - 聚合仪表板，包含欢迎横幅、状态卡片、图表、活动时间线、快速操作（727 行）
-- `files.js` - 文件标签容器（子模块路由）
-- `files-crawl.js` - 爬取控制子模块
-- `files-projects.js` - 项目管理子模块
-- `files-queue.js` - 下载队列子模块
-- `deploy.js` - 部署标签容器
-- `deploy-configs.js` - 操作系统安装配置管理
-- `deploy-iso.js` - ISO 目录 + 下载管理
-- `share.js` - 分享标签容器（WebDAV）
-- `share-files.js` - WebDAV 文件浏览器
-- `settings.js` - 设置（密码、主题、语言、磁盘阈值）
-- `login.js` - 登录页面
-- `containers.js` - 容器列表和管理
-- `containers-detail.js` - 容器详情视图（日志、统计、环境变量）
-- `containers-images.js` - Docker 镜像管理
-- `containers-templates.js` - 应用模板
-- `logs.js` - 系统日志查看器
-- `search.js` - 搜索结果页面
-- `tasks.js` - 后台任务查看器
+- `overview.js` - 供应链总览首页（默认落地页）
+- `foraging.js` + `files.js` / `files-crawl.js` / `files-projects.js` / `files-queue.js` - 采蜜模块（项目、爬取控制、下载队列）
+- `file-center.js` / `file-detail.js` / `file-bulk.js` / `view-manager.js` - 跨项目文件中心与虚拟索引视图管理
+- `supply.js` - 供应层页面（APT/PyPI 客户端配置片段）
+- `deploy.js` + `deploy-configs.js` / `deploy-iso.js` / `foraging-iso.js` - 哺育模块（OS 安装配置、ISO 目录与队列）
+- `share.js` / `share-files.js` / `share-link-dialog.js` - 分享模块（WebDAV 浏览、分享链接）
+- `containers.js` / `containers-detail.js` / `containers-images.js` / `containers-templates.js` - 容器管理
+- `registries.js` / `registries-repos.js` / `registries-sync.js` / `registries-cleanup.js` - 远程 registry（浏览、同步、保留策略）
+- `dashboard.js` / `system-status.js` / `logs.js` / `tasks.js` - 系统状态（仪表板、日志、任务）
+- `settings.js` - 设置（密码、主题、语言、磁盘阈值、存储路径）
+- `external-service.js`、`search.js`、`login.js` - 外部服务、搜索结果、登录页
 
 ## 后端架构
 

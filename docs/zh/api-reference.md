@@ -1,6 +1,14 @@
 # MiBeeHive API 参考文档
 
-[English](../en/api-reference.md)
+MiBeeHive 的全部 HTTP 端点。**认证模型**：除下述**公共端点**外，所有 `/api/v1/*` 端点都需要 JWT（`Authorization: Bearer <token>`）：
+
+- `POST /api/v1/auth/login`（登录本身）
+- `GET /api/v1/files/{id|token}/download`、`GET /s/{token}`（令牌下载）
+- `GET /api/v1/isos`（公共 ISO 列表）
+- 供应层：`/repo/*`、`/apt/*`、`/simple/*`
+- `GET /pxe/{format}/{name}`（PXE 客户端无法登录）
+- `GET /health`、`GET /metrics`
+- `/webdav/*`（独立的基本认证：匿名只读、管理员读写）
 
 ## 认证端点
 
@@ -22,8 +30,12 @@
 }
 ```
 
+### POST /api/v1/auth/refresh
+**描述**：在令牌过期前续期，返回新 JWT
+**认证**：需要 JWT
+
 ### GET /api/v1/auth/password-status
-**描述**：检查是否需要更改密码
+**描述**：检查是否需要更改密码（例如仍在使用默认密码时）
 **认证**：需要 JWT
 **响应**：
 ```json
@@ -35,18 +47,18 @@
 }
 ```
 
-## 文件管理端点
+## 文件端点
 
 ### GET /api/v1/files/{id}/download
-**描述**：下载特定文件
+**描述**：下载特定文件。`{id}` 既可以是数字 ID，也可以是**分享令牌**（base58）——后者是分享链接的下载通道，无需登录
 **认证**：无
 **参数**：
-- `id`（路径）：文件 ID
+- `id`（路径）：文件 ID 或分享令牌
 **响应**：文件下载流
 
 ### GET /api/v1/files/search
 **描述**：搜索文件
-**认证**：无
+**认证**：需要 JWT
 **查询参数**：
 - `query`（字符串）：搜索查询
 - `type`（字符串）：文件类型过滤（可选）
@@ -68,7 +80,7 @@
 
 ### GET /api/v1/files/queue
 **描述**：获取下载队列状态
-**认证**：无
+**认证**：需要 JWT
 **响应**：
 ```json
 {
@@ -83,7 +95,7 @@
 
 ### GET /api/v1/files/queue/stats
 **描述**：获取下载队列统计信息
-**认证**：无
+**认证**：需要 JWT
 **响应**：
 ```json
 {
@@ -96,11 +108,17 @@
 }
 ```
 
-## 项目管理端点
+### GET /api/v1/files/queue/progress
+**描述**：获取下载队列的实时进度（供轮询）
+**认证**：需要 JWT
+
+## 项目端点（只读）
+
+`/api/v1/projects` 为只读视图；项目的增删改走下方管理面板的 `/api/v1/admin/projects`。
 
 ### GET /api/v1/projects
 **描述**：列出所有项目
-**认证**：无
+**认证**：需要 JWT
 **响应**：
 ```json
 {
@@ -116,48 +134,23 @@
 }
 ```
 
-### POST /api/v1/projects
-**描述**：创建新项目
-**认证**：无
-**请求体**：
-```json
-{
-  "name": "New Project",
-  "enabled": true,
-  "config": {...}
-}
-```
-
 ### GET /api/v1/projects/{id}
 **描述**：获取项目详情
-**认证**：无
-**参数**：
-- `id`（路径）：项目 ID
-
-### PUT /api/v1/projects/{id}
-**描述**：更新项目
-**认证**：无
-**参数**：
-- `id`（路径）：项目 ID
-**请求体**：与创建相同
-
-### DELETE /api/v1/projects/{id}
-**描述**：删除项目（软删除）
-**认证**：无
+**认证**：需要 JWT
 **参数**：
 - `id`（路径）：项目 ID
 
 ### GET /api/v1/projects/{id}/files
 **描述**：列出项目文件
-**认证**：无
+**认证**：需要 JWT
 **参数**：
 - `id`（路径）：项目 ID
 
-## 爬取管理端点
+## 爬取端点
 
 ### GET /api/v1/crawl/status
 **描述**：获取爬取状态
-**认证**：无
+**认证**：需要 JWT
 **响应**：
 ```json
 {
@@ -176,7 +169,7 @@
 
 ### POST /api/v1/crawl/trigger
 **描述**：手动触发爬取
-**认证**：无
+**认证**：需要 JWT
 **请求体**：
 ```json
 {
@@ -187,7 +180,7 @@
 
 ### GET /api/v1/crawl/logs
 **描述**：获取爬取日志
-**认证**：无
+**认证**：需要 JWT
 **查询参数**：
 - `project`（字符串）：项目过滤（可选）
 - `limit`（整数）：日志限制（可选）
@@ -209,7 +202,7 @@
 
 ### GET /api/v1/system/info
 **描述**：获取系统信息
-**认证**：无
+**认证**：需要 JWT
 **响应**：
 ```json
 {
@@ -225,7 +218,7 @@
 
 ### GET /api/v1/system/stats
 **描述**：获取当前系统统计信息（CPU、内存、网络）
-**认证**：无
+**认证**：需要 JWT
 **响应**：
 ```json
 {
@@ -241,7 +234,7 @@
 
 ### GET /api/v1/system/stats/history
 **描述**：获取系统统计历史
-**认证**：无
+**认证**：需要 JWT
 **查询参数**：
 - `hours`（整数）：历史小时数（可选，默认 24）
 **响应**：
@@ -261,7 +254,7 @@
 
 ### GET /api/v1/os-install/configs
 **描述**：列出操作系统安装配置
-**认证**：无
+**认证**：需要 JWT
 **响应**：
 ```json
 {
@@ -331,25 +324,30 @@
 }
 ```
 
+### GET /api/v1/admin/metrics/cache
+**描述**：内部缓存指标（供应层索引/计数缓存命中情况）
+**认证**：需要 JWT
+
 ## 管理面板端点（需要 JWT）
 
 ### 项目管理
 - **GET** `/api/v1/admin/projects` - 列出项目
 - **POST** `/api/v1/admin/projects` - 创建项目
+- **GET** `/api/v1/admin/projects/{id}` - 获取项目
 - **PUT** `/api/v1/admin/projects/{id}` - 更新项目
 - **DELETE** `/api/v1/admin/projects/{id}` - 删除项目
-- **PUT** `/api/v1/admin/projects/{id}/toggle` - 启用/禁用项目
+- **PATCH** `/api/v1/admin/projects/{id}/toggle` - 启用/禁用项目
 
 ### 爬取管理
 - **GET** `/api/v1/admin/crawl/status` - 获取管理爬取状态
 - **POST** `/api/v1/admin/crawl/trigger/{name}` - 触发特定项目
 - **POST** `/api/v1/admin/crawl/trigger-all` - 触发所有项目
-- **PUT** `/api/v1/admin/crawl/pause/{name}` - 暂停项目
-- **PUT** `/api/v1/admin/crawl/resume/{name}` - 恢复项目
+- **POST** `/api/v1/admin/crawl/pause/{name}` - 暂停项目
+- **POST** `/api/v1/admin/crawl/resume/{name}` - 恢复项目
 
 ### 令牌管理
 - **GET** `/api/v1/admin/credentials` - 列出 API 令牌
-- **POST** `/api/v1/admin/credentials` - 创建/更新令牌
+- **PUT** `/api/v1/admin/credentials` - 创建/更新令牌
 
 ### 安全管理
 - **PUT** `/api/v1/admin/password` - 更改管理员密码
@@ -364,6 +362,23 @@
   "disk_critical_percent": 95
 }
 ```
+
+### 存储配置与迁移
+- **GET** `/api/v1/admin/config/storage` - 获取存储路径配置
+- **PUT** `/api/v1/admin/config/storage` - 更新存储路径（触发后台迁移任务）
+- **GET** `/api/v1/admin/storage/migrations` - 列出存储迁移任务
+- **GET** `/api/v1/admin/storage/migrations/{id}` - 获取迁移任务详情
+- **POST** `/api/v1/admin/storage/migrations/{id}/cancel` - 取消迁移任务
+
+### 文件中心与文件管理
+- **GET** `/api/v1/admin/files` - 跨项目文件列表（过滤、分页）
+- **POST** `/api/v1/admin/files/{id}/retry` - 重新排队失败的下载
+- **GET** `/api/v1/admin/files/{id}/internal` - 文件内部元数据（路径、校验等诊断信息）
+
+### 分享链接管理
+- **GET** `/api/v1/admin/share-links` - 列出分享链接
+- **POST** `/api/v1/admin/share-links` - 创建分享链接（生成下载令牌）
+- **DELETE** `/api/v1/admin/share-links/{token}` - 吊销分享链接
 
 ### 操作系统安装管理
 - **GET** `/api/v1/admin/os-install/configs` - 列出配置
@@ -383,7 +398,10 @@
 - **DELETE** `/api/v1/admin/os-install/catalog/{id}` - 删除目录条目
 - **POST** `/api/v1/admin/os-install/catalog/{id}/check` - 检查最新版本
 - **POST** `/api/v1/admin/os-install/catalog/{id}/download` - 触发目录下载
+- **POST** `/api/v1/admin/os-install/catalog/{id}/retry` - 重试失败的下载
+- **POST** `/api/v1/admin/os-install/catalog/{id}/cancel` - 取消下载
 - **POST** `/api/v1/admin/os-install/catalog/check-all` - 检查所有版本
+- **GET** `/api/v1/admin/os-install/catalog/profiles` - 发行版档案（两级抓取模板）
 - **GET** `/api/v1/admin/os-install/catalog/queue` - 获取 ISO 下载队列统计
 - **POST** `/api/v1/admin/os-install/catalog/download-all` - 队列所有可用的 ISO
 - **GET** `/api/v1/admin/os-install/catalog/progress` - 获取 ISO 下载进度
@@ -411,9 +429,44 @@
 - **GET** `/api/v1/admin/templates/{id}` - 获取应用模板
 - **DELETE** `/api/v1/admin/templates/{id}` - 删除应用模板
 
-### WebDAV 管理
-- **GET** `/api/v1/admin/webdav/status` - 获取 WebDAV 状态
-- **GET** `/api/v1/admin/webdav/files` - 列出 WebDAV 文件
+### Registry 管理（远程镜像仓库）
+- **GET** `/api/v1/admin/registries` - 列出 registry
+- **POST** `/api/v1/admin/registries` - 创建 registry
+- **GET** `/api/v1/admin/registries/{id}` - 获取 registry
+- **PUT** `/api/v1/admin/registries/{id}` - 更新 registry
+- **DELETE** `/api/v1/admin/registries/{id}` - 删除 registry
+- **POST** `/api/v1/admin/registries/test-connection` - 测试连接
+- **GET** `/api/v1/admin/registries/{id}/catalog` - 浏览仓库目录
+- **GET** `/api/v1/admin/registries/{id}/tags` - 列出某仓库的标签
+- **GET** `/api/v1/admin/registries/{id}/tags/{tag}` - 标签详情
+- **DELETE** `/api/v1/admin/registries/{id}/tags/{tag}` - 删除标签
+
+### 同步任务
+- **POST** `/api/v1/admin/sync` - 创建 registry 同步任务
+- **GET** `/api/v1/admin/sync` - 列出同步任务
+- **GET** `/api/v1/admin/sync/{id}` - 获取同步任务
+- **POST** `/api/v1/admin/sync/{id}/cancel` - 取消同步任务
+
+### 保留策略
+- **GET** `/api/v1/admin/retention` - 列出保留策略
+- **POST** `/api/v1/admin/retention` - 创建保留策略
+- **PUT** `/api/v1/admin/retention/{id}` - 更新保留策略
+- **DELETE** `/api/v1/admin/retention/{id}` - 删除保留策略
+- **POST** `/api/v1/admin/retention/{id}/execute` - 立即执行一次清理
+
+### 虚拟索引（WebDAV 目录树）
+- **GET/POST** `/api/v1/admin/channels` - 列出/创建频道
+- **GET/PUT/DELETE** `/api/v1/admin/channels/{id}` - 获取/更新/删除频道
+- **GET/POST** `/api/v1/admin/channels/{channel_id}/views` - 列出/创建视图
+- **GET/PUT/DELETE** `/api/v1/admin/views/{id}` - 获取/更新/删除视图
+- **GET** `/api/v1/admin/views/{view_id}/tree` - 获取视图完整节点树
+- **GET/POST** `/api/v1/admin/views/{view_id}/nodes` - 列出/创建节点
+- **PUT/DELETE** `/api/v1/admin/nodes/{id}` - 更新/删除节点
+- **GET** `/api/v1/admin/virtual-audit` - 虚拟索引变更审计日志
+
+### 工具目录
+- **GET** `/api/v1/admin/tool-catalog` - 内置常用工具目录
+- **POST** `/api/v1/admin/tool-catalog/{slug}/enable` - 一键启用某工具（自动建项目）
 
 ### 搜索
 - **GET** `/api/v1/admin/search` - 在文件和配置中全文搜索
@@ -438,7 +491,7 @@
 ## ISO 公开端点
 
 ### GET /api/v1/isos
-**描述**：列出可用的 ISO 文件（公共，无需认证）
+**描述**：列出可用的 ISO 文件（公共，无需认证——供 PXE/装机脚本发现镜像）
 **认证**：无
 **响应**：
 ```json
@@ -509,6 +562,18 @@ uv pip install --index-url http://<host>:9090/simple/ <pkg>
 ```
 **认证**：无
 
+## 分享链接端点（公开，令牌即凭证）
+
+### GET /s/{token}
+**描述**：通过分享令牌下载文件。令牌由管理端 `/api/v1/admin/share-links` 创建，可随时吊销；同一个令牌也可用于 `GET /api/v1/files/{token}/download`。
+**认证**：无（令牌本身即凭证）
+**参数**：`token`（路径）：分享令牌
+
+## WebDAV 端点
+
+### /webdav/（及子路径）
+**描述**：WebDAV 文件服务（`PROPFIND`、`GET`、`PUT`、`MKCOL`、`DELETE`、`MOVE`、`COPY`）。**仅在 HTTPS 端口提供**（HTTP 端口会重定向）。
+**认证**：基本认证——匿名只读；管理员凭据与管理面板相同，可读写。目录树由虚拟索引（频道/视图/节点）组织，手工上传落在 Manual Uploads 项目下。
 
 ## 公共 PXE 端点（无需认证）
 
@@ -564,10 +629,14 @@ uv pip install --index-url http://<host>:9090/simple/ <pkg>
 - 管理端点需要在 `Authorization` 头中提供有效的 JWT 令牌
 - 令牌格式：`Authorization: Bearer <token>`
 - 令牌过期：1 小时（3600 秒）
-- 令牌由 `/api/v1/auth/login` 端点提供
+- 令牌由 `/api/v1/auth/login` 端点提供，`/api/v1/auth/refresh` 续期
 
 ### WebDAV 认证
-- 需要基础认证
+- 需要基本认证
 - 匿名用户：只读访问
 - 管理员用户：读写访问
 - 凭据与 Web 管理面板相同
+
+### 分享令牌
+- `GET /s/{token}` 与 `GET /api/v1/files/{token}/download` 以令牌代替登录
+- 令牌可由管理员随时吊销

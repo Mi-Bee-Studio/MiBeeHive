@@ -1,14 +1,12 @@
 # MiBeeHive Deployment Guide
 
-[中文](../zh/deployment.md)
+## Target: Any Linux Host (amd64 / arm64)
 
-## Target Device: ARM64 NAS Device
-
-### Specifications
+### Reference Specifications
 - **SSH**: `ssh user@device-ip`
-- **OS**: Linux (Debian/Ubuntu/Armbian), kernel 6.0+, aarch64
-- **Hardware**: ARM64 device with ≥1GB RAM, ≥32GB storage
-- **No Go toolchain on device** — cross-compile locally, SCP binary over
+- **OS**: Linux (Debian/Ubuntu/Armbian all work), kernel 6.0+
+- **Hardware**: amd64 or arm64; runs in as little as 469MB RAM (NAS / mini PC), ≥1GB recommended; storage depends on how much you forage (≥32GB to start)
+- **No Go toolchain needed on the device** — cross-compile locally and SCP the binary over (a direct `go build` on the device works too, if Go is present)
 
 ## Build Commands
 
@@ -136,6 +134,8 @@ auth:
 - Supports YAML format only
 - Environment-specific configurations stored in YAML
 - Database stores project configuration separately from infrastructure config
+
+For every option (crawl cadence, monitoring, log rotation, backups, containers, foraging project seeds, …) see the [configuration reference](configuration.md).
 
 ## Memory Management
 

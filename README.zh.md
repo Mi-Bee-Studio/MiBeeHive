@@ -89,9 +89,14 @@ GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o mibeehive-arm64 ./cmd/mibeehiv
 
 ## 文档
 
+- [产品介绍](docs/zh/introduction.md) —— MiBeeHive 是什么、给谁用
+- [快速开始](docs/zh/quick-start.md) —— 构建、启动、第一次采集与消费
 - [架构](docs/zh/architecture.md) —— 模块、分层、供应协议
 - [部署](docs/zh/deployment.md) —— Linux 安装(amd64/arm64)、systemd、健康检查
+- [配置参考](docs/zh/configuration.md) —— `config.yaml` 全部选项
 - [API 参考](docs/zh/api-reference.md) —— 全部 HTTP 端点
+- [开发与贡献](docs/zh/development.md) —— 构建、测试与提交约定
+- [更新日志](docs/zh/changelog.md) —— 版本发布历史
 - [供应层](docs/roadmap/supply-layer_zh.md) —— 协议路线图(APT ✅、PyPI ✅,更多规划中)
 
 ## 范围

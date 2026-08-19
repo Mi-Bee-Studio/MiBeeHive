@@ -1,8 +1,5 @@
 # MiBeeHive Architecture
 
-[中文](../zh/architecture.md)
-
-
 ## BeeHive Philosophy
 
 MiBeeHive is an **operations tooling supply platform for external servers**. The bee-hive is the right metaphor: the hive does not produce honey, it **collects, ages, and distributes** it. MiBeeHive does not invent protocols — it collects ops tools from public sources, keeps them up to date, and serves them to external servers over existing standard protocols. The product is a supply chain, and the two self-sufficient provisioning capabilities below are the core differentiators that no other ops panel offers:
@@ -53,54 +50,49 @@ MiBeeHive is a lightweight monolithic Go binary that acts as a **supply hub for 
 │                                                             │
 │  Embedded Frontend (web/)                                   │
 │  ├── HTML/CSS (CSS variables, responsive)                  │
-│  └── JavaScript Modules (31 files, 3-tier)                 │
+│  └── JavaScript Modules (49 files, 3-tier)                 │
 │                                                             │
 │  SQLite Database                                            │
-│  └── 14 Embedded Migrations                                 │
+│  └── 26 Embedded Migrations                                 │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ## Frontend Module Structure
 
-The frontend is a **Preact + HTM** SPA organized into 38 modules across 3 tiers. See `web/js/AGENTS.md` for detailed documentation.
+The frontend is a **Preact + HTM** SPA organized into 3 tiers (12 core files + 3 layout files + 33 module files = 49 in total).
 
 ### Core Layer (web/js/core/)
-- `api.js` - HTTP client wrapper (fetch + JWT header injection)
+- `api.js` - HTTP client wrapper (fetch + JWT header injection + 401 refresh + AbortSignal passthrough)
 - `auth.js` - Login/logout, token management, localStorage
-- `components.js` - Reusable UI components (toast, modal, table, tabs, skeletonCard)
+- `cache.js` - Client-side cache helpers
+- `components.js` - Reusable UI components (toast, modal, table, moduleTabs, FilterBar, ActionMenu)
 - `drawer.js` - Slide-out drawer panel
-- `helpers.js` - Utility functions (formatDate, formatSize, debounce, etc.)
-- `router.js` - Hash-based SPA routing with route guards
+- `helpers.js` - Utility functions (formatDate, formatSize, debounce, statusBadge, …)
+- `hooks.js` - Composable hooks (incl. `Hooks.usePolling`, polling tied to AbortSignals and scoped timers)
+- `preact.js` - **Preact bridge** (the `PreactBridge` global) providing h, html, render, Component, Fragment + all hooks
+- `router.js` - Hash-based SPA routing (`:id`/`:subtab` params, per-route AbortController, route guards)
 - `search.js` - Global search functionality
-- `state.js` - Global App singleton with event bus and timer management
-- `preact.js` - **Preact bridge** providing h, html, render, Component, Fragment + all hooks
+- `state.js` - Global App singleton with event bus and scoped timer management
+- `tooltips.js` - Tooltip component
 - `i18n.js` - i18n system (zh/en) with `t('key')` function and `{count}` interpolation
 
 ### Layout Layer (web/js/layout/)
-- `sidebar.js` - Desktop sidebar navigation (with hexagon brand icon)
-- `shell.js` - App shell (renders sidebar + main content area)
-- `bottom-tab.js` - Mobile bottom tab navigation
+- `shell.js` - App shell (AppProvider + I18nProvider wrapping sidebar/bottom-tab/main content)
+- `sidebar.js` - Desktop sidebar navigation (grouped Foraging → Supply → Provisioning → Ops, with hexagon brand icon)
+- `bottom-tab.js` - Mobile bottom tab navigation (same order as the sidebar)
 
 ### Module Layer (web/js/modules/)
-- `dashboard.js` - Aggregated dashboard with welcome banner, status cards, charts, activity timeline, quick actions (727 lines)
-- `files.js` - Files tab container (sub-module router)
-- `files-crawl.js` - Crawl control sub-module
-- `files-projects.js` - Project management sub-module
-- `files-queue.js` - Download queue sub-module
-- `deploy.js` - Deploy tab container
-- `deploy-configs.js` - OS install config management
-- `deploy-iso.js` - ISO catalog + download management
-- `share.js` - Share tab container (WebDAV)
-- `share-files.js` - WebDAV file browser
-- `settings.js` - Settings (password, theme, language, disk thresholds)
-- `login.js` - Login page
-- `containers.js` - Container list and management
-- `containers-detail.js` - Container detail view (logs, stats, env vars)
-- `containers-images.js` - Docker image management
-- `containers-templates.js` - Application templates
-- `logs.js` - System logs viewer
-- `search.js` - Search results page
-- `tasks.js` - Background tasks viewer
+- `overview.js` - Supply-chain overview home (default landing page)
+- `foraging.js` + `files.js` / `files-crawl.js` / `files-projects.js` / `files-queue.js` - Foraging module (projects, crawl control, download queue)
+- `file-center.js` / `file-detail.js` / `file-bulk.js` / `view-manager.js` - Cross-project file center and virtual-index view management
+- `supply.js` - Supply-layer page (APT/PyPI client config snippets)
+- `deploy.js` + `deploy-configs.js` / `deploy-iso.js` / `foraging-iso.js` - Provisioning module (OS install configs, ISO catalog and queue)
+- `share.js` / `share-files.js` / `share-link-dialog.js` - Sharing module (WebDAV browsing, share links)
+- `containers.js` / `containers-detail.js` / `containers-images.js` / `containers-templates.js` - Container management
+- `registries.js` / `registries-repos.js` / `registries-sync.js` / `registries-cleanup.js` - Remote registries (browsing, sync, retention)
+- `dashboard.js` / `system-status.js` / `logs.js` / `tasks.js` - System status (dashboard, logs, tasks)
+- `settings.js` - Settings (password, theme, language, disk thresholds, storage paths)
+- `external-service.js`, `search.js`, `login.js` - External services, search results, login page
 
 ## Backend Architecture
 
@@ -274,5 +266,3 @@ PXE Client → Public Endpoint → Config Generation → Boot Files → Installa
 - **Queue Processing**: Background goroutines for download queue management
 - **Incremental DOM Updates**: Periodic refresh uses targeted DOM patching, never innerHTML
 - **Single Dashboard API**: One aggregated endpoint reduces request count on dashboard
-
-[中文](../zh/architecture.md)

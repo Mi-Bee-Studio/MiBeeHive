@@ -1,14 +1,12 @@
 # MiBeeHive 部署指南
 
-[English](../en/deployment.md)
+## 目标：任意 Linux 主机（amd64 / arm64）
 
-## 目标设备：ARM64 NAS 设备
-
-### 规格说明
+### 参考规格
 - **SSH**: `ssh user@device-ip`
-- **操作系统**: Linux (Debian/Ubuntu/Armbian), kernel 6.0+, aarch64
-- **硬件**: ARM64 设备，≥1GB 内存，≥32GB 存储
-- **设备上无 Go 工具链** — 在本地交叉编译，通过 SCP 传输二进制文件
+- **操作系统**: Linux（Debian/Ubuntu/Armbian 均可），kernel 6.0+
+- **硬件**: amd64 或 arm64；内存下限低至 469MB（NAS / 迷你主机），推荐 ≥1GB；存储视采集量而定（≥32GB 起步）
+- **设备上无需 Go 工具链** — 在本地交叉编译，通过 SCP 传输二进制文件（设备上有 Go 的话直接 `go build` 亦可）
 
 ## 构建命令
 
@@ -136,6 +134,8 @@ auth:
 - 仅支持 YAML 格式
 - 环境特定配置存储在 YAML 中
 - 数据库将项目配置与基础设施配置分开存储
+
+全部选项（爬取节奏、监控、日志轮转、备份、容器、采集项目种子等）见[配置参考](configuration.md)。
 
 ## 内存管理
 

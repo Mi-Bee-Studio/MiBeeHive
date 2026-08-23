@@ -42,8 +42,9 @@ docs/                 bilingual docs (zh/ en/)
 
 The request path is fixed at four layers — **never skip a layer**:
 
-```text
-HTTP Request → Handler (internal/handler/) → Service (internal/service/) → Repository (internal/db/repo_*.go) → SQLite
+```mermaid
+flowchart LR
+    Req["HTTP Request"] --> Handler["Handler<br/>internal/handler/"] --> Service["Service<br/>internal/service/"] --> Repo["Repository<br/>internal/db/repo_*.go"] --> DB[("SQLite")]
 ```
 
 - **Routing**: everything registers in `buildRouter()` in `cmd/mibeehive/init.go`. Public routes (login, PXE, public ISO list/download, health, metrics, supply endpoints) go on the outer `mux`; everything else under `/api/v1/*` goes on `apiMux` wrapped by the JWT middleware. **Route path strings live as constants in `internal/model/routes.go`** — reference the constants instead of re-typing paths.

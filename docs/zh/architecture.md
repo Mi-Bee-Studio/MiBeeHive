@@ -32,29 +32,31 @@ MiBeeHive 是一个轻量的单体 Go 二进制文件，充当**外部服务器�
 - **运维模型：** 供应优先（被动地按协议供应制品）。对外部服务器的主动远程控制（SSH/agent）是远期方向，叠加在稳定的供应层之上。
 
 ### 架构概览
-```text
-┌─────────────────────────────────────────────────────────────┐
-│                    MiBeeHive 应用程序                         │
-├─────────────────────────────────────────────────────────────┤
-│  Go 后端 (cmd/mibeehive)                                  │
-│  ├── HTTP 处理器 (internal/handler/)                      │
-│  ├── 供应层 (internal/supply/)  APT · PyPI · 通用仓库     │
-│  ├── 业务逻辑 (internal/service/)                         │
-│  ├── 爬取层 (internal/crawler/ + internal/source/)        │
-│  ├── 数据层 (internal/db/)                                │
-│  ├── 配置 (internal/config/)                              │
-│  ├── 中间件 (internal/middleware/)                        │
-│  ├── Docker 客户端 (internal/docker/)                    │
-│  ├── 监控器 (internal/monitor/)                          │
-│  └── WebDAV (internal/webdav/)                            │
-│                                                             │
-│  嵌入式前端 (web/)                                         │
-│  ├── HTML/CSS (CSS 变量、响应式)                          │
-│  └── JavaScript 模块 (49 个文件、3 层架构)                 │
-│                                                             │
-│  SQLite 数据库                                             │
-│  └── 26 个嵌入式迁移文件                                   │
-└─────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    Req["HTTP 请求"] --> Handlers
+
+    subgraph app["MiBeeHive 应用程序"]
+        subgraph backend["Go 后端 (cmd/mibeehive)"]
+            Handlers["HTTP 处理器<br/>internal/handler/"]
+            Supply["供应层：APT · PyPI · 通用仓库<br/>internal/supply/"]
+            Service["业务逻辑<br/>internal/service/"]
+            Crawler["爬取层<br/>internal/crawler/ + internal/source/"]
+            Repo["数据层<br/>internal/db/"]
+            Config["配置 internal/config/"]
+            MW["中间件 internal/middleware/"]
+            Docker["Docker 客户端 internal/docker/"]
+            Monitor["监控器 internal/monitor/"]
+            WebDAV["WebDAV internal/webdav/"]
+        end
+        subgraph frontend["嵌入式前端 (web/)"]
+            HTMLCSS["HTML/CSS（CSS 变量、响应式）"]
+            JS["JavaScript 模块（49 个文件、3 层架构）"]
+        end
+        SQLite[("SQLite 数据库<br/>26 个嵌入式迁移文件")]
+    end
+
+    Handlers --> Service --> Repo --> SQLite
 ```
 
 ## 前端模块结构
@@ -97,8 +99,9 @@ MiBeeHive 是一个轻量的单体 Go 二进制文件，充当**外部服务器�
 ## 后端架构
 
 ### 层结构
-```text
-HTTP 请求 → 处理器 → 服务 → 仓库 → 数据库
+```mermaid
+flowchart LR
+    Req["HTTP 请求"] --> Handler["处理器"] --> Service["服务"] --> Repo["仓库"] --> DB[("数据库")]
 ```
 
 ### 处理器层 (internal/handler/)
@@ -212,28 +215,33 @@ HTTP 请求 → 处理器 → 服务 → 仓库 → 数据库
 ## 数据流
 
 ### 仪表板流
-```text
-仪表板 UI → 单个 /admin/dashboard/summary → DashboardHandler → 多个仓库 → 聚合响应
+```mermaid
+flowchart LR
+    UI["仪表板 UI"] --> API["单个 /admin/dashboard/summary"] --> Handler["DashboardHandler"] --> Repos["多个仓库"] --> Resp["聚合响应"]
 ```
 
 ### 爬取和下载流
-```text
-用户请求 → 管理 UI → 爬取触发 → 爬取器 → 下载服务 → 文件存储
+```mermaid
+flowchart LR
+    User["用户请求"] --> AdminUI["管理 UI"] --> Trigger["爬取触发"] --> Crawler["爬取器"] --> Download["下载服务"] --> Storage["文件存储"]
 ```
 
 ### 文件访问流
-```text
-客户端请求 → 文件搜索 → 文件服务 → 下载流 → 客户端
+```mermaid
+flowchart LR
+    Client["客户端请求"] --> Search["文件搜索"] --> FileSvc["文件服务"] --> Stream["下载流"] --> Out["客户端"]
 ```
 
 ### WebDAV 流
-```text
-WebDAV 客户端 → 基础认证 → 文件系统 → 文件操作
+```mermaid
+flowchart LR
+    WClient["WebDAV 客户端"] --> Auth["基础认证"] --> FS["文件系统"] --> Ops["文件操作"]
 ```
 
 ### 操作系统安装流
-```text
-PXE 客户端 → 公共端点 → 配置生成 → 引导文件 → 安装
+```mermaid
+flowchart LR
+    PXE["PXE 客户端"] --> Public["公共端点"] --> Gen["配置生成"] --> Boot["引导文件"] --> Install["安装"]
 ```
 
 ## 关键设计原则

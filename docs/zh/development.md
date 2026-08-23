@@ -42,8 +42,9 @@ docs/                 双语文档（zh/ en/）
 
 请求路径固定为四层，**不得跳层**：
 
-```text
-HTTP Request → Handler (internal/handler/) → Service (internal/service/) → Repository (internal/db/repo_*.go) → SQLite
+```mermaid
+flowchart LR
+    Req["HTTP Request"] --> Handler["Handler<br/>internal/handler/"] --> Service["Service<br/>internal/service/"] --> Repo["Repository<br/>internal/db/repo_*.go"] --> DB[("SQLite")]
 ```
 
 - **路由**：全部在 `cmd/mibeehive/init.go` 的 `buildRouter()` 注册。公开路由（login、PXE、ISO 公共列表/下载、health、metrics、供应端点）挂外层 `mux`；其余 `/api/v1/*` 挂 `apiMux` 并包 JWT 中间件。**路径字符串以常量形式定义在 `internal/model/routes.go`**——引用常量，不要重复手写。

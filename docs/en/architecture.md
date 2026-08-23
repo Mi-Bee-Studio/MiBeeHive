@@ -32,29 +32,31 @@ MiBeeHive is a lightweight monolithic Go binary that acts as a **supply hub for 
 - **Operations model**: supply-first (serve artifacts passively over protocols). Active remote control of external servers (SSH/agent) is a long-term direction, layered on top of a stable supply layer.
 
 ### Architecture Overview
-```text
-┌─────────────────────────────────────────────────────────────┐
-│                    MiBeeHive Application                      │
-├─────────────────────────────────────────────────────────────┤
-│  Go Backend (cmd/mibeehive)                                │
-│  ├── HTTP Handlers (internal/handler/)                     │
-│  ├── Supply Layer (internal/supply/)  APT · PyPI · repo    │
-│  ├── Business Logic (internal/service/)                    │
-│  ├── Crawl Layer (internal/crawler/ + internal/source/)    │
-│  ├── Data Layer (internal/db/)                             │
-│  ├── Configuration (internal/config/)                       │
-│  ├── Middleware (internal/middleware/)                     │
-│  ├── Docker Client (internal/docker/)                     │
-│  ├── Monitor (internal/monitor/)                           │
-│  └── WebDAV (internal/webdav/)                             │
-│                                                             │
-│  Embedded Frontend (web/)                                   │
-│  ├── HTML/CSS (CSS variables, responsive)                  │
-│  └── JavaScript Modules (49 files, 3-tier)                 │
-│                                                             │
-│  SQLite Database                                            │
-│  └── 26 Embedded Migrations                                 │
-└─────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    Req["HTTP Request"] --> Handlers
+
+    subgraph app["MiBeeHive Application"]
+        subgraph backend["Go Backend (cmd/mibeehive)"]
+            Handlers["HTTP Handlers<br/>internal/handler/"]
+            Supply["Supply Layer: APT · PyPI · generic repo<br/>internal/supply/"]
+            Service["Business Logic<br/>internal/service/"]
+            Crawler["Crawl Layer<br/>internal/crawler/ + internal/source/"]
+            Repo["Data Layer<br/>internal/db/"]
+            Config["Configuration internal/config/"]
+            MW["Middleware internal/middleware/"]
+            Docker["Docker Client internal/docker/"]
+            Monitor["Monitor internal/monitor/"]
+            WebDAV["WebDAV internal/webdav/"]
+        end
+        subgraph frontend["Embedded Frontend (web/)"]
+            HTMLCSS["HTML/CSS (CSS variables, responsive)"]
+            JS["JavaScript Modules (49 files, 3-tier)"]
+        end
+        SQLite[("SQLite Database<br/>26 Embedded Migrations")]
+    end
+
+    Handlers --> Service --> Repo --> SQLite
 ```
 
 ## Frontend Module Structure
@@ -97,8 +99,9 @@ The frontend is a **Preact + HTM** SPA organized into 3 tiers (12 core files + 3
 ## Backend Architecture
 
 ### Layer Structure
-```text
-HTTP Request → Handler → Service → Repository → Database
+```mermaid
+flowchart LR
+    Req["HTTP Request"] --> Handler["Handler"] --> Service["Service"] --> Repo["Repository"] --> DB[("Database")]
 ```
 
 ### Handler Layer (internal/handler/)
@@ -225,28 +228,33 @@ The dashboard provides an aggregated overview of all modules through a single AP
 ## Data Flow
 
 ### Dashboard Flow
-```text
-Dashboard UI → Single /admin/dashboard/summary → DashboardHandler → Multiple Repos → Aggregated Response
+```mermaid
+flowchart LR
+    UI["Dashboard UI"] --> API["Single /admin/dashboard/summary"] --> Handler["DashboardHandler"] --> Repos["Multiple Repos"] --> Resp["Aggregated Response"]
 ```
 
 ### Crawl and Download Flow
-```text
-User Request → Admin UI → Crawl Trigger → Crawler → Download Service → File Storage
+```mermaid
+flowchart LR
+    User["User Request"] --> AdminUI["Admin UI"] --> Trigger["Crawl Trigger"] --> Crawler["Crawler"] --> Download["Download Service"] --> Storage["File Storage"]
 ```
 
 ### File Access Flow
-```text
-Client Request → File Search → File Service → Download Stream → Client
-```
-
-### Supply (Native-Protocol) Flow
-```text
-External server → apt/pip/webdav → Supply handler → on-demand index over oss/ → File Service → Client
+```mermaid
+flowchart LR
+    Client["Client Request"] --> Search["File Search"] --> FileSvc["File Service"] --> Stream["Download Stream"] --> Out["Client"]
 ```
 
 ### WebDAV Flow
-```text
-WebDAV Client → Basic Auth → File System → File Operations
+```mermaid
+flowchart LR
+    WClient["WebDAV Client"] --> Auth["Basic Auth"] --> FS["File System"] --> Ops["File Operations"]
+```
+
+### OS Installation Flow
+```mermaid
+flowchart LR
+    PXE["PXE Client"] --> Public["Public Endpoint"] --> Gen["Config Generation"] --> Boot["Boot Files"] --> Install["Installation"]
 ```
 
 ### OS Installation Flow

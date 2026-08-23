@@ -22,7 +22,7 @@ go build -o mibeehive ./cmd/mibeehive
 
 ## Code layout
 
-```
+```text
 cmd/mibeehive/        main entry; init.go wires dependencies and registers routes
 cmd/migrate/          standalone migration tool
 internal/
@@ -42,7 +42,7 @@ docs/                 bilingual docs (zh/ en/)
 
 The request path is fixed at four layers — **never skip a layer**:
 
-```
+```text
 HTTP Request → Handler (internal/handler/) → Service (internal/service/) → Repository (internal/db/repo_*.go) → SQLite
 ```
 
@@ -88,4 +88,5 @@ CI (`.github/workflows/ci.yml`) runs `go vet` + `go test -race` + build on every
 
 - **Conventional Commits**: `type(scope): description` with `type` one of `feat` / `fix` / `docs` / `style` / `refactor` / `test` / `chore`.
 - **Bilingual docs**: user-facing doc changes must update both `docs/zh/` and `docs/en/` (the studio's docs center syncs these two directories per language).
+- **Always tag fenced code blocks**: `bash` for shell, `yaml`/`json` for config, `go`/`typescript` for code; `text` for diagrams, directory trees, and plain output. The studio docs center syntax-highlights by tag; CI rejects bare fences.
 - Releases: tag `v*`; record changes in `docs/{zh,en}/changelog.md`.

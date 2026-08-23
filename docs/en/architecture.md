@@ -32,7 +32,7 @@ MiBeeHive is a lightweight monolithic Go binary that acts as a **supply hub for 
 - **Operations model**: supply-first (serve artifacts passively over protocols). Active remote control of external servers (SSH/agent) is a long-term direction, layered on top of a stable supply layer.
 
 ### Architecture Overview
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
 │                    MiBeeHive Application                      │
 ├─────────────────────────────────────────────────────────────┤
@@ -97,7 +97,7 @@ The frontend is a **Preact + HTM** SPA organized into 3 tiers (12 core files + 3
 ## Backend Architecture
 
 ### Layer Structure
-```
+```text
 HTTP Request → Handler → Service → Repository → Database
 ```
 
@@ -225,32 +225,32 @@ The dashboard provides an aggregated overview of all modules through a single AP
 ## Data Flow
 
 ### Dashboard Flow
-```
+```text
 Dashboard UI → Single /admin/dashboard/summary → DashboardHandler → Multiple Repos → Aggregated Response
 ```
 
 ### Crawl and Download Flow
-```
+```text
 User Request → Admin UI → Crawl Trigger → Crawler → Download Service → File Storage
 ```
 
 ### File Access Flow
-```
+```text
 Client Request → File Search → File Service → Download Stream → Client
 ```
 
 ### Supply (Native-Protocol) Flow
-```
+```text
 External server → apt/pip/webdav → Supply handler → on-demand index over oss/ → File Service → Client
 ```
 
 ### WebDAV Flow
-```
+```text
 WebDAV Client → Basic Auth → File System → File Operations
 ```
 
 ### OS Installation Flow
-```
+```text
 PXE Client → Public Endpoint → Config Generation → Boot Files → Installation
 ```
 

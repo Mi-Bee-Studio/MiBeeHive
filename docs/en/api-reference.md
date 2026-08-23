@@ -517,11 +517,11 @@ All HTTP endpoints. **Auth model**: apart from the **public endpoints** listed b
 - `name` (path): ISO name
 **Response**: file download stream
 **Example header**:
-```
+```text
 Authorization: Bearer <jwt-token>
 ```
 **Example URL**:
-```
+```text
 /api/v1/isos/ubuntu-22.04/download?token=<jwt-token>
 ```
 
@@ -545,7 +545,7 @@ MiBeeHive serves what Foraging collected over the **native protocols** of extern
 `dists/{suite}/main/binary-{arch}/Packages[.gz]` and `Release` on demand (cached,
 invalidated by mtime) and serves pool downloads. External Debian/Ubuntu hosts add
 it as an apt source:
-```
+```bash
 echo "deb http://<host>:9090/apt stable main" | tee /etc/apt/sources.list.d/mibeehive.list
 apt update && apt install <pkg>
 ```
@@ -557,7 +557,7 @@ Python wheels/sdists. `GET /simple/` lists supplied projects; `GET /simple/<proj
 lists the project's distributions with `#sha256=...` fragments. Project names are
 PEP 503-normalized (`My_Pkg`, `my-pkg`, and `my.pkg` all match). External Python
 hosts install with their native tools:
-```
+```bash
 pip install --index-url http://<host>:9090/simple/ <pkg>
 # or
 uv pip install --index-url http://<host>:9090/simple/ <pkg>

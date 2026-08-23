@@ -41,7 +41,7 @@ GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o mibeehive ./cmd/mibeehive
 
 然后打开 **http://localhost:9090**，使用默认账号登录：
 
-```
+```text
 用户名: admin
 密码:   admin
 ```

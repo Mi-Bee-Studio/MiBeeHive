@@ -29,6 +29,19 @@ jobs:
       - name: Vet
         run: go vet ./...
 
+      # Docs are synced verbatim to the studio website docs center, which
+      # syntax-highlights fenced code blocks. Every fence must carry a language
+      # tag (plain output uses `text`) — bare fences render unhighlighted there.
+      - name: Docs fence lint
+        run: |
+          bad=$(awk '
+            { if (infence==0 && /^```[ \t]*$/) { print FILENAME ":" FNR; bad=1 }
+              else if (infence==1 && /^```/) infence=0
+              else if (infence==0 && /^```/) infence=1 }
+            END { exit bad ? 1 : 0 }' docs/zh/*.md docs/en/*.md) && echo "all fences tagged" || {
+              echo "untagged code fences found:"; echo "$bad"; exit 1
+            }
+
       # golangci-lint v2. Config lives in .golangci.yaml. On Linux the entire
       # module type-checks, so this lints all packages (Windows-only dev can't,
       # because internal/service uses Unix syscall.Statfs).

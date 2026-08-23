@@ -517,11 +517,11 @@ MiBeeHive 的全部 HTTP 端点。**认证模型**：除下述**公共端点**�
 - `name`（路径）：ISO 名称
 **响应**：文件下载流
 **示例请求头**：
-```
+```text
 Authorization: Bearer <jwt-token>
 ```
 **示例请求 URL**：
-```
+```text
 /api/v1/isos/ubuntu-22.04/download?token=<jwt-token>
 ```
 
@@ -544,7 +544,7 @@ MiBeeHive 把采集（采蜜）到的产物通过外部服务器的**原生协�
 **描述**：基于采集到的 `.deb` 构建的 APT 仓库。按需生成
 `dists/{suite}/main/binary-{arch}/Packages[.gz]` 与 `Release`（带缓存、按
 mtime 失效），并提供 pool 下载。外部 Debian/Ubuntu 主机将其加入 apt 源：
-```
+```bash
 echo "deb http://<host>:9090/apt stable main" | tee /etc/apt/sources.list.d/mibeehive.list
 apt update && apt install <pkg>
 ```
@@ -555,7 +555,7 @@ apt update && apt install <pkg>
 API」（PEP 503）。`GET /simple/` 列出已供应的项目；`GET /simple/<project>/`
 列出该项目的分发包并附带 `#sha256=...` 校验片段。项目名按 PEP 503 归一化
 （`My_Pkg`、`my-pkg`、`my.pkg` 均可匹配）。外部 Python 主机用原生工具安装：
-```
+```bash
 pip install --index-url http://<host>:9090/simple/ <pkg>
 # 或
 uv pip install --index-url http://<host>:9090/simple/ <pkg>

@@ -22,7 +22,7 @@ go build -o mibeehive ./cmd/mibeehive
 
 ## 代码结构
 
-```
+```text
 cmd/mibeehive/        主程序入口；init.go 集中装配依赖与注册路由
 cmd/migrate/          独立迁移工具
 internal/
@@ -42,7 +42,7 @@ docs/                 双语文档（zh/ en/）
 
 请求路径固定为四层，**不得跳层**：
 
-```
+```text
 HTTP Request → Handler (internal/handler/) → Service (internal/service/) → Repository (internal/db/repo_*.go) → SQLite
 ```
 
@@ -88,4 +88,5 @@ CI（`.github/workflows/ci.yml`）在每次 push/PR 运行 `go vet` + `go test -
 
 - **Conventional Commits**：`type(scope): description`，type 取 `feat` / `fix` / `docs` / `style` / `refactor` / `test` / `chore`。
 - **文档双语**：用户可见的文档改动需同时更新 `docs/zh/` 与 `docs/en/`（官网文档中心按语言目录同步这两处）。
+- **代码块一律带语言标注**：shell 用 `bash`，配置用 `yaml`/`json`，代码用 `go`/`typescript`；图表、目录树、纯输出用 `text`。官网文档中心按标注做语法高亮，CI 会拦截裸围栏。
 - 版本发布：打 `v*` 标签；变更记录写入 `docs/{zh,en}/changelog.md`。

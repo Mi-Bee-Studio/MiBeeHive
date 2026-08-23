@@ -34,7 +34,7 @@ go vet ./...                                        # Static analysis
 
 ## Deployment Layout (on device)
 
-```
+```text
 /opt/mibeehive/
 ├── bin/mibeehive
 ├── config.yaml

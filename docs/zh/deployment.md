@@ -34,7 +34,7 @@ go vet ./...                                        # 静态分析
 
 ## 设备上的部署布局
 
-```
+```text
 /opt/mibeehive/
 ├── bin/mibeehive
 ├── config.yaml

@@ -41,7 +41,7 @@ The default config path is `./configs/config.yaml` (override with `-config`). On
 
 Then open **http://localhost:9090** and log in with the defaults:
 
-```
+```text
 username: admin
 password: admin
 ```

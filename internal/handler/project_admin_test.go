@@ -36,7 +36,7 @@ func setupProjectAdminHandler(t *testing.T, database *sql.DB) (*ProjectAdminHand
 	fileService := service.NewFileService(database, service.NewStorageResolver(&config.Config{Storage: config.StorageConfig{BasePath: tmpDir}}), 2, nil)
 	cm := crawler.NewCrawlManager(database, fileService, cfg, logger, nil)
 
-	return NewProjectAdminHandler(projectRepo, fileRepo, cm, cfg), cm, cfg
+	return NewProjectAdminHandler(projectRepo, fileRepo, db.NewCrawlLogRepo(database), cm, cfg), cm, cfg
 }
 
 func registerProjectAdminRoutes(mux *http.ServeMux, h *ProjectAdminHandler) {

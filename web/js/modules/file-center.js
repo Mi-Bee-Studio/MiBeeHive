@@ -220,7 +220,7 @@ const FileCenter = (function () {
 
     function copyWebdavUrl() {
       if (!webdav) return;
-      var url = webdav.https_url || webdav.http_url || '';
+      var url = webdav.https_url || '';
       if (!url) return;
       Helpers.copyToClipboard(url).then(function () {
         Components.showToast(t('file_center_copied'), 'success');
@@ -364,7 +364,7 @@ const FileCenter = (function () {
 
     function renderWebdavCard() {
       var enabled = webdav && webdav.enabled;
-      var url = webdav ? (webdav.https_url || webdav.http_url || '') : '';
+      var url = webdav ? (webdav.https_url || '') : '';
       return html`
         <div class="card p-4 mt-2">
           <div class="flex items-center justify-between mb-3">
@@ -376,7 +376,7 @@ const FileCenter = (function () {
           <div class="grid gap-2 text-xs" style="color:var(--color-text-secondary)">
             <div class="flex items-center justify-between gap-2">
               <span>${t('file_center_webdav_protocol')}</span>
-              <span style="color:var(--color-text)">${webdav && webdav.https_url ? 'HTTPS' : 'HTTP'}</span>
+              <span style="color:var(--color-text)">${url ? 'HTTPS' : t('webdav_no_https')}</span>
             </div>
             <div class="flex items-center justify-between gap-2">
               <span>${t('file_center_webdav_url')}</span>

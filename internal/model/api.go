@@ -76,6 +76,7 @@ type CrawlLogResponse struct {
 	Status          string  `json:"status"`
 	VersionsFound   int     `json:"versions_found"`
 	FilesDownloaded int     `json:"files_downloaded"`
+	ErrorMessage    string  `json:"error_message,omitempty"`
 }
 
 type SystemStatsResponse struct {
@@ -142,6 +143,10 @@ type AdminProjectResponse struct {
 	Config         json.RawMessage `json:"config"`
 	FileCount      int             `json:"file_count"`
 	VersionPattern string          `json:"version_pattern,omitempty"`
+	// Last crawl outcome (from the newest crawl log), so the foraging page
+	// can show why a source has 0 files instead of a silent "never" (#60).
+	LastCrawlStatus string `json:"last_crawl_status,omitempty"`
+	LastCrawlError  string `json:"last_crawl_error,omitempty"`
 }
 type UpsertCredentialRequest struct {
 	SourceType string `json:"source_type"`
@@ -162,10 +167,10 @@ type ChangePasswordRequest struct {
 }
 
 // WebDAVStatusResponse holds WebDAV service status information.
+// WebDAV is served over HTTPS only; no http:// URL is provided.
 type WebDAVStatusResponse struct {
-	Enabled     bool   `json:"enabled"`
-	HTTPURL     string `json:"http_url"`
-	HTTPSURL    string `json:"https_url,omitempty"`
+	Enabled  bool   `json:"enabled"`
+	HTTPSURL string `json:"https_url,omitempty"`
 }
 
 // DashboardSummaryResponse aggregates all module statistics for the dashboard.

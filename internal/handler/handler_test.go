@@ -660,7 +660,7 @@ func TestAdminEndpoints_Return401WithoutJWT(t *testing.T) {
 
 	projectRepo := db.NewProjectRepo(database)
 	credRepo := db.NewSourceCredentialRepo(database)
-	adminH := NewAdminHandler(projectRepo, db.NewFileRepo(database), credRepo, cm, cfg, "", service.NewStorageResolver(cfg))
+	adminH := NewAdminHandler(projectRepo, db.NewFileRepo(database), db.NewCrawlLogRepo(database), credRepo, cm, cfg, "", service.NewStorageResolver(cfg))
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET "+model.RouteAdminProjectsList, adminH.ListProjects)

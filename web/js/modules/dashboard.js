@@ -530,6 +530,7 @@ const Dashboard = (function () {
     function _loadHistory() {
       fetchHistory(range).then(function (pts) {
         if (!mountedRef.current || !pts || !pts.length) return;
+        setUpdatedTime(_ft());
         var lb = pts.map(function(p){return _fl(p.timestamp);});
         var cd = pts.map(function(p){return p.cpu_usage_percent;});
         var md = pts.map(function(p){return p.memory_usage_percent;});
@@ -611,7 +612,16 @@ const Dashboard = (function () {
         if (paused || sysInflightRef.current || !mountedRef.current) return;
         sysInflightRef.current = true;
         fetchSystemStats().then(function (d) {
-          if (!mountedRef.current || !d) return;
+          if (!mountedRef.current) return;
+          // Api resolves non-2xx responses with success:false (→ d === null
+          // here). Treat that as a failure: otherwise a persistently failing
+          // /system/stats silently freezes the "更新于" stamp and the
+          // connection-lost banner never appears.
+          if (!d) {
+            _consecFails.current++;
+            if (_consecFails.current >= 3) setConnLost(true);
+            return;
+          }
           _consecFails.current = 0;
           if (connLost) setConnLost(false);
 
@@ -659,7 +669,13 @@ const Dashboard = (function () {
         if (paused || summaryInflightRef.current || !mountedRef.current) return;
         summaryInflightRef.current = true;
         fetchSummary().then(function (data) {
-          if (!mountedRef.current || !data) return;
+          if (!mountedRef.current) return;
+          if (!data) {
+            // Same resolved-but-failed case as the stats poll above.
+            _consecFails.current++;
+            if (_consecFails.current >= 3) setConnLost(true);
+            return;
+          }
           _consecFails.current = 0;
           if (connLost) setConnLost(false);
           setSummary(data);
@@ -754,10 +770,16 @@ const Dashboard = (function () {
         if (sysInflightRef.current || !mountedRef.current) return;
         sysInflightRef.current = true;
         fetchSystemStats().then(function (d) {
-          if (!mountedRef.current || !d) return;
+          if (!mountedRef.current) return;
+          if (!d) {
+            _consecFails.current++;
+            if (_consecFails.current >= 3) setConnLost(true);
+            return;
+          }
           _consecFails.current = 0;
           if (connLost) setConnLost(false);
           setSysStats(d);
+          setUpdatedTime(_ft());
         }).catch(function () {
           _consecFails.current++;
           if (_consecFails.current >= 3) setConnLost(true);
@@ -768,9 +790,15 @@ const Dashboard = (function () {
         if (summaryInflightRef.current || !mountedRef.current) return;
         summaryInflightRef.current = true;
         fetchSummary().then(function (data) {
-          if (!mountedRef.current || !data) return;
+          if (!mountedRef.current) return;
+          if (!data) {
+            _consecFails.current++;
+            if (_consecFails.current >= 3) setConnLost(true);
+            return;
+          }
           _consecFails.current = 0;
           if (connLost) setConnLost(false);
+          setUpdatedTime(_ft());
           if (!_isFirstRun(data)) {
             setSummary(data);
             setActivity(data.activity || []);

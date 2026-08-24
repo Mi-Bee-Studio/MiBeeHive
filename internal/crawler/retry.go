@@ -78,6 +78,12 @@ func classifyFetchError(err error) errorClass {
 	if errors.Is(err, ErrRateLimited) {
 		return classRateLimit
 	}
+	// The fingerprint (rulesrc) track surfaces quota errors as plain error
+	// strings (e.g. GitHub's 403 "API rate limit exceeded"), tagged with
+	// "(rate limit)" by its getter — recognize them by message.
+	if strings.Contains(strings.ToLower(err.Error()), "rate limit") {
+		return classRateLimit
+	}
 	// Explicit HTTP status errors (set by the HTTP-layer fetchers via the
 	// retryDo wrapper). 5xx is transient; everything else (4xx, 3xx, etc.) is
 	// permanent.

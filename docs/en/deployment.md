@@ -97,7 +97,7 @@ sudo systemctl status mibeehive
 ### Health Checks
 ```bash
 curl -s http://localhost:9090/ | head -5              # Health check (web UI)
-curl -s -X PROPFIND http://localhost:9090/webdav/     # WebDAV check
+curl -sk -X PROPFIND https://localhost:9443/webdav/   # WebDAV check (HTTPS only, self-signed cert)
 curl -sk https://localhost:9443/ | head -5            # HTTPS check
 # Supply layer (public, no auth) — external servers consume from these:
 curl -s http://localhost:9090/repo/index | head -c 120        # Generic file manifest (JSON)

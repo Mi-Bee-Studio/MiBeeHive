@@ -21,12 +21,17 @@ const Files = (function () {
 
   var SORT_OPTIONS = ['name', 'file_count', 'last_activity'];
 
+  // Crawl statuses that mean the latest crawl did not produce files.
+  var FAILED_CRAWL_STATUSES = { error: 1, network_error: 1, rate_limited: 1 };
+
   // ── Project Card ──────────────────────────────────────────────────
   function ProjectCard(props) {
     var p = props.project;
     var enabled = p.enabled !== false;
     var name = Helpers.escapeHtml(p.display_name || p.name);
     var fileCount = p.file_count || 0;
+    var crawlFailed = FAILED_CRAWL_STATUSES[p.last_crawl_status] ? true : false;
+    var crawlError = crawlFailed ? Helpers.escapeHtml(p.last_crawl_error || p.last_crawl_status) : '';
     var _toggling = useState(false);
     var toggling = _toggling[0], setToggling = _toggling[1];
 
@@ -71,6 +76,13 @@ const Files = (function () {
             ${fileCount} ${t('files')}
           </span>
         </div>
+        ${crawlFailed ? html`
+          <div class="flex items-start gap-1 text-xs mb-3" style="color:var(--color-error)"
+               title=${crawlError}>
+            <span aria-hidden="true">⚠</span>
+            <span class="truncate">${t('proj_last_crawl_failed')}: ${crawlError}</span>
+          </div>
+        ` : null}
         <div class="flex items-center gap-1 text-xs" style="color:var(--color-text-quaternary)">
           <span dangerouslySetInnerHTML=${{ __html: Helpers.ICONS.clock }} />
           <span>${Helpers.formatTime(p.last_crawled_at)}</span>

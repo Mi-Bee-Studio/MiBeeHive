@@ -92,3 +92,28 @@ func (r *CrawlLogRepo) ListRecent(ctx context.Context, limit int) ([]*CrawlLog, 
 	}
 	return logs, rows.Err()
 }
+
+// LatestPerProject returns the most recent crawl log for each project,
+// keyed by project ID. Used to surface per-project crawl health (last
+// status / last error) in the UI instead of a silent "0 files, never".
+func (r *CrawlLogRepo) LatestPerProject(ctx context.Context) (map[int64]*CrawlLog, error) {
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT l.id, l.project_id, l.started_at, l.finished_at, l.status, l.versions_found, l.files_downloaded, l.error_message
+		 FROM crawl_logs l
+		 JOIN (SELECT project_id, MAX(id) AS max_id FROM crawl_logs GROUP BY project_id) m
+		   ON l.id = m.max_id`)
+	if err != nil {
+		return nil, fmt.Errorf("listing latest crawl logs per project: %w", err)
+	}
+	defer rows.Close()
+
+	logs := make(map[int64]*CrawlLog)
+	for rows.Next() {
+		l := &CrawlLog{}
+		if err := rows.Scan(&l.ID, &l.ProjectID, &l.StartedAt, &l.FinishedAt, &l.Status, &l.VersionsFound, &l.FilesDownloaded, &l.ErrorMessage); err != nil {
+			return nil, fmt.Errorf("scanning latest crawl log: %w", err)
+		}
+		logs[l.ProjectID] = l
+	}
+	return logs, rows.Err()
+}

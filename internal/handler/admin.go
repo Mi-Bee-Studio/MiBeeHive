@@ -23,9 +23,9 @@ type AdminHandler struct {
 }
 
 // NewAdminHandler creates a new AdminHandler with all sub-handlers.
-func NewAdminHandler(projectRepo *dbrepo.ProjectRepo, fileRepo *dbrepo.FileRepo, credRepo *dbrepo.SourceCredentialRepo, crawlManager *crawler.CrawlManager, cfg *config.Config, configPath string, resolver *service.StorageResolver) *AdminHandler {
+func NewAdminHandler(projectRepo *dbrepo.ProjectRepo, fileRepo *dbrepo.FileRepo, crawlLogRepo *dbrepo.CrawlLogRepo, credRepo *dbrepo.SourceCredentialRepo, crawlManager *crawler.CrawlManager, cfg *config.Config, configPath string, resolver *service.StorageResolver) *AdminHandler {
 	return &AdminHandler{
-		ProjectAdminHandler: NewProjectAdminHandler(projectRepo, fileRepo, crawlManager, cfg),
+		ProjectAdminHandler: NewProjectAdminHandler(projectRepo, fileRepo, crawlLogRepo, crawlManager, cfg),
 		CrawlControlHandler: NewCrawlControlHandler(projectRepo, credRepo, crawlManager),
 		ConfigHandler:       NewConfigHandler(cfg, configPath),
 		WebDAVAdminHandler:  NewWebDAVAdminHandler(cfg, resolver),

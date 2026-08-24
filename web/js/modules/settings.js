@@ -630,6 +630,36 @@ const Settings = (function () {
     `;
   }
 
+  // ── External Services Card ────────────────────────────────────────────
+
+  function WebdavServiceRow(props) {
+    var d = props.data;
+    if (!d) {
+      return html`
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm" style="color:var(--color-text-secondary)">${t('webdav_title')}</p>
+            <p class="text-xs" style="margin-top:0.25rem;color:var(--color-text-tertiary)">${t('webdav_auth_note')}</p>
+          </div>
+          <span class="badge badge-default">--</span>
+        </div>`;
+    }
+    var on = !!d.enabled;
+    return html`
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm" style="color:var(--color-text-secondary)">${t('webdav_title')}</p>
+          <p class="text-xs" style="margin-top:0.25rem;color:var(--color-text-tertiary)">
+            ${on && d.https_url ? Helpers.escapeHtml(d.https_url) : t('webdav_auth_note')}
+          </p>
+        </div>
+        <span class="inline-flex items-center gap-1.5">
+          <span class="status-dot ${on ? 'status-dot-success' : 'status-dot-error'}"></span>
+          <span class="text-sm font-medium" style="color:var(--color-${on ? 'success' : 'error'})">${t(on ? 'webdav_enabled' : 'webdav_disabled')}</span>
+        </span>
+      </div>`;
+  }
+
   // ── Main Settings Page ────────────────────────────────────────────────
 
   function SettingsPage() {
@@ -637,6 +667,8 @@ const Settings = (function () {
     var sysInfo = infoState[0], setSysInfo = infoState[1];
     var pwStatusState = useState(false);
     var isDefaultPw = pwStatusState[0], setDefaultPw = pwStatusState[1];
+    var webdavState = useState(null);
+    var webdavStatus = webdavState[0], setWebdavStatus = webdavState[1];
     var errState = useState(null);
     var error = errState[0], setError = errState[1];
     var loadingState = useState(true);
@@ -645,10 +677,11 @@ const Settings = (function () {
     useEffect(function () {
       Promise.all([
         Api.get('/system/info'),
-        Api.get('/auth/password-status')
+        Api.get('/auth/password-status'),
+        Api.get('/admin/webdav/status', { silent: true }).catch(function () { return null; })
       ]).then(function (results) {
         setLoading(false);
-        var infoRes = results[0], pwRes = results[1];
+        var infoRes = results[0], pwRes = results[1], webdavRes = results[2];
 
         if (!infoRes || !infoRes.success) {
           setError((infoRes && infoRes.message) || t('error'));
@@ -657,6 +690,10 @@ const Settings = (function () {
         setSysInfo(infoRes.data);
         if (pwRes && pwRes.success && pwRes.data && pwRes.data.is_default) {
           setDefaultPw(true);
+        }
+        // WebDAV status is supplementary — never block the page on it.
+        if (webdavRes && webdavRes.success && webdavRes.data) {
+          setWebdavStatus(webdavRes.data);
         }
       });
     }, []);
@@ -713,13 +750,7 @@ const Settings = (function () {
         <//>
 
         <${SectionCard} title=${t('nav.external_services')}>
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-sm" style="color:var(--color-text-secondary)">${t('webdav_title')}</p>
-              <p class="text-xs" style="margin-top:0.25rem;color:var(--color-text-tertiary)">${t('webdav_auth_note')}</p>
-            </div>
-            <span class="badge badge-default">${t('webdav_disabled')}</span>
-          </div>
+          <${WebdavServiceRow} data=${webdavStatus} />
         <//>
 
         <${SectionCard} title=${t('backup_restore_title')}>

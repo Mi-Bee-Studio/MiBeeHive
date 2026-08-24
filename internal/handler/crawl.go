@@ -108,6 +108,7 @@ func (h *CrawlHandler) ListLogs(w http.ResponseWriter, r *http.Request) {
 			Status:          l.Status,
 			VersionsFound:   l.VersionsFound,
 			FilesDownloaded: l.FilesDownloaded,
+			ErrorMessage:    l.ErrorMessage,
 		})
 	}
 	if result == nil {

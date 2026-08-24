@@ -55,6 +55,8 @@ func TestClassifyFetchError(t *testing.T) {
 		{"no such host string", errors.New("dial tcp: lookup x: no such host"), classTransient},
 		{"config error", errors.New("invalid source url"), classPermanent},
 		{"parse error", errors.New("decoding response: invalid character"), classPermanent},
+		{"rate limit message (fingerprint track)", errors.New(`source https://api.github.com: HTTP 403: {"message":"API rate limit exceeded"} (rate limit)`), classRateLimit},
+		{"rate limit message no tag", errors.New("source x: HTTP 429: rate limit exceeded"), classRateLimit},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

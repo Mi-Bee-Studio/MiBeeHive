@@ -20,7 +20,7 @@ func setupWebDAVAdminHandler(t *testing.T) (*WebDAVAdminHandler, *config.Config)
 			JWTSecret:    "test-jwt-secret-key-12345",
 		},
 		Storage: config.StorageConfig{BasePath: tmpDir},
-		Server:  config.ServerConfig{Port: 9090},
+		Server:  config.ServerConfig{Port: 9090, HTTPSPort: 9443},
 	}
 	resolver := service.NewStorageResolver(cfg)
 	return NewWebDAVAdminHandler(cfg, resolver), cfg
@@ -56,8 +56,42 @@ func TestWebDAVStatus(t *testing.T) {
 	if !resp.Data.Enabled {
 		t.Fatal("expected enabled=true")
 	}
-	if resp.Data.HTTPURL == "" {
-		t.Fatal("expected non-empty HTTP URL")
+	if resp.Data.HTTPSURL == "" {
+		t.Fatal("expected non-empty HTTPS URL")
+	}
+}
+
+// TestWebDAVStatus_NoHTTPSPort verifies that when no HTTPS port is configured
+// the service reports itself as disabled: WebDAV is HTTPS-only, so without
+// the HTTPS listener there is no reachable endpoint at all.
+func TestWebDAVStatus_NoHTTPSPort(t *testing.T) {
+	h, _ := setupWebDAVAdminHandler(t)
+	h.config.Server.HTTPSPort = 0
+
+	mux := http.NewServeMux()
+	registerWebDAVAdminRoutes(mux, h)
+	handler := wrapWithAuth(mux)
+
+	req := authedRequest(http.MethodGet, "/api/v1/admin/webdav/status", nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var resp model.ApiResponse[model.WebDAVStatusResponse]
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if !resp.Success {
+		t.Fatal("expected success=true")
+	}
+	if resp.Data.Enabled {
+		t.Fatal("expected enabled=false when HTTPS port is not configured")
+	}
+	if resp.Data.HTTPSURL != "" {
+		t.Fatalf("expected empty HTTPS URL, got %q", resp.Data.HTTPSURL)
 	}
 }
 
@@ -89,9 +123,9 @@ func TestWebDAVStatus_UsesRequestHost(t *testing.T) {
 	if !resp.Success {
 		t.Fatal("expected success=true")
 	}
-	wantURL := "http://192.168.63.32:9090/webdav/"
-	if resp.Data.HTTPURL != wantURL {
-		t.Fatalf("HTTPURL = %q, want %q (should use the request host, not localhost)", resp.Data.HTTPURL, wantURL)
+	wantURL := "https://192.168.63.32:9443/webdav/"
+	if resp.Data.HTTPSURL != wantURL {
+		t.Fatalf("HTTPSURL = %q, want %q (should use the request host, not localhost)", resp.Data.HTTPSURL, wantURL)
 	}
 }
 

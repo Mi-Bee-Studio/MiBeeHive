@@ -548,7 +548,7 @@ func initHandlers(cfg *config.Config, svcs *appServices, database *sql.DB, confi
 	h.crawl = handler.NewCrawlHandler(svcs.crawlManager, db.NewCrawlLogRepo(database), db.NewProjectRepo(database))
 	h.system = handler.NewSystemHandler(database, svcs.fileService, cfg.Storage.BasePath, version, cfg.Monitor.NodeExporterURL)
 	h.osInstall = handler.NewOSInstallHandler(db.NewOsInstallConfigRepo(database), service.NewOsTemplateService(), cfg.Storage.BasePath)
-	h.projectAdmin = handler.NewProjectAdminHandler(db.NewProjectRepo(database), db.NewFileRepo(database), svcs.crawlManager, cfg)
+	h.projectAdmin = handler.NewProjectAdminHandler(db.NewProjectRepo(database), db.NewFileRepo(database), db.NewCrawlLogRepo(database), svcs.crawlManager, cfg)
 	h.webdavAdmin = handler.NewWebDAVAdminHandler(cfg, svcs.storageResolver)
 	h.configHandler = handler.NewConfigHandler(cfg, configPath)
 	migrationAdapter := service.NewMigrationAdapter(svcs.migrationSvc, slog.Default())

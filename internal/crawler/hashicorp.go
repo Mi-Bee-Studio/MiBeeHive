@@ -57,6 +57,13 @@ func (c *HashiCorpCrawler) SourceType() model.SourceType { return model.SourceTy
 // The repo parameter is ignored.
 // Only the latest version (first entry in the API response) is returned.
 func (c *HashiCorpCrawler) FetchReleases(ctx context.Context, owner, repo string) ([]model.ReleaseAsset, error) {
+	// An empty product name produces /v1/releases/ which the API rejects with
+	// a misleading 403 ("authorization failure") — fail fast with a clear
+	// config error instead (issue #60).
+	if owner == "" {
+		return nil, fmt.Errorf("hashicorp product name is empty — set the project's owner to the product (e.g. consul, packer) or fix its source URL")
+	}
+
 	url := fmt.Sprintf("%s/v1/releases/%s", c.baseURL, owner)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
@@ -76,11 +83,13 @@ func (c *HashiCorpCrawler) FetchReleases(ctx context.Context, owner, repo string
 
 	if resp.StatusCode == http.StatusForbidden {
 		body, _ := io.ReadAll(resp.Body)
-		c.logger.Warn("HashiCorp API returned 403 — API token may be required",
-			"product", owner,
-			"has_token", c.apiToken != "",
-			"body", string(body),
-		)
+		if c.logger != nil {
+			c.logger.Warn("HashiCorp API returned 403 — API token may be required",
+				"product", owner,
+				"has_token", c.apiToken != "",
+				"body", string(body),
+			)
+		}
 		if c.apiToken == "" {
 			return nil, fmt.Errorf("HashiCorp API token required for %s — configure in Settings > API Tokens", owner)
 		}

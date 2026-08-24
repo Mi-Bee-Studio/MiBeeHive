@@ -44,6 +44,8 @@ func Migrate(db *sql.DB) error {
 		{"024", "migrations/024_perf_indexes.sql"},
 		{"025", "migrations/025_files_created_index.sql"},
 		{"026", "migrations/026_virtual_audit.sql"},
+		{"027", "migrations/027_backfill_files_source_type.sql"},
+		{"028", "migrations/028_fix_seed_source_configs.sql"},
 	}
 	tx, err := db.Begin()
 	if err != nil {

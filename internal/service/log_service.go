@@ -66,9 +66,17 @@ func (s *LogService) GetCrawlLogs(ctx context.Context, limit, offset int) ([]mod
 		level := "info"
 		msg := fmt.Sprintf("crawl %s: found %d versions, downloaded %d files",
 			status, versionsFound, filesDownloaded)
-		if status == "error" {
+		switch status {
+		case "error":
 			level = "error"
 			msg = fmt.Sprintf("crawl error: %s", errorMsg)
+		case "network_error", "rate_limited":
+			// Failed too — surface the reason instead of a bare
+			// "found 0 versions" line that hides the failure (#60).
+			level = "error"
+			if errorMsg != "" {
+				msg = fmt.Sprintf("crawl %s: %s", status, errorMsg)
+			}
 		}
 
 		entries = append(entries, model.LogEntry{

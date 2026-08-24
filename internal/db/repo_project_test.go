@@ -267,3 +267,47 @@ func TestProjectRepoListAll(t *testing.T) {
 		t.Fatalf("List: expected 3, got %d", len(list))
 	}
 }
+
+func TestProjectRepoMaxLastCrawledAt(t *testing.T) {
+	db := testDB(t)
+	repo := NewProjectRepo(db)
+	ctx := context.Background()
+
+	// No projects crawled yet → nil.
+	if ts, err := repo.MaxLastCrawledAt(ctx); err != nil || ts != nil {
+		t.Fatalf("empty DB: got (%v, %v), want (nil, nil)", ts, err)
+	}
+
+	p1, err := repo.Create(ctx, "proj1", "Proj1", "github", "https://example.com/1")
+	if err != nil {
+		t.Fatalf("create p1: %v", err)
+	}
+	p2, err := repo.Create(ctx, "proj2", "Proj2", "github", "https://example.com/2")
+	if err != nil {
+		t.Fatalf("create p2: %v", err)
+	}
+
+	if err := repo.UpdateLastCrawledAt(ctx, p1.ID); err != nil {
+		t.Fatalf("update p1 last_crawled_at: %v", err)
+	}
+	ts, err := repo.MaxLastCrawledAt(ctx)
+	if err != nil {
+		t.Fatalf("MaxLastCrawledAt: %v", err)
+	}
+	if ts == nil {
+		t.Fatal("expected non-nil timestamp after crawling p1")
+	}
+	first := *ts
+
+	// Crawling the second project later must move the max forward.
+	if err := repo.UpdateLastCrawledAt(ctx, p2.ID); err != nil {
+		t.Fatalf("update p2 last_crawled_at: %v", err)
+	}
+	ts, err = repo.MaxLastCrawledAt(ctx)
+	if err != nil {
+		t.Fatalf("MaxLastCrawledAt: %v", err)
+	}
+	if ts == nil || ts.Before(first) {
+		t.Errorf("max timestamp did not advance: first=%v now=%v", first, ts)
+	}
+}

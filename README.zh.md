@@ -84,7 +84,7 @@ GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o mibeehive-arm64 ./cmd/mibeehiv
 |---|---|
 | APT | `echo "deb http://<host>:9090/apt stable main" \| tee /etc/apt/sources.list.d/mibeehive.list` |
 | PyPI | `pip install --index-url http://<host>:9090/simple/ <pkg>` |
-| WebDAV | `http://<host>:9090/webdav/` |
+| WebDAV | `https://<host>:9443/webdav/`（仅 HTTPS） |
 | 通用 | `GET /repo/index`(JSON 清单)· `GET /repo/files/{id}`(下载) |
 
 ## 文档

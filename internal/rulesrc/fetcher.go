@@ -9,6 +9,7 @@ import (
 	"path"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/Mi-Bee-Studio/mibeehive/internal/model"
 )
@@ -42,14 +43,47 @@ func (d defaultGetter) Get(ctx context.Context, req Request) (io.ReadCloser, str
 		return nil, req.URL, err
 	}
 	if resp.StatusCode >= 400 {
+		// Include a bounded body excerpt so quota errors (e.g. GitHub's
+		// "API rate limit exceeded") are diagnosable, and tag rate limiting
+		// explicitly so the retry policy maps it to the rate_limited crawl
+		// status instead of a generic permanent error (#60).
+		body := drainBody(resp.Body, 2048)
 		resp.Body.Close()
-		return nil, req.URL, fmt.Errorf("source %s: HTTP %d", req.URL, resp.StatusCode)
+		msg := fmt.Sprintf("source %s: HTTP %d", req.URL, resp.StatusCode)
+		if body != "" {
+			msg += ": " + body
+		}
+		if resp.StatusCode == http.StatusTooManyRequests ||
+			resp.Header.Get("X-RateLimit-Remaining") == "0" ||
+			strings.Contains(strings.ToLower(body), "rate limit") {
+			msg += " (rate limit)"
+		}
+		return nil, req.URL, fmt.Errorf("%s", msg)
 	}
 	return resp.Body, resp.Request.URL.String(), nil
 }
 
-// NewFetcher builds a Fetcher using the default http.Client.
-func NewFetcher() *Fetcher { return &Fetcher{client: defaultGetter{hc: http.DefaultClient}} }
+// drainBody reads up to limit bytes from r as a string, ignoring read errors,
+// and always closes it.
+func drainBody(r io.ReadCloser, limit int) string {
+	if r == nil {
+		return ""
+	}
+	defer r.Close()
+	b, err := io.ReadAll(io.LimitReader(r, int64(limit)+1))
+	if err != nil {
+		return ""
+	}
+	if len(b) > limit {
+		b = b[:limit]
+	}
+	return string(b)
+}
+
+// NewFetcher builds a Fetcher with a bounded-timeout HTTP client.
+func NewFetcher() *Fetcher {
+	return &Fetcher{client: defaultGetter{hc: &http.Client{Timeout: 30 * time.Second}}}
+}
 
 // newFetcherWith allows tests to inject a stub getter.
 func newFetcherWith(g httpGetter) *Fetcher { return &Fetcher{client: g} }

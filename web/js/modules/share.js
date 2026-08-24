@@ -102,8 +102,9 @@ const Share = (function () {
   // ── Connection view ─────────────────────────────────────────────────────
   function ConnectionView(props) {
     var d = props.data;
-    var best = d.https_url || d.http_url || '';
-    var http = d.http_url || '';
+    // WebDAV is served over HTTPS only — the HTTP port rejects /webdav, so
+    // every platform guide uses the same HTTPS URL.
+    var url = d.https_url || '';
 
     return html`
       <div>
@@ -112,13 +113,12 @@ const Share = (function () {
             <h3 class="text-base font-semibold" style="color:var(--color-text)">${t('webdav_title')}</h3>
             <${StatusBadge} enabled=${d.enabled} />
           </div>
-          ${d.http_url ? html`<${UrlRow} label=${t('webdav_http_url')} url=${d.http_url} />` : null}
-          ${d.https_url
-            ? html`<${UrlRow} label=${t('webdav_https_url')} url=${d.https_url} />`
+          ${url
+            ? html`<${UrlRow} label=${t('webdav_https_url')} url=${url} />`
             : html`<${InfoRow} label=${t('webdav_https_url')}>
                 <span class="text-sm" style="color:var(--color-text-tertiary)">${t('webdav_no_https')}</span>
               <//>`}
-          ${d.https_url ? html`
+          ${url ? html`
             <div class="flex items-center justify-between py-2 border-b" style="border-color:var(--color-border)">
               <span class="text-xs" style="color:var(--color-warning)">${t('webdav_https_only')}</span>
             </div>` : null}
@@ -128,9 +128,9 @@ const Share = (function () {
         </div>
         <div class="card" style="padding:1.25rem;margin-top:1rem">
           <h3 class="text-base font-semibold mb-3" style="color:var(--color-text)">${t('webdav_connection')}</h3>
-          <${Guide} title=${t('webdav_windows')} url=${best} desc=${t('webdav_windows_desc')} iconPath=${WINDOWS_PATH} />
-          <${Guide} title=${t('webdav_macos')} url=${http} desc=${t('webdav_macos_desc')} iconPath=${MACOS_PATH} />
-          <${Guide} title=${t('webdav_linux')} url=${http} desc=${t('webdav_linux_desc')} iconPath=${LINUX_PATH} last=${true} />
+          <${Guide} title=${t('webdav_windows')} url=${url} desc=${t('webdav_windows_desc')} iconPath=${WINDOWS_PATH} />
+          <${Guide} title=${t('webdav_macos')} url=${url} desc=${t('webdav_macos_desc')} iconPath=${MACOS_PATH} />
+          <${Guide} title=${t('webdav_linux')} url=${url} desc=${t('webdav_linux_desc')} iconPath=${LINUX_PATH} last=${true} />
         </div>
       </div>`;
   }
@@ -143,7 +143,6 @@ const Share = (function () {
         <div class="card" style="padding:1.25rem">
           <h3 class="text-base font-semibold mb-4" style="color:var(--color-text)">${t('webdav_title')}</h3>
           <${InfoRow} label=${t('webdav_status')}><${StatusBadge} enabled=${d.enabled} /><//>
-          <${InfoRow} label=${t('webdav_http_url')}>${d.http_url ? html`<${CodeVal} value=${d.http_url} />` : '-'}<//>
           <${InfoRow} label=${t('webdav_https_url')}>${d.https_url ? html`<${CodeVal} value=${d.https_url} />` : html`<span style="color:var(--color-text-tertiary)">${t('webdav_no_https')}</span>`}<//>
           ${d.https_url ? html`
             <div class="flex items-center justify-between py-2 border-b" style="border-color:var(--color-border)">

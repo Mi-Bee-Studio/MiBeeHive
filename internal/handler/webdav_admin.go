@@ -40,18 +40,17 @@ func (h *WebDAVAdminHandler) WebDAVStatus(w http.ResponseWriter, r *http.Request
 	if host == "" {
 		host = h.config.Server.BindAddr
 	}
-	// Strip any port from r.Host; we append the configured ports below.
+	// Strip any port from r.Host; we append the configured port below.
 	if h, _, err := net.SplitHostPort(host); err == nil {
 		host = h
 	}
 	if host == "" || host == "0.0.0.0" {
 		host = "localhost"
 	}
-	httpURL := fmt.Sprintf("http://%s:%d/webdav/", host, h.config.Server.Port)
-	resp := model.WebDAVStatusResponse{
-		Enabled:     true,
-		HTTPURL:     httpURL,
-	}
+	// WebDAV is HTTPS-only: the HTTP handler rejects /webdav with 404, so no
+	// http:// URL is advertised. The service is reachable only when the HTTPS
+	// port is configured.
+	resp := model.WebDAVStatusResponse{Enabled: h.config.Server.HTTPSPort > 0}
 	if h.config.Server.HTTPSPort > 0 {
 		resp.HTTPSURL = fmt.Sprintf("https://%s:%d/webdav/", host, h.config.Server.HTTPSPort)
 	}

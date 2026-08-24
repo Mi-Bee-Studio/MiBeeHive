@@ -50,6 +50,7 @@ func setupTestDB(t *testing.T) *sql.DB {
 			local_path TEXT NOT NULL DEFAULT '',
 			checksum TEXT NOT NULL DEFAULT '',
 			status TEXT NOT NULL DEFAULT 'pending',
+			source_type TEXT DEFAULT NULL,
 			error_message TEXT NOT NULL DEFAULT '',
 			retry_count INTEGER NOT NULL DEFAULT 0,
 			last_attempt_at DATETIME,

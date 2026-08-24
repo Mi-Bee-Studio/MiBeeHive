@@ -22,14 +22,16 @@ import (
 type ProjectAdminHandler struct {
 	projectRepo  *dbrepo.ProjectRepo
 	fileRepo     *dbrepo.FileRepo
+	crawlLogRepo *dbrepo.CrawlLogRepo
 	crawlManager *crawler.CrawlManager
 	config       *config.Config
 }
 
-func NewProjectAdminHandler(projectRepo *dbrepo.ProjectRepo, fileRepo *dbrepo.FileRepo, crawlManager *crawler.CrawlManager, cfg *config.Config) *ProjectAdminHandler {
+func NewProjectAdminHandler(projectRepo *dbrepo.ProjectRepo, fileRepo *dbrepo.FileRepo, crawlLogRepo *dbrepo.CrawlLogRepo, crawlManager *crawler.CrawlManager, cfg *config.Config) *ProjectAdminHandler {
 	return &ProjectAdminHandler{
 		projectRepo:  projectRepo,
 		fileRepo:     fileRepo,
+		crawlLogRepo: crawlLogRepo,
 		crawlManager: crawlManager,
 		config:       cfg,
 	}
@@ -43,6 +45,11 @@ func (h *ProjectAdminHandler) ListProjects(w http.ResponseWriter, r *http.Reques
 	}
 
 	counts, _ := h.fileRepo.CountByProjects(r.Context())
+	latestLogs, err := h.crawlLogRepo.LatestPerProject(r.Context())
+	if err != nil {
+		slog.Warn("failed to load latest crawl logs for project list", "error", err)
+		latestLogs = nil
+	}
 
 	var result []model.AdminProjectResponse
 	for _, p := range projects {
@@ -62,6 +69,10 @@ func (h *ProjectAdminHandler) ListProjects(w http.ResponseWriter, r *http.Reques
 		if p.LastCrawledAt != nil {
 			s := p.LastCrawledAt.Format("2006-01-02T15:04:05Z07:00")
 			resp.LastCrawledAt = &s
+		}
+		if log, ok := latestLogs[p.ID]; ok && log != nil {
+			resp.LastCrawlStatus = log.Status
+			resp.LastCrawlError = log.ErrorMessage
 		}
 		result = append(result, resp)
 	}

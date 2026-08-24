@@ -304,10 +304,14 @@ func SeedProjects() []ProjectConfig {
 			Name:          "vmagent",
 			DisplayName:   "VMAgent",
 			SourceType:    SourceTypeGitHub,
-			SourceURL:     "https://github.com/VictoriaMetrics/vmagent",
+			SourceURL:     "https://github.com/VictoriaMetrics/VictoriaMetrics",
 			CrawlInterval: "6h",
-			GitHubOwner:   "VictoriaMetrics",
-			GitHubRepo:    "vmagent",
+			// vmagent has no standalone releases repo; it ships inside the
+			// vmutils-* archives of the main VictoriaMetrics repo. The filter
+			// keeps this project from duplicating the victoriametrics mirror.
+			GitHubOwner:    "VictoriaMetrics",
+			GitHubRepo:     "VictoriaMetrics",
+			FilterPatterns: []string{"vmutils-*"},
 		},
 		// 1 Go official
 		{
@@ -317,13 +321,16 @@ func SeedProjects() []ProjectConfig {
 			SourceURL:     "https://go.dev/dl/",
 			CrawlInterval: "24h",
 		},
-		// 4 HashiCorp
+		// 4 HashiCorp. For hashicorp sources the owner IS the product name
+		// on releases.hashicorp.com; without it the fetch hits
+		// /v1/releases/ (empty product) and always fails (issue #60).
 		{
 			Name:          "consul",
 			DisplayName:   "Consul",
 			SourceType:    SourceTypeHashiCorp,
 			SourceURL:     "https://releases.hashicorp.com/consul/",
 			CrawlInterval: "6h",
+			GitHubOwner:   "consul",
 		},
 		{
 			Name:          "packer",
@@ -331,6 +338,7 @@ func SeedProjects() []ProjectConfig {
 			SourceType:    SourceTypeHashiCorp,
 			SourceURL:     "https://releases.hashicorp.com/packer/",
 			CrawlInterval: "6h",
+			GitHubOwner:   "packer",
 		},
 		{
 			Name:          "vagrant",
@@ -338,6 +346,7 @@ func SeedProjects() []ProjectConfig {
 			SourceType:    SourceTypeHashiCorp,
 			SourceURL:     "https://releases.hashicorp.com/vagrant/",
 			CrawlInterval: "6h",
+			GitHubOwner:   "vagrant",
 		},
 		{
 			Name:          "nomad",
@@ -345,6 +354,7 @@ func SeedProjects() []ProjectConfig {
 			SourceType:    SourceTypeHashiCorp,
 			SourceURL:     "https://releases.hashicorp.com/nomad/",
 			CrawlInterval: "6h",
+			GitHubOwner:   "nomad",
 		},
 		// 1 Grafana
 		{

@@ -152,7 +152,7 @@ func TestAdminChangePassword_InvalidatesOldToken(t *testing.T) {
 	configPath := t.TempDir() + "/config.yaml"
 
 	configH := NewConfigHandler(cfg, configPath)
-	projectH := NewProjectAdminHandler(projectRepo, db.NewFileRepo(database), cm, cfg)
+	projectH := NewProjectAdminHandler(projectRepo, db.NewFileRepo(database), db.NewCrawlLogRepo(database), cm, cfg)
 
 	// Step 1: Create a token issued 30 minutes ago (after initial password_changed_at, but before the upcoming change).
 	oldTokenClaims := jwt.MapClaims{

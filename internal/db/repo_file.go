@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-const fileColumns = `id, project_id, version, filename, os, arch, ext, size_bytes, download_url, local_path, checksum, status, error_message, retry_count, last_attempt_at, created_at`
+const fileColumns = `id, project_id, version, filename, os, arch, ext, size_bytes, download_url, local_path, checksum, status, source_type, error_message, retry_count, last_attempt_at, created_at`
 
 // FileRepo provides CRUD operations for files.
 type FileRepo struct {
@@ -57,11 +57,11 @@ func (r *FileRepo) cachedFileCount(ctx context.Context) (int, error) {
 // Create inserts a new file and returns the generated ID.
 func (r *FileRepo) Create(ctx context.Context, f *File) (int64, error) {
 	query := `INSERT INTO files (project_id, version, filename, os, arch, ext,
-	          size_bytes, download_url, local_path, checksum, status)
-	          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+	          size_bytes, download_url, local_path, checksum, status, source_type)
+	          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 	result, err := r.db.ExecContext(ctx, query,
 		f.ProjectID, f.Version, f.Filename, f.OS, f.Arch, f.Ext,
-		f.SizeBytes, f.DownloadURL, f.LocalPath, f.Checksum, f.Status)
+		f.SizeBytes, f.DownloadURL, f.LocalPath, f.Checksum, f.Status, f.SourceType)
 	if err != nil {
 		return 0, fmt.Errorf("inserting file %q: %w", f.Filename, err)
 	}
@@ -258,7 +258,7 @@ func scanFileFromScanner(s interface{ Scan(dest ...any) error }) (*File, error) 
 	err := s.Scan(
 		&f.ID, &f.ProjectID, &f.Version, &f.Filename, &f.OS, &f.Arch, &f.Ext,
 		&f.SizeBytes, &f.DownloadURL, &f.LocalPath, &f.Checksum,
-		&f.Status, &f.ErrorMessage, &f.RetryCount, &f.LastAttemptAt, &f.CreatedAt,
+		&f.Status, &f.SourceType, &f.ErrorMessage, &f.RetryCount, &f.LastAttemptAt, &f.CreatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("scanning file: %w", err)

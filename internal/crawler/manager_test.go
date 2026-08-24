@@ -83,6 +83,7 @@ func setupTestDB(t *testing.T) *sql.DB {
 		local_path TEXT NOT NULL,
 		checksum TEXT DEFAULT '',
 		status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','downloading','complete','error','imported','failed_permanent')),
+		source_type TEXT DEFAULT NULL,
 		error_message TEXT DEFAULT '',
 		retry_count INTEGER NOT NULL DEFAULT 0,
 		last_attempt_at DATETIME,

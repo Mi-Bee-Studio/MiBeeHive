@@ -59,6 +59,13 @@ func (h *SystemHandler) Info(w http.ResponseWriter, r *http.Request) {
 		projects = nil
 	}
 
+	// LastCrawlAt is the most recent crawl across all projects, so the
+	// settings page no longer reports "从未" while crawls are running.
+	lastCrawlAt := ""
+	if ts, err := h.projectRepo.MaxLastCrawledAt(r.Context()); err == nil && ts != nil {
+		lastCrawlAt = ts.Format(time.RFC3339)
+	}
+
 	writeJSON(w, http.StatusOK, model.ApiResponse[model.SystemInfoResponse]{
 		Success: true,
 		Data: model.SystemInfoResponse{
@@ -67,6 +74,7 @@ func (h *SystemHandler) Info(w http.ResponseWriter, r *http.Request) {
 			DiskAvail:    avail,
 			FileCount:    fileCount,
 			ProjectCount: len(projects),
+			LastCrawlAt:  lastCrawlAt,
 			Version:      h.version,
 		},
 	})

@@ -196,14 +196,14 @@ func DefaultCatalog() []ToolCatalogEntry {
 			Category: "infrastructure", SourceType: "hashicorp",
 			SourceURL:     "https://releases.hashicorp.com/consul/",
 			Description:   "Service networking solution to connect and secure services.",
-			ConfigTemplate: `{"version_pattern":"[0-9]+\\.[0-9]+\\.[0-9]+"}`,
+			ConfigTemplate: `{"github_owner":"consul","version_pattern":"[0-9]+\\.[0-9]+\\.[0-9]+"}`,
 		},
 		{
 			Slug: "vault", Name: "vault", DisplayName: "Vault",
 			Category: "infrastructure", SourceType: "hashicorp",
 			SourceURL:     "https://releases.hashicorp.com/vault/",
 			Description:   "Tool for securely accessing secrets.",
-			ConfigTemplate: `{"version_pattern":"[0-9]+\\.[0-9]+\\.[0-9]+"}`,
+			ConfigTemplate: `{"github_owner":"vault","version_pattern":"[0-9]+\\.[0-9]+\\.[0-9]+"}`,
 		},
 		{
 			Slug: "traefik", Name: "traefik", DisplayName: "Traefik",
@@ -247,14 +247,14 @@ func DefaultCatalog() []ToolCatalogEntry {
 			Category: "other", SourceType: "hashicorp",
 			SourceURL:     "https://releases.hashicorp.com/terraform/",
 			Description:   "Infrastructure as code software tool.",
-			ConfigTemplate: `{"version_pattern":"[0-9]+\\.[0-9]+\\.[0-9]+"}`,
+			ConfigTemplate: `{"github_owner":"terraform","version_pattern":"[0-9]+\\.[0-9]+\\.[0-9]+"}`,
 		},
 		{
 			Slug: "packer", Name: "packer", DisplayName: "Packer",
 			Category: "other", SourceType: "hashicorp",
 			SourceURL:     "https://releases.hashicorp.com/packer/",
 			Description:   "Tool for creating identical machine images for multiple platforms.",
-			ConfigTemplate: `{"version_pattern":"[0-9]+\\.[0-9]+\\.[0-9]+"}`,
+			ConfigTemplate: `{"github_owner":"packer","version_pattern":"[0-9]+\\.[0-9]+\\.[0-9]+"}`,
 		},
 		{
 			Slug: "ansible", Name: "ansible", DisplayName: "Ansible",

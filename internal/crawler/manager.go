@@ -7,7 +7,9 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"path"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -27,6 +29,10 @@ type CrawlStatusInfo struct {
 	Interval      time.Duration    `json:"interval"`
 	LatestVersion string           `json:"latest_version"`
 	LastCrawledAt *string          `json:"last_crawled_at"`
+	// LastStatus/LastError mirror the most recent crawl log entry so the UI
+	// can show WHY a source has 0 files instead of a silent "never" (#60).
+	LastStatus string `json:"last_status,omitempty"`
+	LastError  string `json:"last_error,omitempty"`
 }
 
 // ErrCrawlInProgress is returned when a crawl is already running for a project.
@@ -277,11 +283,18 @@ func classToStatus(class errorClass) model.CrawlStatus {
 }
 
 // processAssets filters out existing files and downloads new ones.
+// Assets are first narrowed by the project's filter_patterns globs (if any),
+// which lets one upstream repo serve several narrowly-scoped projects
+// (e.g. vmagent collecting only vmutils-* archives from VictoriaMetrics).
 func (m *CrawlManager) processAssets(ctx context.Context, proj *dbrepo.Project, releases []model.ReleaseAsset, projectName string) ([]model.ReleaseAsset, int) {
 	var newAssets []model.ReleaseAsset
 	downloaded := 0
 
+	filterPatterns := m.projectFilterPatterns(proj)
 	for _, asset := range releases {
+		if len(filterPatterns) > 0 && !matchAnyGlob(asset.Filename, filterPatterns) {
+			continue
+		}
 		existing, err := m.fileRepo.FindExisting(ctx, proj.ID, asset.Filename)
 		if err != nil {
 			m.logger.Error("checking existing file", "project", projectName, "filename", asset.Filename, "error", err)
@@ -308,6 +321,7 @@ func (m *CrawlManager) processAssets(ctx context.Context, proj *dbrepo.Project, 
 			LocalPath:   localPath,
 			Checksum:    asset.Checksum,
 			Status:      string(model.FileStatusPending),
+			SourceType:  proj.SourceType,
 		}
 		fileID, err := m.fileRepo.Create(ctx, dbFile)
 		if err != nil {
@@ -387,6 +401,11 @@ func (m *CrawlManager) GetCrawlStatus() map[string]CrawlStatusInfo {
 		m.logger.Error("listing enabled projects for status", "error", err)
 		return statuses
 	}
+	latestLogs, err := m.crawlRepo.LatestPerProject(context.Background())
+	if err != nil {
+		m.logger.Warn("failed to load latest crawl logs for status", "error", err)
+		latestLogs = nil
+	}
 	for _, proj := range projects {
 		interval := time.Duration(0)
 		m.scheduler.mu.Lock()
@@ -401,7 +420,7 @@ func (m *CrawlManager) GetCrawlStatus() map[string]CrawlStatusInfo {
 			lastCrawled = &s
 		}
 
-		statuses[proj.Name] = CrawlStatusInfo{
+		info := CrawlStatusInfo{
 			ProjectName:   proj.Name,
 			SourceType:    model.SourceType(proj.SourceType),
 			Running:       m.scheduler.Running(proj.Name),
@@ -409,6 +428,11 @@ func (m *CrawlManager) GetCrawlStatus() map[string]CrawlStatusInfo {
 			LatestVersion: proj.LatestVersion,
 			LastCrawledAt: lastCrawled,
 		}
+		if log, ok := latestLogs[proj.ID]; ok && log != nil {
+			info.LastStatus = log.Status
+			info.LastError = log.ErrorMessage
+		}
+		statuses[proj.Name] = info
 	}
 	return statuses
 }
@@ -429,6 +453,38 @@ func (m *CrawlManager) getOwnerRepo(proj *dbrepo.Project) (string, string) {
 	return settings.GitHubOwner, settings.GitHubRepo
 }
 
+// projectFilterPatterns returns the per-project filename globs from settings
+// (nil when unset). Used by processAssets to narrow a shared upstream to the
+// artifacts this project actually collects.
+func (m *CrawlManager) projectFilterPatterns(proj *dbrepo.Project) []string {
+	settings, err := m.projectRepo.GetSettings(context.Background(), proj.ID)
+	if err != nil || settings == nil {
+		return nil
+	}
+	return settings.FilterPatterns
+}
+
+// matchAnyGlob reports whether name matches any glob pattern
+// (case-insensitive, same semantics as rulesrc's spec filters).
+func matchAnyGlob(name string, patterns []string) bool {
+	for _, p := range patterns {
+		if ok, _ := filepath.Match(strings.ToLower(p), strings.ToLower(name)); ok {
+			return true
+		}
+	}
+	return false
+}
+
+// hashicorpProductFromURL derives the HashiCorp Releases product name from a
+// source URL like "https://releases.hashicorp.com/consul/" → "consul".
+func hashicorpProductFromURL(sourceURL string) string {
+	u := strings.Trim(sourceURL, "/")
+	if u == "" {
+		return ""
+	}
+	return path.Base(u)
+}
+
 // getParams builds the source.Params map for the new two-track path from a
 // project's DB settings. It generalizes getOwnerRepo: today it carries
 // owner/repo (matching the legacy overloading), and can grow new keys as
@@ -439,6 +495,14 @@ func (m *CrawlManager) getParams(proj *dbrepo.Project) map[string]string {
 	if err == nil && settings != nil {
 		params["owner"] = settings.GitHubOwner
 		params["repo"] = settings.GitHubRepo
+	}
+	// HashiCorp seeds historically omitted the product name (github_owner),
+	// producing requests to /v1/releases/ that always 403. Fall back to the
+	// product name embedded in the source URL.
+	if proj.SourceType == string(model.SourceTypeHashiCorp) && params["owner"] == "" {
+		if product := hashicorpProductFromURL(proj.SourceURL); product != "" {
+			params["owner"] = product
+		}
 	}
 	// Pass through project config fields that may contain a runtime
 	// fingerprint (enables adding sources without recompiling — issue #2).

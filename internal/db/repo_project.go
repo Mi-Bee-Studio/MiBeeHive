@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/Mi-Bee-Studio/mibeehive/internal/model"
 )
@@ -87,6 +88,34 @@ func (r *ProjectRepo) UpdateLastCrawledAt(ctx context.Context, id int64) error {
 		return fmt.Errorf("updating last_crawled_at for project %d: %w", id, err)
 	}
 	return nil
+}
+
+// MaxLastCrawledAt returns the most recent last_crawled_at across all
+// projects, or nil when no project has ever been crawled.
+//
+// The value is scanned as a string because SQLite's MAX() expression loses
+// the column's DATETIME affinity, so the driver hands back raw TEXT
+// ("2006-01-02 15:04:05", UTC — what CURRENT_TIMESTAMP writes).
+func (r *ProjectRepo) MaxLastCrawledAt(ctx context.Context) (*time.Time, error) {
+	var raw sql.NullString
+	err := r.db.QueryRowContext(ctx,
+		"SELECT MAX(last_crawled_at) FROM projects").Scan(&raw)
+	if err != nil {
+		return nil, fmt.Errorf("querying max last_crawled_at: %w", err)
+	}
+	if !raw.Valid || raw.String == "" {
+		return nil, nil
+	}
+	ts, err := time.Parse("2006-01-02 15:04:05", raw.String)
+	if err != nil {
+		// Tolerate other well-formed shapes before giving up.
+		if ts2, err2 := time.Parse(time.RFC3339, raw.String); err2 == nil {
+			return &ts2, nil
+		}
+		return nil, fmt.Errorf("parsing last_crawled_at %q: %w", raw.String, err)
+	}
+	utc := ts.UTC()
+	return &utc, nil
 }
 
 // CreateWithSettings inserts a new project with settings marshaled as JSON config.

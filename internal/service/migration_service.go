@@ -8,9 +8,9 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
-	"syscall"
 
 	"github.com/Mi-Bee-Studio/mibeehive/internal/db"
+	"github.com/Mi-Bee-Studio/mibeehive/internal/diskutil"
 )
 
 // MigrationService handles background file migration between storage paths.
@@ -351,14 +351,13 @@ func (s *MigrationService) checkDiskSpace(path string, requiredBytes int64) erro
 		return fmt.Errorf("creating path for disk check: %w", err)
 	}
 
-	var stat syscall.Statfs_t
-	if err := syscall.Statfs(path, &stat); err != nil {
+	_, _, available, err := diskutil.Usage(path)
+	if err != nil {
 		return fmt.Errorf("checking disk space: %w", err)
 	}
 
-	available := int64(stat.Bavail) * int64(stat.Bsize)
 	needed := int64(float64(requiredBytes) * 1.1)
-	if available < needed {
+	if int64(available) < needed {
 		return fmt.Errorf("insufficient disk space: need %d bytes, have %d available", needed, available)
 	}
 	return nil

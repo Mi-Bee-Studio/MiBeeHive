@@ -4,8 +4,9 @@ import (
 	"context"
 	"log/slog"
 	"sync/atomic"
-	"syscall"
 	"time"
+
+	"github.com/Mi-Bee-Studio/mibeehive/internal/diskutil"
 )
 
 // DiskMonitor periodically checks disk usage and tracks warning/critical states.
@@ -113,13 +114,11 @@ func (d *DiskMonitor) check() {
 
 // usagePercent returns current disk usage as a percentage and available bytes.
 func (d *DiskMonitor) usagePercent() (usedPct int, available uint64, err error) {
-	var stat syscall.Statfs_t
-	if err = syscall.Statfs(d.path, &stat); err != nil {
+	total, _, available, err := diskutil.Usage(d.path)
+	if err != nil {
 		return 0, 0, err
 	}
 
-	total := stat.Blocks * uint64(stat.Bsize)
-	available = stat.Bavail * uint64(stat.Bsize)
 	used := total - available
 
 	if total > 0 {
@@ -130,12 +129,10 @@ func (d *DiskMonitor) usagePercent() (usedPct int, available uint64, err error) 
 
 // GetUsage returns current disk usage stats (total, used, available bytes).
 func (d *DiskMonitor) GetUsage() (total, used, available uint64, err error) {
-	var stat syscall.Statfs_t
-	if err = syscall.Statfs(d.path, &stat); err != nil {
+	total, _, available, err = diskutil.Usage(d.path)
+	if err != nil {
 		return 0, 0, 0, err
 	}
-	total = stat.Blocks * uint64(stat.Bsize)
-	available = stat.Bavail * uint64(stat.Bsize)
 	used = total - available
 	return total, used, available, nil
 }

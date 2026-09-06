@@ -272,11 +272,12 @@ func TestMigrationService_FailedCopy_NoDBUpdate(t *testing.T) {
 	projectID := insertTestProject(t, testDB)
 	fileID := insertMigrationTestFile(t, fileRepo, projectID, srcFile, 12)
 
-	// Make destination unwritable.
-	if err := os.Chmod(dstDir, 0555); err != nil {
-		t.Fatalf("chmod: %v", err)
+	// Force the copy to fail portably: block the expected destination file
+	// with a directory, so os.Create fails on every OS (chmod-based
+	// read-only directories don't prevent file creation on Windows).
+	if err := os.Mkdir(filepath.Join(dstDir, "app-1.0.0.tar.gz"), 0755); err != nil {
+		t.Fatalf("blocking destination: %v", err)
 	}
-	defer os.Chmod(dstDir, 0755)
 
 	ctx := context.Background()
 	taskID, err := svc.EnqueueMigration(ctx, "oss", srcDir, dstDir)

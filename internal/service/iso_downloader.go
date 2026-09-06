@@ -14,9 +14,9 @@ import (
  "path/filepath"
  "strings"
  "sync"
- "syscall"
  "time"
 
+	"github.com/Mi-Bee-Studio/mibeehive/internal/diskutil"
 	"github.com/Mi-Bee-Studio/mibeehive/internal/metrics"
 )
 
@@ -276,6 +276,14 @@ func (s *ISOService) DownloadISO(ctx context.Context, filename string, rawURL st
 		return fmt.Errorf("downloaded file is empty (0 bytes)")
 	}
 
+	// Close before renaming: an open handle makes os.Rename fail on Windows
+	// ("being used by another process"). The deferred Close below stays
+	// harmless for the error paths above.
+	if err := f.Close(); err != nil {
+		os.Remove(tempPath)
+		return fmt.Errorf("closing temp file: %w", err)
+	}
+
 	if err := os.Rename(tempPath, finalPath); err != nil {
 		os.Remove(tempPath)
 		return fmt.Errorf("renaming temp file: %w", err)
@@ -286,7 +294,7 @@ func (s *ISOService) DownloadISO(ctx context.Context, filename string, rawURL st
 		if err := verifyChecksum(finalPath, expectedSHA256); err != nil {
 			os.Remove(finalPath)
 			return fmt.Errorf("checksum verification failed: %w", err)
-			}
+		}
 		slog.Info("ISO checksum verified", "filename", filename, "sha256", expectedSHA256)
 	}
 
@@ -393,11 +401,11 @@ func (s *ISOService) DeleteISO(filename string) error {
 // DiskAvailable returns available disk space in bytes on the partition
 // containing the os-install directory.
 func (s *ISOService) DiskAvailable() (uint64, error) {
-	var stat syscall.Statfs_t
-	if err := syscall.Statfs(s.resolver.ResolveISO(), &stat); err != nil {
+	_, _, avail, err := diskutil.Usage(s.resolver.ResolveISO())
+	if err != nil {
 		return 0, fmt.Errorf("statfs failed: %w", err)
 	}
-	return uint64(stat.Bavail) * uint64(stat.Bsize), nil
+	return avail, nil
 }
 
 // checkDiskSpace verifies that the filesystem has at least 110% of the

@@ -1,8 +1,22 @@
 package docker
 
 import (
+	"fmt"
+	"os"
+	"runtime"
 	"testing"
 )
+
+// TestMain skips the suite on Windows: every test here exercises unix-socket
+// host URLs, which the Docker SDK client rejects on Windows ("protocol not
+// available"). The production target is Linux, where these all run.
+func TestMain(m *testing.M) {
+	if runtime.GOOS == "windows" {
+		fmt.Fprintln(os.Stderr, "skipping docker client tests: unix-socket hosts are Linux-only")
+		os.Exit(0)
+	}
+	os.Exit(m.Run())
+}
 
 func TestNewClient(t *testing.T) {
 	t.Run("empty_socket_path_uses_default", func(t *testing.T) {

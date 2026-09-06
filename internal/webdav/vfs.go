@@ -457,7 +457,9 @@ func (fs *VirtualFS) openWrite(ctx context.Context, name string, flag int, perm 
 	if err != nil {
 		return nil, err
 	}
-	localPath := filepath.Join(manualUploadsSubdir, rest)
+	// local_path is stored in the DB in POSIX form (convention across the
+	// codebase); rest is already slash-separated.
+	localPath := path.Join(manualUploadsSubdir, rest)
 	return &manualUploadFile{File: f, fs: fs, ctx: ctx, view: view, localPath: localPath}, nil
 }
 

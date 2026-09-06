@@ -21,7 +21,10 @@ func ValidateStorageSubdir(basePath, subdir string) error {
 	if subdir == "" {
 		return nil
 	}
-	if filepath.IsAbs(subdir) {
+	// Reject POSIX-absolute subdirs explicitly: filepath.IsAbs alone is
+	// platform-dependent (it returns false for "/etc" on Windows), while the
+	// storage path convention is POSIX on every OS.
+	if strings.HasPrefix(subdir, "/") || strings.HasPrefix(subdir, `\`) || filepath.IsAbs(subdir) {
 		return fmt.Errorf("storage_subdir must be relative: %q", subdir)
 	}
 

@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -403,7 +404,7 @@ func GenerateDefault(path string) error {
 		return fmt.Errorf("marshaling default config: %w", err)
 	}
 
-	if err := os.MkdirAll(parentDir(path), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return fmt.Errorf("creating config directory: %w", err)
 	}
 
@@ -567,15 +568,6 @@ func (c *Config) EnsurePasswordHash() {
 	if c.Auth.PasswordHash == "" {
 		c.Auth.PasswordHash = defaultPasswordHash
 	}
-}
-
-func parentDir(path string) string {
-	for i := len(path) - 1; i >= 0; i-- {
-		if path[i] == '/' {
-			return path[:i]
-		}
-	}
-	return "."
 }
 
 // validateSchedule checks that the schedule format is valid HH:MM.

@@ -15,10 +15,10 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	dbrepo "github.com/Mi-Bee-Studio/mibeehive/internal/db"
+	"github.com/Mi-Bee-Studio/mibeehive/internal/diskutil"
 	"github.com/Mi-Bee-Studio/mibeehive/internal/metrics"
 	"github.com/Mi-Bee-Studio/mibeehive/internal/model"
 )
@@ -451,16 +451,16 @@ func validateZip(path string) error {
 // GetDiskUsage returns total, used, and available disk space in bytes for the
 // filesystem containing basePath.
 func (s *FileService) GetDiskUsage(basePath string) (total, used, avail int64, err error) {
-	var stat syscall.Statfs_t
-	if err := syscall.Statfs(basePath, &stat); err != nil {
+	t, free, a, err := diskutil.Usage(basePath)
+	if err != nil {
 		return 0, 0, 0, fmt.Errorf("statfs failed: %w", err)
 	}
 
-	bs := stat.Bsize
-	total = int64(stat.Blocks) * int64(bs)
-	avail = int64(stat.Bavail) * int64(bs)
-	used = total - avail - int64(stat.Bfree-stat.Bavail)*int64(bs)
-
+	total = int64(t)
+	avail = int64(a)
+	// Count root-reserved blocks as used, matching the statfs semantics:
+	// used = total - available - reserved.
+	used = total - avail - int64(free-a)
 	return total, used, avail, nil
 }
 

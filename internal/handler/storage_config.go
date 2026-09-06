@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"path/filepath"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 	"sync"
@@ -63,9 +63,12 @@ func (h *StorageConfigHandler) GetStorageConfig(w http.ResponseWriter, r *http.R
 		OSS:               cfg.Storage.Modules.OSS,
 		OSInstall:         cfg.Storage.Modules.OSInstall,
 		ISO:               cfg.Storage.Modules.ISO,
+		// Fallbacks are display strings for the admin UI and follow the
+		// POSIX path convention used across this API (validateStoragePath
+		// requires leading "/"), so join with path.Join, not filepath.Join.
 		OSSFallback:       cfg.Storage.BasePath,
-		OSInstallFallback: filepath.Join(cfg.Storage.BasePath, "os-install"),
-		ISOFallback:       filepath.Join(cfg.Storage.BasePath, "os-install"),
+		OSInstallFallback: path.Join(cfg.Storage.BasePath, "os-install"),
+		ISOFallback:       path.Join(cfg.Storage.BasePath, "os-install"),
 	}
 
 	writeJSON(w, http.StatusOK, model.ApiResponse[model.StorageConfigResponse]{

@@ -2,9 +2,8 @@
 //
 // Slide-in panel showing a single file's metadata, checksum, source info,
 // and dual action buttons (Download + Copy Link). It is not a routed page;
-// file-center opens it by calling FileDetail.open(file). The admin-only
-// internal endpoint (/admin/files/{id}/internal) is fetched to reveal the
-// physical local_path, which is never exposed to non-admin callers.
+// file-center opens it by calling FileDetail.open(file). Physical storage
+// paths are intentionally never rendered here (#59).
 const FileDetail = (function () {
   'use strict';
 

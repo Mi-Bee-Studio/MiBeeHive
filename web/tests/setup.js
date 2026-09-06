@@ -37,13 +37,16 @@ evalFile(path.join(coreDir, 'preact.js'));
 // ---------------------------------------------------------------------------
 
 // Api — HTTP client (api.js)
+// Default to resolved responses: modules that chain .then() directly on the
+// result (e.g. foraging-iso.js in a useEffect) would otherwise throw
+// "reading 'then' of undefined" as an uncaught error during tests.
 globalThis.Api = {
-  get: vi.fn(),
-  post: vi.fn(),
-  put: vi.fn(),
-  delete: vi.fn(),
-  patch: vi.fn(),
-  getWithHeaders: vi.fn(),
+  get: vi.fn(() => Promise.resolve({ success: true, data: null })),
+  post: vi.fn(() => Promise.resolve({ success: true, data: null })),
+  put: vi.fn(() => Promise.resolve({ success: true, data: null })),
+  delete: vi.fn(() => Promise.resolve({ success: true, data: null })),
+  patch: vi.fn(() => Promise.resolve({ success: true, data: null })),
+  getWithHeaders: vi.fn(() => Promise.resolve({ success: true, data: null })),
 };
 
 // Auth — authentication module (auth.js)

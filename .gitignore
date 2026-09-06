@@ -27,8 +27,10 @@ configs/server.key
 .sisyphus/
 .playwright-mcp/
 
-# Playwright
-tests/
+# Playwright e2e (repo-root dir only). Anchor to root: the unanchored
+# `tests/` pattern also matched web/tests/ and silently excluded half of
+# the vitest suite from the repo (same class of bug as /migrations/ below).
+/tests/
 node_modules/
 package-lock.json
 

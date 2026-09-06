@@ -1,9 +1,7 @@
-# Internal planning documents
+# Manuals moved to Mi-Bee-Studio/mibee-docs (issue #66). This directory
+# keeps the pointer README and internal planning documents only.
 *
 !.gitignore
-!en/
-!en/**
-!zh/
-!zh/**
+!README.md
 !roadmap/
 !roadmap/**

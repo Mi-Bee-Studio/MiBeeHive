@@ -1,6 +1,6 @@
 # MiBeeHive
 
-[中文](README.zh.md) · [Docs](docs/en/architecture.md) · [API](docs/en/api-reference.md)
+[中文](README.zh.md) · [Docs](https://www.mlsbs.top/docs/mibeehive) · [API](https://www.mlsbs.top/docs/mibeehive/api-reference)
 
 > **A lightweight, self-hosted ops-tooling supply hub for your whole fleet.**
 > MiBeeHive auto-collects the binaries, packages, and ISOs your servers need — and serves them back out over the protocols those servers already speak: `apt`, `pip`, WebDAV. One static Go binary, an embedded UI, runs anywhere Linux does (amd64 / arm64 — a mini PC, a NAS, a VM, an old laptop). They run the box; MiBeeHive keeps the fleet stocked.
@@ -76,7 +76,7 @@ Or cross-compile for another architecture (e.g. arm64) — MiBeeHive builds for 
 GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o mibeehive-arm64 ./cmd/mibeehive
 ```
 
-> Runs on any Linux + systemd host (amd64 or arm64). Lightweight: comfortable from ~1 GB RAM / 32 GB storage up. See the [deployment guide](docs/en/deployment.md). A prebuilt multi-arch Docker image (`linux/amd64`, `linux/arm64`) is published on release tags.
+> Runs on any Linux + systemd host (amd64 or arm64). Lightweight: comfortable from ~1 GB RAM / 32 GB storage up. See the [deployment guide](https://www.mlsbs.top/docs/mibeehive/deployment). A prebuilt multi-arch Docker image (`linux/amd64`, `linux/arm64`) is published on release tags.
 
 ## Supply endpoints (copy-paste for your fleet)
 
@@ -89,14 +89,8 @@ GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o mibeehive-arm64 ./cmd/mibeehiv
 
 ## Documentation
 
-- [Introduction](docs/en/introduction.md) — what MiBeeHive is and who it's for
-- [Quick Start](docs/en/quick-start.md) — build, launch, first crawl, first pull
-- [Architecture](docs/en/architecture.md) — modules, layers, supply protocols
-- [Deployment](docs/en/deployment.md) — Linux install (amd64/arm64), systemd, health checks
-- [Configuration](docs/en/configuration.md) — every `config.yaml` option
-- [API Reference](docs/en/api-reference.md) — all HTTP endpoints
-- [Development](docs/en/development.md) — building, testing, and contributing
-- [Changelog](docs/en/changelog.md) — release history
+Manuals (introduction, quick start, architecture, deployment, configuration, API reference, development) are published from the [mibee-docs](https://github.com/Mi-Bee-Studio/mibee-docs) repository to the docs center at **[www.mlsbs.top/docs/mibeehive](https://www.mlsbs.top/docs/mibeehive)**. Manual changes go there via PR — submission rules are in that repo's [README](https://github.com/Mi-Bee-Studio/mibee-docs#提交规范各项目仓库请遵守); this repo's `docs/` only holds internal planning notes.
+
 - [Supply Layer](docs/roadmap/supply-layer.md) — protocol roadmap (APT ✅, PyPI ✅, more coming)
 
 ## Scope
@@ -105,7 +99,7 @@ MiBeeHive is a **supply chain**: it collects ops tools and serves them over *exi
 
 ## Contributing & License
 
-- [Contributing guide](CONTRIBUTING.md) · Conventional Commits · bilingual docs (en / zh)
+- [Contributing guide](CONTRIBUTING.md) · Conventional Commits · manuals in [mibee-docs](https://github.com/Mi-Bee-Studio/mibee-docs) (zh-CN / en-US)
 - AGPL-3.0 — see [LICENSE](LICENSE)
 
 ---

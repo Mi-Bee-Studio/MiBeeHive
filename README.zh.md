@@ -1,6 +1,6 @@
 # MiBeeHive
 
-[English](README.md) · [文档](docs/zh/architecture.md) · [API](docs/zh/api-reference.md)
+[English](README.md) · [文档](https://www.mlsbs.top/docs/mibeehive) · [API](https://www.mlsbs.top/docs/mibeehive/api-reference)
 
 > **一个轻量、自托管的运维工具供应中枢,喂饱你的整个服务器集群。**
 > MiBeeHive 自动采集你的服务器所需的二进制、安装包和 ISO,再按它们本来就会说的协议对外供应:`apt`、`pip`、WebDAV。单个静态 Go 二进制 + 内嵌界面,Linux 哪里都能跑(amd64 / arm64 —— 迷你主机、NAS、虚拟机、旧笔记本都行)。盒子它们自己跑;集群由 MiBeeHive 喂饱。
@@ -76,7 +76,7 @@ cp configs/config.yaml config.yaml   # 编辑存储路径、端口、密钥
 GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o mibeehive-arm64 ./cmd/mibeehive
 ```
 
-> 可跑在任意 Linux + systemd 主机上(amd64 或 arm64)。轻量:从约 1GB 内存 / 32GB 存储起即可舒适运行。详见[部署指南](docs/zh/deployment.md)。release 标签会发布预构建的多架构 Docker 镜像(`linux/amd64`、`linux/arm64`)。
+> 可跑在任意 Linux + systemd 主机上(amd64 或 arm64)。轻量:从约 1GB 内存 / 32GB 存储起即可舒适运行。详见[部署指南](https://www.mlsbs.top/docs/mibeehive/deployment)。release 标签会发布预构建的多架构 Docker 镜像(`linux/amd64`、`linux/arm64`)。
 
 ## 供应端点(直接复制给你的集群用)
 
@@ -89,14 +89,8 @@ GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o mibeehive-arm64 ./cmd/mibeehiv
 
 ## 文档
 
-- [产品介绍](docs/zh/introduction.md) —— MiBeeHive 是什么、给谁用
-- [快速开始](docs/zh/quick-start.md) —— 构建、启动、第一次采集与消费
-- [架构](docs/zh/architecture.md) —— 模块、分层、供应协议
-- [部署](docs/zh/deployment.md) —— Linux 安装(amd64/arm64)、systemd、健康检查
-- [配置参考](docs/zh/configuration.md) —— `config.yaml` 全部选项
-- [API 参考](docs/zh/api-reference.md) —— 全部 HTTP 端点
-- [开发与贡献](docs/zh/development.md) —— 构建、测试与提交约定
-- [更新日志](docs/zh/changelog.md) —— 版本发布历史
+手册(产品介绍、快速开始、架构、部署、配置参考、API 参考、开发与贡献)由文档仓库 [mibee-docs](https://github.com/Mi-Bee-Studio/mibee-docs) 发布到官网文档中心 **[www.mlsbs.top/docs/mibeehive](https://www.mlsbs.top/docs/mibeehive)**。手册改动请向该仓库提交 PR —— 提交规范见其 [README](https://github.com/Mi-Bee-Studio/mibee-docs#提交规范各项目仓库请遵守);本仓库 `docs/` 仅保留内部规划文档。
+
 - [供应层](docs/roadmap/supply-layer_zh.md) —— 协议路线图(APT ✅、PyPI ✅,更多规划中)
 
 ## 范围
@@ -105,7 +99,7 @@ MiBeeHive 是一条**供应链**:采集运维工具,按*已有*的标准协议�
 
 ## 贡献与许可
 
-- [贡献指南](CONTRIBUTING_ZH.md) · Conventional Commits · 双语文档(中 / en)
+- [贡献指南](CONTRIBUTING_ZH.md) · Conventional Commits · 手册位于 [mibee-docs](https://github.com/Mi-Bee-Studio/mibee-docs)(zh-CN / en-US)
 - AGPL-3.0 —— 见 [LICENSE](LICENSE)
 
 ---

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"time"
 
 	"github.com/Mi-Bee-Studio/mibeehive/internal/model"
 )
@@ -14,6 +15,7 @@ const (
 	TaskTypeDownload  = "download"
 	TaskTypeBackup    = "backup"
 	TaskTypeISOCheck  = "iso_check"
+	TaskTypeScript    = "script"
 )
 
 // TaskService aggregates background tasks from multiple sources into a unified view.
@@ -54,7 +56,60 @@ func (s *TaskService) GetAllTasks(ctx context.Context) ([]model.Task, error) {
 	}
 	tasks = append(tasks, backupTasks...)
 
+	scriptTasks, err := s.getScriptTasks(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("getting script tasks: %w", err)
+	}
+	tasks = append(tasks, scriptTasks...)
+
 	return tasks, nil
+}
+
+// getScriptTasks returns scheduled scripts as script tasks, including the
+// computed next fire time of their cron schedule.
+func (s *TaskService) getScriptTasks(ctx context.Context) ([]model.Task, error) {
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT id, name, schedule, enabled, last_run_at, last_status
+		 FROM scheduled_scripts ORDER BY name`)
+	if err != nil {
+		return nil, fmt.Errorf("querying scheduled scripts: %w", err)
+	}
+	defer rows.Close()
+
+	var tasks []model.Task
+	for rows.Next() {
+		var id int64
+		var name, schedule string
+		var enabled int
+		var lastRunAt, lastStatus sql.NullString
+		if err := rows.Scan(&id, &name, &schedule, &enabled, &lastRunAt, &lastStatus); err != nil {
+			return nil, fmt.Errorf("scanning scheduled script row: %w", err)
+		}
+
+		task := model.Task{
+			ID:       fmt.Sprintf("script-%d", id),
+			Name:     name,
+			Type:     TaskTypeScript,
+			Schedule: schedule,
+		}
+		if enabled == 1 {
+			task.Status = "scheduled"
+			if next, err := NextRun(schedule, time.Now().Local()); err == nil {
+				task.NextRunAt = next.Format(time.RFC3339)
+			}
+		} else {
+			task.Status = "disabled"
+		}
+		if lastRunAt.Valid {
+			task.LastRunAt = lastRunAt.String
+		}
+		if lastStatus.Valid {
+			task.LastResult = lastStatus.String
+		}
+
+		tasks = append(tasks, task)
+	}
+	return tasks, rows.Err()
 }
 
 // getCrawlTasks returns enabled projects as scheduled crawl tasks.

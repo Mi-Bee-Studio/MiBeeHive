@@ -77,6 +77,10 @@ type appServices struct {
 	retentionSvc       *service.RetentionService
 	retentionScheduler *service.RetentionScheduler
 
+	// Scheduled scripts (#70)
+	scriptSvc       *service.ScriptService
+	scriptScheduler *service.ScriptScheduler
+
 	// Storage resolver
 	storageResolver *service.StorageResolver
 	migrationSvc    *service.MigrationService
@@ -126,6 +130,7 @@ type appHandlers struct {
 	cacheMetrics  *handler.CacheMetricsHandler  // admin cache metrics endpoint
 	virtualAdmin  *handler.VirtualAdminHandler  // virtual index admin API
 	toolCatalog   *handler.ToolCatalogHandler   // built-in tool catalog + one-click enable
+	scripts       *handler.ScriptHandler        // scheduled scripts admin API (#70)
 }
 
 // loadConfig initializes the logger, loads or generates the config file,
@@ -447,6 +452,24 @@ func initServices(cfg *config.Config, database *sql.DB, readDB *sql.DB) *appServ
 	s.crawlLogRepo = db.NewCrawlLogRepo(database)
 	s.statsRepo = db.NewSystemStatsRepo(database)
 
+	// Scheduled scripts (#70): scripts live next to the DB (data dir) so they
+	// stay out of the public-read WebDAV tree; MIBEEHIVE_URL points scripts
+	// back at this instance's API.
+	scriptsDir := filepath.Join(filepath.Dir(cfg.Database.Path), "scripts")
+	apiHost := cfg.Server.BindAddr
+	if apiHost == "" || apiHost == "0.0.0.0" || apiHost == "::" {
+		apiHost = "127.0.0.1"
+	}
+	scriptSvc, err := service.NewScriptService(database, scriptsDir,
+		fmt.Sprintf("http://%s:%d", apiHost, cfg.Server.Port), logger)
+	if err != nil {
+		slog.Error("failed to init script service", "error", err)
+		os.Exit(1)
+	}
+	s.scriptSvc = scriptSvc
+	s.scriptScheduler = service.NewScriptScheduler(scriptSvc)
+	slog.Info("scheduled scripts module initialized", "dir", scriptSvc.ScriptsDir())
+
 	// Registry module (optional — requires remote registry enabled).
 	if cfg.Container.Remote.Enabled {
 		registryRepo := db.NewRegistryRepo(database, cfg.Auth.JWTSecret)
@@ -583,6 +606,8 @@ func initHandlers(cfg *config.Config, svcs *appServices, database *sql.DB, confi
 	h.virtualAdmin = handler.NewVirtualAdminHandler(svcs.virtualIndexSvc, db.NewAuditRepo(database))
 	// Tool catalog handler: built-in catalog + one-click enable.
 	h.toolCatalog = handler.NewToolCatalogHandler(service.NewToolCatalogService(), db.NewProjectRepo(database))
+	// Scheduled scripts handler (#70).
+	h.scripts = handler.NewScriptHandler(svcs.scriptSvc, svcs.scriptScheduler)
 
 	return h
 }
@@ -766,6 +791,16 @@ func buildRouter(cfg *config.Config, h *appHandlers, svcs *appServices, database
 	// Tool catalog routes (admin).
 	apiMux.HandleFunc("GET "+model.RouteToolCatalog, h.toolCatalog.ListCatalog)
 	apiMux.HandleFunc("POST "+model.RouteToolCatalogEnable, h.toolCatalog.EnableTool)
+	// Scheduled scripts routes (admin, #70).
+	apiMux.HandleFunc("GET "+model.RouteAdminScriptsList, h.scripts.List)
+	apiMux.HandleFunc("POST "+model.RouteAdminScriptsCreate, h.scripts.Create)
+	apiMux.HandleFunc("GET "+model.RouteAdminScriptsGet, h.scripts.Get)
+	apiMux.HandleFunc("PUT "+model.RouteAdminScriptsUpdate, h.scripts.Update)
+	apiMux.HandleFunc("DELETE "+model.RouteAdminScriptsDelete, h.scripts.Delete)
+	apiMux.HandleFunc("POST "+model.RouteAdminScriptsRun, h.scripts.Run)
+	apiMux.HandleFunc("GET "+model.RouteAdminScriptsRuns, h.scripts.Runs)
+	apiMux.HandleFunc("GET "+model.RouteAdminScriptsContent, h.scripts.GetContent)
+	apiMux.HandleFunc("PUT "+model.RouteAdminScriptsContent, h.scripts.PutContent)
 
 	// Registry management routes (admin).
 	if h.registry != nil {
@@ -938,6 +973,13 @@ func runServers(cfg *config.Config, httpHandler, httpsHandler http.Handler, svcs
 	}
 	slog.Info("crawl scheduler started")
 
+	// Start scheduled scripts cron scheduler (#70).
+	if err := svcs.scriptScheduler.Start(context.Background()); err != nil {
+		slog.Error("failed to start script scheduler", "error", err)
+	} else {
+		slog.Info("script scheduler started")
+	}
+
 	// Start ISO catalog version checker.
 	catalogCtx, catalogCancel := context.WithCancel(context.Background())
 	defer catalogCancel()
@@ -1021,6 +1063,10 @@ func runServers(cfg *config.Config, httpHandler, httpsHandler http.Handler, svcs
 	}
 
 	svcs.crawlManager.Stop()
+
+	// Stop scheduled scripts cron scheduler (#70).
+	svcs.scriptScheduler.Stop()
+	slog.Info("script scheduler stopped")
 
 	if svcs.dockerClient != nil {
 		svcs.dockerClient.Close()

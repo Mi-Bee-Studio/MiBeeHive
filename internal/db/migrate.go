@@ -46,6 +46,7 @@ func Migrate(db *sql.DB) error {
 		{"026", "migrations/026_virtual_audit.sql"},
 		{"027", "migrations/027_backfill_files_source_type.sql"},
 		{"028", "migrations/028_fix_seed_source_configs.sql"},
+		{"029", "migrations/029_scheduled_scripts.sql"},
 	}
 	tx, err := db.Begin()
 	if err != nil {

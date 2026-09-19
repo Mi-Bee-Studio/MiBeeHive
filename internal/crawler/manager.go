@@ -38,6 +38,10 @@ type CrawlStatusInfo struct {
 // ErrCrawlInProgress is returned when a crawl is already running for a project.
 var ErrCrawlInProgress = errors.New("crawl already in progress")
 
+// ErrVirtualProject is returned when a crawl is attempted on a virtual project
+// (e.g. the WebDAV Manual Uploads tag-holder) that has no fetcher by design.
+var ErrVirtualProject = errors.New("virtual project is not crawlable")
+
 // FetchFunc is the new two-track fetch entry point. Given a project's name,
 // source type, and params, it returns release assets. It is satisfied by
 // internal/source.Registry.Fetch (wired in init.go) and lets CrawlManager route
@@ -123,6 +127,10 @@ func (m *CrawlManager) startProjects(ctx context.Context) error {
 		return fmt.Errorf("listing enabled projects: %w", err)
 	}
 	for _, proj := range projects {
+		if proj.SourceType == "manual_upload" {
+			// Virtual WebDAV tag-holder project (#68) — nothing to fetch.
+			continue
+		}
 		if err := m.scheduleProject(ctx, proj); err != nil {
 			m.logger.Error("failed to schedule project", "project", proj.Name, "error", err)
 		}
@@ -206,6 +214,12 @@ func (m *CrawlManager) resolveCrawlSetup(ctx context.Context, projectName string
 	}
 	if proj == nil {
 		return nil, 0, fmt.Errorf("project %q not found", projectName)
+	}
+	if proj.SourceType == "manual_upload" {
+		// WebDAV Manual Uploads tag-holder: no fetcher exists by design —
+		// fail fast with a clear message instead of "no fetcher registered"
+		// noise in crawl logs and the foraging UI (#68).
+		return nil, 0, ErrVirtualProject
 	}
 
 	crawlLog := &dbrepo.CrawlLog{
@@ -378,6 +392,9 @@ func (m *CrawlManager) TriggerAllCrawls(ctx context.Context) []model.CrawlResult
 		return results
 	}
 	for _, proj := range projects {
+		if proj.SourceType == "manual_upload" {
+			continue // virtual project, not crawlable (#68)
+		}
 		result, err := m.TriggerCrawl(ctx, proj.Name)
 		if err != nil && result == nil {
 			result = &model.CrawlResult{

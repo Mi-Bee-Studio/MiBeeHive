@@ -996,6 +996,11 @@
     skeletonTree: skeletonTree,
     skeletonText: skeletonText,
     skeletonHeading: skeletonHeading,
+    // Preact component versions — use these inside HTM templates; the
+    // lowercase wrappers return HTML *strings* and render as literal text
+    // when interpolated (issue #67).
+    SkeletonHeadingComponent: SkeletonHeadingComponent,
+    SkeletonTextComponent: SkeletonTextComponent,
     renderPagination: renderPagination,
     removePagination: removePagination,
     renderRetryError: renderRetryError,

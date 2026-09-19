@@ -934,12 +934,12 @@ const Dashboard = (function () {
           <div dangerouslySetInnerHTML=${{ __html: SystemStatus._nav('dashboard') }} />
           <div class="p-4 md:p-6 max-w-7xl mx-auto">
             <div class="flex items-center justify-between mb-6">
-              <div>${Components.skeletonHeading && Components.skeletonHeading('200px')}</div>
+              <div><${Components.SkeletonHeadingComponent} width="200px" /></div>
             </div>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
               ${[1,2,3,4].map(function () { return html`<div class="skeleton" style="height:6rem;border-radius:var(--radius-lg)"></div>`; })}
             </div>
-            ${Components.skeletonText && Components.skeletonText(5)}
+            <${Components.SkeletonTextComponent} lines=${5} />
           </div>
         </div>`;
     }

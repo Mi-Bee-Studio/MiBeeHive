@@ -97,6 +97,14 @@ globalThis.Components = {
   tabs: vi.fn(),
   skeletonCard: vi.fn(),
   skeletonTable: vi.fn(() => '<div class="skeleton-table"></div>'),
+  skeletonHeading: vi.fn(() => '<div class="skeleton skeleton-heading"></div>'),
+  skeletonText: vi.fn(() => '<div class="skeleton skeleton-text"></div>'),
+  SkeletonHeadingComponent: function (props) {
+    return '<div class="skeleton skeleton-heading" style="width:' + ((props && props.width) || '50%') + '"></div>';
+  },
+  SkeletonTextComponent: function () {
+    return '<div class="skeleton skeleton-text"></div>';
+  },
   emptyState: vi.fn((cfg) => '<div class="empty-state"><p>' + (cfg.message || '') + '</p>' + (cfg.description ? '<p>' + cfg.description + '</p>' : '') + (cfg.actionLabel ? '<button data-action="empty-state-action">' + cfg.actionLabel + '</button>' : '') + '</div>'),
   FilterBar: {
     _instances: {},

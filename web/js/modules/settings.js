@@ -708,11 +708,11 @@ const Settings = (function () {
     if (isLoading) {
       return html`
         <div class="p-4 md:p-6" style="max-width:48rem;margin:0 auto">
-          ${Components.skeletonHeading('40%')}
-          <div class="card" style="padding:1.25rem;margin-bottom:1.5rem">${Components.skeletonText(4)}</div>
-          <div class="card" style="padding:1.25rem;margin-bottom:1.5rem">${Components.skeletonText(3)}</div>
-          <div class="card" style="padding:1.25rem;margin-bottom:1.5rem">${Components.skeletonText(5)}</div>
-          <div class="card" style="padding:1.25rem;margin-bottom:1.5rem">${Components.skeletonText(3)}</div>
+          <${Components.SkeletonHeadingComponent} width="40%" />
+          <div class="card" style="padding:1.25rem;margin-bottom:1.5rem"><${Components.SkeletonTextComponent} lines=${4} /></div>
+          <div class="card" style="padding:1.25rem;margin-bottom:1.5rem"><${Components.SkeletonTextComponent} lines=${3} /></div>
+          <div class="card" style="padding:1.25rem;margin-bottom:1.5rem"><${Components.SkeletonTextComponent} lines=${5} /></div>
+          <div class="card" style="padding:1.25rem;margin-bottom:1.5rem"><${Components.SkeletonTextComponent} lines=${3} /></div>
         </div>
       `;
     }

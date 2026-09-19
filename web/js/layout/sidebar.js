@@ -24,6 +24,7 @@ var Sidebar = (function () {
     key: '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.78 7.78 5.5 5.5 0 017.78-7.78zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>',
     logout: '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>',
     containers: '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>',
+    scripts: '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8l4 4-4 4"/><line x1="13" y1="16" x2="19" y2="16"/></svg>',
     search: '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>',
   };
 
@@ -38,6 +39,7 @@ var Sidebar = (function () {
     // Ops (运维)
     { route: '/deploy',        hash: '#/deploy',        i18nKey: 'nav_deploy',            icon: icons.deploy,     group: 'ops' },
     { route: '/system-status', hash: '#/system-status', i18nKey: 'nav_system_status',     icon: icons.dashboard,  group: 'ops' },
+    { route: '/scripts',       hash: '#/scripts',       i18nKey: 'nav_scripts',            icon: icons.scripts,    group: 'ops' },
     { route: '/containers',    hash: '#/containers',    i18nKey: 'nav_containers',        icon: icons.containers, group: 'ops' },
     { route: '/settings',      hash: '#/settings',      i18nKey: 'nav_settings',          icon: icons.settings,   group: 'ops' },
   ];

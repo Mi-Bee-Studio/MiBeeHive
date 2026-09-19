@@ -61,6 +61,7 @@
     { pattern: '/system-status', handler: function() { SystemStatus.render(); } },
     { pattern: '/system-status/logs', handler: function() { SystemStatus.renderLogs(); } },
     { pattern: '/system-status/tasks', handler: function() { SystemStatus.renderTasks(); } },
+    { pattern: '/scripts', handler: function() { Scripts.render(); } },
     { pattern: '/containers', handler: function() { Containers.render(); } },
     { pattern: '/containers/images', handler: function() { ContainersImages.render(); } },
     { pattern: '/containers/templates', handler: function() { ContainersTemplates.render(); } },

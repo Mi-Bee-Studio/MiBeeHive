@@ -30,6 +30,7 @@ var Shell = (function () {
     '/settings': 'title_settings',
     '/containers': 'title_containers',
     '/system-status': 'title_system_status',
+    '/scripts': 'scripts.title',
     '/search': 'title_search',
   };
 

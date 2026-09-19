@@ -36,6 +36,8 @@ func TestMigrationCountMatchesFiles(t *testing.T) {
 		{"026", "migrations/026_virtual_audit.sql"},
 		{"027", "migrations/027_backfill_files_source_type.sql"},
 		{"028", "migrations/028_fix_seed_source_configs.sql"},
+		{"029", "migrations/029_scheduled_scripts.sql"},
+		{"030", "migrations/030_secrets.sql"},
 	}
 
 	// Read all files in the embedded migrations directory.

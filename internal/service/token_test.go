@@ -69,6 +69,24 @@ func TestPublicTokenUniqueness(t *testing.T) {
 	}
 }
 
+// TestRandomTokenExactLength pins the fix for the #69 flake: ~1.7% of raw
+// 16-byte draws base58-encode to 21 chars; randomToken must redraw instead of
+// returning a short token.
+func TestRandomTokenExactLength(t *testing.T) {
+	for i := 0; i < 2000; i++ {
+		token, err := randomToken()
+		if err != nil {
+			t.Fatalf("randomToken iteration %d: %v", i, err)
+		}
+		if len(token) != publicTokenLength {
+			t.Fatalf("iteration %d: token %q length %d, want exactly %d", i, token, len(token), publicTokenLength)
+		}
+		if !isBase58(token) {
+			t.Fatalf("iteration %d: token %q contains non-base58 characters", i, token)
+		}
+	}
+}
+
 func TestPublicTokenCollisionRetry(t *testing.T) {
 	checker := &mockTokenChecker{exists: true}
 	_, err := GeneratePublicToken(checker)

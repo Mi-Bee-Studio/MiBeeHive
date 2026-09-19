@@ -35,10 +35,13 @@ jobs:
       # NOTE: continue-on-error is intentional while the Unix-side packages
       # (service, handler, crawler, monitor, cmd) are still being gofmt'd into
       # the lint baseline. Flip to a hard failure once those are clean.
+      # v2.13+ is built with Go >= 1.26; v2.5 failed to even load the config
+      # ("Go language version (go1.25) used to build golangci-lint is lower
+      # than the targeted Go version (1.26)") — see #69.
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v7
         with:
-          version: v2.5.0
+          version: v2.13.2
           args: --timeout=5m
         continue-on-error: true
 

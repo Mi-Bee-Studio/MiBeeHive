@@ -92,17 +92,21 @@ func GeneratePublicToken(db DBChecker) (string, error) {
 }
 
 // randomToken reads 16 bytes from crypto/rand, encodes them to base58, and
-// returns the first publicTokenLength characters.
+// returns the first publicTokenLength characters. ~1.7% of 16-byte draws
+// (values < 58^21) encode to fewer characters; those are redrawn so every
+// token has exactly publicTokenLength chars (#69 — short draws were the
+// TestPublicTokenLength flake and produced occasional 21-char tokens).
 func randomToken() (string, error) {
 	buf := make([]byte, 16)
-	if _, err := rand.Read(buf); err != nil {
-		return "", fmt.Errorf("reading random bytes: %w", err)
+	for {
+		if _, err := rand.Read(buf); err != nil {
+			return "", fmt.Errorf("reading random bytes: %w", err)
+		}
+		encoded := base58Encode(buf)
+		if len(encoded) >= publicTokenLength {
+			return encoded[:publicTokenLength], nil
+		}
 	}
-	encoded := base58Encode(buf)
-	if len(encoded) > publicTokenLength {
-		encoded = encoded[:publicTokenLength]
-	}
-	return encoded, nil
 }
 
 // base58Encode encodes a byte slice using the Bitcoin-style base58 alphabet.

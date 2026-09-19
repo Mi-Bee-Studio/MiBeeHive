@@ -80,6 +80,7 @@ type appServices struct {
 	// Scheduled scripts (#70)
 	scriptSvc       *service.ScriptService
 	scriptScheduler *service.ScriptScheduler
+	secretSvc       *service.SecretService
 
 	// Storage resolver
 	storageResolver *service.StorageResolver
@@ -131,6 +132,7 @@ type appHandlers struct {
 	virtualAdmin  *handler.VirtualAdminHandler  // virtual index admin API
 	toolCatalog   *handler.ToolCatalogHandler   // built-in tool catalog + one-click enable
 	scripts       *handler.ScriptHandler        // scheduled scripts admin API (#70)
+	secrets       *handler.SecretHandler        // named secrets admin API (#70 follow-up)
 }
 
 // loadConfig initializes the logger, loads or generates the config file,
@@ -466,7 +468,16 @@ func initServices(cfg *config.Config, database *sql.DB, readDB *sql.DB) *appServ
 		slog.Error("failed to init script service", "error", err)
 		os.Exit(1)
 	}
+	// Secret store (#70 follow-up): AES-encrypted in DB, key beside it in the
+	// data dir; injected as env vars into every script execution.
+	secretSvc, err := service.NewSecretService(database, filepath.Join(filepath.Dir(cfg.Database.Path), ".secret.key"))
+	if err != nil {
+		slog.Error("failed to init secret service", "error", err)
+		os.Exit(1)
+	}
+	scriptSvc.AttachSecrets(secretSvc)
 	s.scriptSvc = scriptSvc
+	s.secretSvc = secretSvc
 	s.scriptScheduler = service.NewScriptScheduler(scriptSvc)
 	slog.Info("scheduled scripts module initialized", "dir", scriptSvc.ScriptsDir())
 
@@ -608,6 +619,8 @@ func initHandlers(cfg *config.Config, svcs *appServices, database *sql.DB, confi
 	h.toolCatalog = handler.NewToolCatalogHandler(service.NewToolCatalogService(), db.NewProjectRepo(database))
 	// Scheduled scripts handler (#70).
 	h.scripts = handler.NewScriptHandler(svcs.scriptSvc, svcs.scriptScheduler)
+	// Named secrets handler (#70 follow-up).
+	h.secrets = handler.NewSecretHandler(svcs.secretSvc)
 
 	return h
 }
@@ -801,6 +814,10 @@ func buildRouter(cfg *config.Config, h *appHandlers, svcs *appServices, database
 	apiMux.HandleFunc("GET "+model.RouteAdminScriptsRuns, h.scripts.Runs)
 	apiMux.HandleFunc("GET "+model.RouteAdminScriptsContent, h.scripts.GetContent)
 	apiMux.HandleFunc("PUT "+model.RouteAdminScriptsContent, h.scripts.PutContent)
+	// Named secrets routes (admin, #70 follow-up).
+	apiMux.HandleFunc("GET "+model.RouteAdminSecretsList, h.secrets.List)
+	apiMux.HandleFunc("PUT "+model.RouteAdminSecretsPut, h.secrets.Put)
+	apiMux.HandleFunc("DELETE "+model.RouteAdminSecretsDelete, h.secrets.Delete)
 
 	// Registry management routes (admin).
 	if h.registry != nil {

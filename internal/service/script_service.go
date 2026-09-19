@@ -112,10 +112,11 @@ func validationError(format string, args ...any) error {
 
 // ScriptService provides CRUD plus execution for scheduled scripts.
 type ScriptService struct {
-	db        *sql.DB
+	db         *sql.DB
 	scriptsDir string
-	baseURL   string
-	logger    *slog.Logger
+	baseURL    string
+	logger     *slog.Logger
+	secrets    *SecretService
 
 	mu      sync.Mutex
 	running map[int64]bool
@@ -141,6 +142,10 @@ func NewScriptService(db *sql.DB, scriptsDir, baseURL string, logger *slog.Logge
 
 // ScriptsDir returns the absolute directory scripts resolve against.
 func (s *ScriptService) ScriptsDir() string { return s.scriptsDir }
+
+// AttachSecrets wires the secret store; its NAME=value pairs are injected
+// into every execution's environment.
+func (s *ScriptService) AttachSecrets(sec *SecretService) { s.secrets = sec }
 
 // ValidateSchedule checks a 5-field cron expression.
 func ValidateSchedule(spec string) error {
@@ -458,6 +463,13 @@ func (s *ScriptService) execute(run *ScriptRun) {
 	cmd := exec.CommandContext(runCtx, "sh", abs)
 	cmd.Dir = s.scriptsDir
 	cmd.Env = append(os.Environ(), "MIBEEHIVE_URL="+s.baseURL)
+	if s.secrets != nil {
+		if pairs, err := s.secrets.EnvPairs(ctx); err != nil {
+			s.logger.Warn("injecting secrets", "error", err)
+		} else if len(pairs) > 0 {
+			cmd.Env = append(cmd.Env, pairs...)
+		}
+	}
 	cmd.WaitDelay = killGrace
 	stdout, stderr := &cappedWriter{limit: maxOutputBytes}, &cappedWriter{limit: maxOutputBytes}
 	cmd.Stdout, cmd.Stderr = stdout, stderr

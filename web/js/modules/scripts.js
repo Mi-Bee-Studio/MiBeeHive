@@ -120,6 +120,24 @@ const Scripts = (function () {
     `;
   }
 
+  // ── Secret row ──────────────────────────────────────────────────────────────
+  function SecretRow(props) {
+    var sec = props.secret;
+    var onDelete = props.onDelete;
+    return html`
+      <div class="flex items-center justify-between" style="padding:0.5rem 0;border-bottom:1px solid var(--color-border)">
+        <div>
+          <code class="text-sm font-medium">${sec.name}</code>
+          <div class="text-xs" style="color:var(--color-text-tertiary)">${formatTime(sec.updated_at)}</div>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" style="color:var(--color-error)"
+                onClick=${function () { onDelete(sec); }} title=${t('secrets.delete')}>
+          ✕
+        </button>
+      </div>
+    `;
+  }
+
   // ── Main component ──────────────────────────────────────────────────────────
   function ScriptsComponent(props) {
     var signal = props.signal;
@@ -332,14 +350,93 @@ const Scripts = (function () {
       });
     }
 
+    function openSecretsModal() {
+      var body = `
+        <div class="space-y-3">
+          <p class="text-xs" style="color:var(--color-text-tertiary)">${t('secrets.hint')}</p>
+          <div id="secrets-list"></div>
+          <form id="secret-form" class="space-y-2" style="border-top:1px solid var(--color-border);padding-top:0.75rem">
+            <div class="flex gap-2">
+              <input type="text" name="name" class="input" style="flex:1" placeholder="GITEE_TOKEN"
+                     pattern="[A-Z][A-Z0-9_]*" required maxlength="64" />
+              <input type="password" name="value" class="input" style="flex:1.5"
+                     placeholder="${t('secrets.value')}" required autocomplete="new-password" />
+            </div>
+            <div class="flex justify-end gap-2">
+              <button type="button" class="btn btn-ghost" data-close="1">${t('close') || t('cancel')}</button>
+              <button type="submit" class="btn btn-primary">${t('save')}</button>
+            </div>
+          </form>
+        </div>
+      `;
+      var modal = Components.createModal({
+        title: t('secrets.title'),
+        bodyHtml: body,
+        onMount: function (overlay) {
+          var listEl = overlay.querySelector('#secrets-list');
+          overlay.querySelector('[data-close]').addEventListener('click', modal.close);
+          function loadList() {
+            Api.get('/admin/secrets', { signal: signal, silent: true }).then(function (res) {
+              var items = (res && res.data) || [];
+              render(html`
+                <div>
+                  ${items.length === 0
+                    ? html`<p class="text-sm" style="color:var(--color-text-tertiary);padding:0.5rem 0">${t('secrets.empty')}</p>`
+                    : items.map(function (sec) {
+                        return html`<${SecretRow} key=${sec.name} secret=${sec} onDelete=${handleSecretDelete} />`;
+                      })}
+                </div>
+              `, listEl);
+            }).catch(function () {
+              render(html`<p class="text-sm" style="color:var(--color-text-tertiary)">${t('secrets.empty')}</p>`, listEl);
+            });
+          }
+          function handleSecretDelete(sec) {
+            Components.showConfirmModal(t('secrets.delete_confirm') + ': ' + sec.name + '?').then(function (confirmed) {
+              if (!confirmed) return;
+              Api.delete('/admin/secrets/' + encodeURIComponent(sec.name), { signal: signal }).then(function (res) {
+                if (res && res.success) {
+                  Components.showToast(t('secrets.deleted') || 'Deleted', 'success');
+                  loadList();
+                } else {
+                  Components.showToast((res && res.message) || 'delete failed', 'error');
+                }
+              });
+            });
+          }
+          loadList();
+          var form = overlay.querySelector('#secret-form');
+          form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            var name = form.name.value.trim();
+            Api.put('/admin/secrets/' + encodeURIComponent(name), { value: form.value.value }, { signal: signal })
+              .then(function (res) {
+                if (res && res.success) {
+                  Components.showToast(t('secrets.saved') || 'Saved', 'success');
+                  form.value.value = '';
+                  loadList();
+                } else {
+                  Components.showToast((res && res.message) || 'save failed', 'error');
+                }
+              });
+          });
+        },
+      });
+    }
+
     // ── Render ────────────────────────────────────────────────────────────────
     return html`
       <div class="p-4 md:p-6 max-w-7xl mx-auto">
         <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
           <h1 class="text-lg font-semibold">${t('scripts.title')}</h1>
-          <button type="button" class="btn btn-primary" onClick=${function () { openEditModal(null); }}>
-            ${t('scripts.new')}
-          </button>
+          <div class="flex gap-2">
+            <button type="button" class="btn btn-secondary" onClick=${openSecretsModal}>
+              ${t('secrets.title')}
+            </button>
+            <button type="button" class="btn btn-primary" onClick=${function () { openEditModal(null); }}>
+              ${t('scripts.new')}
+            </button>
+          </div>
         </div>
         <p class="text-xs mb-4" style="color:var(--color-text-tertiary)">
           ${t('scripts.dir_hint')}: <code>${dir}</code>

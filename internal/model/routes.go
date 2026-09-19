@@ -153,4 +153,8 @@ const (
 	RouteAdminScriptsRun     = "/api/v1/admin/scripts/{id}/run"
 	RouteAdminScriptsRuns    = "/api/v1/admin/scripts/{id}/runs"
 	RouteAdminScriptsContent = "/api/v1/admin/scripts/{id}/content"
+	// Named secrets for scheduled scripts (#70 follow-up)
+	RouteAdminSecretsList   = "/api/v1/admin/secrets"
+	RouteAdminSecretsPut    = "/api/v1/admin/secrets/{name}"
+	RouteAdminSecretsDelete = "/api/v1/admin/secrets/{name}"
 )
